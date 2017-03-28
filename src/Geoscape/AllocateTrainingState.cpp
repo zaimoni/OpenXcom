@@ -313,7 +313,9 @@ void AllocateTrainingState::moveSoldierUp(Action *action, unsigned int row, bool
 		_base->getSoldiers()->at(row - 1) = s;
 		if (row != _lstSoldiers->getScroll())
 		{
-			SDL_WarpMouse(action->getLeftBlackBand() + action->getXMouse(), action->getTopBlackBand() + action->getYMouse() - static_cast<Uint16>(8 * action->getYScale()));
+#ifndef __MOBILE__
+			SDL_WarpMouseInWindow(NULL, (action->getLeftBlackBand() + action->getXMouse()), (action->getTopBlackBand() + action->getYMouse() - static_cast<Uint16>(8 * action->getYScale())));
+#endif
 		}
 		else
 		{
@@ -366,7 +368,9 @@ void AllocateTrainingState::moveSoldierDown(Action *action, unsigned int row, bo
 		_base->getSoldiers()->at(row + 1) = s;
 		if (row != _lstSoldiers->getVisibleRows() - 1 + _lstSoldiers->getScroll())
 		{
-			SDL_WarpMouse(action->getLeftBlackBand() + action->getXMouse(), action->getTopBlackBand() + action->getYMouse() + static_cast<Uint16>(8 * action->getYScale()));
+#ifndef __MOBILE__
+			SDL_WarpMouseInWindow(NULL, (action->getLeftBlackBand() + action->getXMouse()), (action->getTopBlackBand() + action->getYMouse() - static_cast<Uint16>(8 * action->getYScale())));
+#endif
 		}
 		else
 		{

@@ -38,12 +38,12 @@ class InteractiveSurface : public Surface
 {
 private:
 	static const int NUM_BUTTONS = 7;
-	static const SDLKey SDLK_ANY;
+	static const SDL_Keycode SDLK_ANY;
 	Uint8 _buttonsPressed;
 protected:
 	std::map<Uint8, ActionHandler> _click, _press, _release;
-	ActionHandler _in, _over, _out;
-	std::map<SDLKey, ActionHandler> _keyPress, _keyRelease;
+	ActionHandler _in, _over, _out, _fingerMotion, _multiGesture, _wheel;
+	std::map<SDL_Keycode, ActionHandler> _keyPress, _keyRelease;
 	bool _isHovered, _isFocused, _listButton;
 
 	/// Is this mouse button pressed?
@@ -80,9 +80,17 @@ public:
 	/// Hooks an action handler to moving the mouse out of the surface.
 	void onMouseOut(ActionHandler handler);
 	/// Hooks an action handler to pressing a key when the surface is focused.
-	void onKeyboardPress(ActionHandler handler, SDLKey key = SDLK_ANY);
+	void onKeyboardPress(ActionHandler handler, SDL_Keycode key = SDLK_ANY);
 	/// Hooks an action handler to releasing a key when the surface is focused.
-	void onKeyboardRelease(ActionHandler handler, SDLKey key = SDLK_ANY);
+	void onKeyboardRelease(ActionHandler handler, SDL_Keycode key = SDLK_ANY);
+	/// Hooks an action handler to moving a finger on a touchscreen
+	void onFingerMotion(ActionHandler handler);
+	/// Hooks an action handler to multi-finger gesture
+	void onMultiGesture(ActionHandler handler);
+	
+	/// Hooks an action handler to a mousewheel event
+	void onMouseWheel(ActionHandler handler);
+	
 	/// Processes a mouse button press event.
 	virtual void mousePress(Action *action, State *state);
 	/// Processes a mouse button release event.
@@ -99,6 +107,15 @@ public:
 	virtual void keyboardPress(Action *action, State *state);
 	/// Processes a keyboard key release event.
 	virtual void keyboardRelease(Action *action, State *state);
+	/// Processes a finger motion event
+	virtual void fingerMotion(Action *action, State *state);
+	/// Processes a multi-finger gesture event
+	virtual void multiGesture(Action *action, State *state);
+	
+	/// Processes a mousewheel event
+	virtual void mouseWheel(Action *action, State *state);
+
+	virtual void textInput(Action *action, State *state);
 	/// Check this surface to see if it's a textlist button.
 	void setListButton();
 };

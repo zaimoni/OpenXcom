@@ -73,10 +73,9 @@ void Palette::loadDat(const std::string &filename, int ncolors, int offset)
 		_colors[i].r = value[0] * 4;
 		_colors[i].g = value[1] * 4;
 		_colors[i].b = value[2] * 4;
-		_colors[i].unused = 255;
+		_colors[i].a = 255;
 	}
-	_colors[0].unused = 0;
-
+	_colors[0].a = 0;
 	palFile.close();
 }
 
@@ -99,7 +98,14 @@ SDL_Color *Palette::getColors(int offset) const
  */
 Uint32 Palette::getRGBA(SDL_Color* pal, Uint8 color)
 {
-	return ((Uint32) pal[color].r << 24) | ((Uint32) pal[color].g << 16) | ((Uint32) pal[color].b << 8) | (Uint32) 0xFF;
+	if (pal)
+	{
+		return ((Uint32) pal[color].r << 24) | ((Uint32) pal[color].g << 16) | ((Uint32) pal[color].b << 8) | (Uint32) 0xFF;
+	}
+	else
+	{
+		return 0xFF; /*black*/
+	}
 }
 
 void Palette::savePal(const std::string &file) const
@@ -176,7 +182,8 @@ void Palette::setColors(SDL_Color* pal, int ncolors)
 		_colors[i].r = pal[i].r;
 		_colors[i].g = pal[i].g;
 		_colors[i].b = pal[i].b;
-		_colors[i].unused = 255;
+		_colors[i].a = 255;
+		// FIXME: Take a closer look at that.
 		if (i > 15 && _colors[i].r == _colors[0].r &&
 			_colors[i].g == _colors[0].g &&
 			_colors[i].b == _colors[0].b)
@@ -190,7 +197,8 @@ void Palette::setColors(SDL_Color* pal, int ncolors)
 			_colors[i].b++;
 		}
 	}
-	_colors[0].unused = 0;	
+	_colors[0].a = 0;
+	
 }
 
 void Palette::setColor(int index, int r, int g, int b)

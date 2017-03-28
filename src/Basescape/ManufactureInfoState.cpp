@@ -92,10 +92,10 @@ void ManufactureInfoState::buildUi()
 	_txtTodo = new Text(40, 16, 280, 88);
 
 	_surfaceEngineers = new InteractiveSurface(160, 150, 0, 25);
-	_surfaceEngineers->onMouseClick((ActionHandler)&ManufactureInfoState::handleWheelEngineer, 0);
+	_surfaceEngineers->onMouseWheel((ActionHandler)&ManufactureInfoState::handleWheelEngineer);
 
 	_surfaceUnits = new InteractiveSurface(160, 150, 160, 25);
-	_surfaceUnits->onMouseClick((ActionHandler)&ManufactureInfoState::handleWheelUnit, 0);
+	_surfaceUnits->onMouseWheel((ActionHandler)&ManufactureInfoState::handleWheelUnit);
 
 	// Set palette
 	setInterface("manufactureInfo");
@@ -576,8 +576,14 @@ void ManufactureInfoState::onLessEngineer()
  */
 void ManufactureInfoState::handleWheelEngineer(Action *action)
 {
-	if (action->getDetails()->button.button == SDL_BUTTON_WHEELUP) moreEngineer(Options::changeValueByMouseWheel);
-	else if (action->getDetails()->button.button == SDL_BUTTON_WHEELDOWN) lessEngineer(Options::changeValueByMouseWheel);
+	const SDL_Event &ev(*action->getDetails());
+	if (ev.type == SDL_MOUSEWHEEL)
+	{
+		if (ev.wheel.y > 0)
+			moreEngineer(Options::changeValueByMouseWheel);
+		else
+			lessEngineer(Options::changeValueByMouseWheel);
+	}
 }
 
 /**
@@ -604,8 +610,14 @@ void ManufactureInfoState::onLessUnit()
  */
 void ManufactureInfoState::handleWheelUnit(Action *action)
 {
-	if (action->getDetails()->button.button == SDL_BUTTON_WHEELUP) moreUnit(Options::changeValueByMouseWheel);
-	else if (action->getDetails()->button.button == SDL_BUTTON_WHEELDOWN) lessUnit(Options::changeValueByMouseWheel);
+	const SDL_Event &ev(*action->getDetails());
+	if (ev.type == SDL_MOUSEWHEEL)
+	{
+		if (ev.wheel.y > 0)
+			moreUnit(Options::changeValueByMouseWheel);
+		else
+			lessUnit(Options::changeValueByMouseWheel);
+	}
 }
 
 /**

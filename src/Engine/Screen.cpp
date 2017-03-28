@@ -21,6 +21,7 @@
 #include <sstream>
 #include <cmath>
 #include <iomanip>
+#include <cassert>
 #include <climits>
 #include "../lodepng.h"
 #include "Exception.h"
@@ -34,6 +35,9 @@
 #include "Timer.h"
 #include <SDL.h>
 #include <algorithm>
+#include "Renderer.h"
+#include "SDLRenderer.h"
+#include "OpenGLRenderer.h"
 
 namespace OpenXcom
 {
@@ -47,7 +51,13 @@ const int Screen::ORIGINAL_HEIGHT = 200;
  */
 void Screen::makeVideoFlags()
 {
-	_flags = SDL_HWSURFACE|SDL_DOUBLEBUF|SDL_HWPALETTE;
+	_flags = SDL_WINDOW_OPENGL;
+	if (Options::allowResize)
+	{
+		_flags |= SDL_WINDOW_RESIZABLE;
+	}
+
+#if 0
 	if (Options::asyncBlit)
 	{
 		_flags |= SDL_ASYNCBLIT;
@@ -61,41 +71,33 @@ void Screen::makeVideoFlags()
 		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 );
 		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	}
-	if (Options::allowResize)
-	{
-		_flags |= SDL_RESIZABLE;
-	}
-	
-	// Handle window positioning
-	if (!Options::fullscreen && Options::rootWindowedMode)
-	{
-		std::ostringstream ss;
-		ss << "SDL_VIDEO_WINDOW_POS=" << std::dec << Options::windowedModePositionX << "," << Options::windowedModePositionY;
-		SDL_putenv(const_cast<char*>(ss.str().c_str()));
-		SDL_putenv(const_cast<char*>("SDL_VIDEO_CENTERED="));
-	}
-	else if (Options::borderless)
-	{
-		SDL_putenv(const_cast<char*>("SDL_VIDEO_WINDOW_POS="));
-		SDL_putenv(const_cast<char*>("SDL_VIDEO_CENTERED=center"));
-	}
-	else
-	{
-		SDL_putenv(const_cast<char*>("SDL_VIDEO_WINDOW_POS="));
-		SDL_putenv(const_cast<char*>("SDL_VIDEO_CENTERED="));
-	}
+#endif
 
 	// Handle display mode
 	if (Options::fullscreen)
 	{
-		_flags |= SDL_FULLSCREEN;
+		_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
 	if (Options::borderless)
 	{
-		_flags |= SDL_NOFRAME;
+		_flags |= SDL_WINDOW_BORDERLESS;
 	}
 
-	_bpp = (is32bitEnabled() || isOpenGLEnabled()) ? 32 : 8;
+	// Try fixing the Samsung devices - see https://bugzilla.libsdl.org/show_bug.cgi?id=2291
+#ifdef __ANDROID__
+	if (Options::forceGLMode) 
+	{
+		Log(LOG_INFO) << "Setting GL format to RGB565";
+		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
+		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 6);
+		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+		//SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	}
+	CrossPlatform::setSystemUI();
+#endif
+
+	//_bpp = (isHQXEnabled() || isOpenGLEnabled()) ? 32 : 8;
+	_bpp = 32;
 	_baseWidth = Options::baseXResolution;
 	_baseHeight = Options::baseYResolution;
 }
@@ -105,7 +107,8 @@ void Screen::makeVideoFlags()
  * Initializes a new display screen for the game to render contents to.
  * The screen is set up based on the current options.
  */
-Screen::Screen() : _baseWidth(ORIGINAL_WIDTH), _baseHeight(ORIGINAL_HEIGHT), _scaleX(1.0), _scaleY(1.0), _flags(0), _numColors(0), _firstColor(0), _pushPalette(false), _surface(0)
+Screen::Screen() : _baseWidth(ORIGINAL_WIDTH), _baseHeight(ORIGINAL_HEIGHT), _scaleX(1.0), _scaleY(1.0), _numColors(0), _firstColor(0), _pushPalette(false), _surface(0), _window(NULL), _renderer(NULL), _texture(NULL)
+	, _prevWidth(0), _prevHeight(0)
 {
 	resetDisplay();
 	memset(deferredPalette, 0, 256*sizeof(SDL_Color));
@@ -117,6 +120,7 @@ Screen::Screen() : _baseWidth(ORIGINAL_WIDTH), _baseHeight(ORIGINAL_HEIGHT), _sc
  */
 Screen::~Screen()
 {
+	delete _renderer;	
 	delete _surface;
 }
 
@@ -181,32 +185,7 @@ void Screen::handle(Action *action)
  */
 void Screen::flip()
 {
-	if (getWidth() != _baseWidth || getHeight() != _baseHeight || isOpenGLEnabled())
-	{
-		Zoom::flipWithZoom(_surface->getSurface(), _screen, _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, &glOutput);
-	}
-	else
-	{
-		SDL_BlitSurface(_surface->getSurface(), 0, _screen, 0);
-	}
-
-	// perform any requested palette update
-	if (_pushPalette && _numColors && _screen->format->BitsPerPixel == 8)
-	{
-		if (_screen->format->BitsPerPixel == 8 && SDL_SetColors(_screen, &(deferredPalette[_firstColor]), _firstColor, _numColors) == 0)
-		{
-			Log(LOG_DEBUG) << "Display palette doesn't match requested palette";
-		}
-		_numColors = 0;
-		_pushPalette = false;
-	}
-
-
-	
-	if (SDL_Flip(_screen) == -1)
-	{
-		throw Exception(SDL_GetError());
-	}
+	_renderer->flip(_surface->getSurface());
 }
 
 /**
@@ -215,8 +194,11 @@ void Screen::flip()
 void Screen::clear()
 {
 	_surface->clear();
+
+#if 0
 	if (_screen->flags & SDL_SWSURFACE) memset(_screen->pixels, 0, _screen->h*_screen->pitch);
 	else SDL_FillRect(_screen, &_clear, 0);
+#endif
 }
 
 /**
@@ -244,11 +226,13 @@ void Screen::setPalette(SDL_Color* colors, int firstcolor, int ncolors, bool imm
 
 	_surface->setPalette(colors, firstcolor, ncolors);
 
+#if 0
 	// defer actual update of screen until SDL_Flip()
 	if (immediately && _screen->format->BitsPerPixel == 8 && SDL_SetColors(_screen, colors, firstcolor, ncolors) == 0)
 	{
 		Log(LOG_DEBUG) << "Display palette doesn't match requested palette";
 	}
+#endif
 
 	// Sanity check
 	/*
@@ -283,7 +267,9 @@ SDL_Color *Screen::getPalette() const
  */
 int Screen::getWidth() const
 {
-	return _screen->w;
+	int w, h;
+	SDL_GetWindowSize(_window, &w, &h);
+	return w;
 }
 
 /**
@@ -292,7 +278,9 @@ int Screen::getWidth() const
  */
 int Screen::getHeight() const
 {
-	return _screen->h;
+	int w, h;
+	SDL_GetWindowSize(_window, &w, &h);
+	return h;
 }
 
 /**
@@ -304,70 +292,174 @@ void Screen::resetDisplay(bool resetVideo)
 {
 	int width = Options::displayWidth;
 	int height = Options::displayHeight;
+	bool switchRenderer = false;
+	if (!_renderer)
+	{
+		switchRenderer = true;
+	}
+	else
+	{
+		if ( (Options::useOpenGL && _renderer->getRendererType() == RENDERER_SDL2)
+			|| (!Options::useOpenGL && _renderer->getRendererType() == RENDERER_OPENGL) )
+		{
+			switchRenderer = true;
+		}
+	}
 #ifdef __linux__
 	Uint32 oldFlags = _flags;
 #endif
 	makeVideoFlags();
+	// A kludge to make video resolution changing work
+	resetVideo = ( (_prevWidth != _baseWidth) || (_prevHeight != _baseHeight) ) || resetVideo;
 
-	if (!_surface || (_surface->getSurface()->format->BitsPerPixel != _bpp ||
+	Log(LOG_INFO) << "Current _baseWidth x _baseHeight: " << _baseWidth << "x" << _baseHeight;
+
+	if (!_surface || (_surface->getSurface()->format->BitsPerPixel != _bpp || 
 		_surface->getSurface()->w != _baseWidth ||
 		_surface->getSurface()->h != _baseHeight)) // don't reallocate _surface if not necessary, it's a waste of CPU cycles
 	{
 		if (_surface) delete _surface;
-		_surface = new Surface(_baseWidth, _baseHeight, 0, 0, Screen::is32bitEnabled() ? 32 : 8); // only HQX needs 32bpp for this surface; the OpenGL class has its own 32bpp buffer
+		//_surface = new Surface(_baseWidth, _baseHeight, 0, 0, Screen::isHQXEnabled() ? 32 : 8); // only HQX needs 32bpp for this surface; the OpenGL class has its own 32bpp buffer
+		/* So why exactly does the new surface have fixed size? */
+		_surface = new Surface(_baseWidth, _baseHeight, 0, 0, 32);
 		if (_surface->getSurface()->format->BitsPerPixel == 8) _surface->setPalette(deferredPalette);
 	}
 	SDL_SetColorKey(_surface->getSurface(), 0, 0); // turn off color key! 
 
-	if (resetVideo || _screen->format->BitsPerPixel != _bpp)
+	if (resetVideo /*|| _screen->format->BitsPerPixel != _bpp */)
 	{
-#ifdef __linux__
-		// Workaround for segfault when switching to opengl
-		if (!(oldFlags & SDL_OPENGL) && (_flags & SDL_OPENGL))
-		{
-			Uint8 cursor = 0;
-			char *_oldtitle = 0;
-			SDL_WM_GetCaption(&_oldtitle, NULL);
-			std::string title(_oldtitle);
-			SDL_QuitSubSystem(SDL_INIT_VIDEO);
-			SDL_InitSubSystem(SDL_INIT_VIDEO);
-			SDL_ShowCursor(SDL_ENABLE);
-			SDL_EnableUNICODE(1);
-			SDL_WM_SetCaption(title.c_str(), 0);
-			SDL_SetCursor(SDL_CreateCursor(&cursor, &cursor, 1,1,0,0));
-		}
-#endif
+		/* FIXME: leak? */
 		Log(LOG_INFO) << "Attempting to set display to " << width << "x" << height << "x" << _bpp << "...";
-		_screen = SDL_SetVideoMode(width, height, _bpp, _flags);
-		if (_screen == 0)
+		/* Attempt to set scaling */
+		if (Options::useNearestScaler)
 		{
-			Log(LOG_ERROR) << SDL_GetError();
-			Log(LOG_INFO) << "Attempting to set display to default resolution...";
-			_screen = SDL_SetVideoMode(640, 400, _bpp, _flags);
-			if (_screen == 0)
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		}
+		else if (Options::useLinearScaler)
+		{
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		}
+		else if (Options::useAnisotropicScaler)
+		{
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+		}
+		// Hack: you have to destroy and recreate a window to make it resizable.
+		if (_window)
+		{
+			if ((SDL_GetWindowFlags(_window) & SDL_WINDOW_RESIZABLE) != (_flags & SDL_WINDOW_RESIZABLE))
 			{
-				if (_flags & SDL_OPENGL)
+				if (_renderer)
 				{
-					Options::useOpenGL = false;
+					delete _renderer;
+					_renderer = NULL;
 				}
-				throw Exception(SDL_GetError());
+				SDL_DestroyWindow(_window);
+				_window = NULL;
 			}
 		}
-		Log(LOG_INFO) << "Display set to " << getWidth() << "x" << getHeight() << "x" << (int)_screen->format->BitsPerPixel << ".";
+		/* Now, we only need to create a window AND a renderer when we have none*/
+		if (_window == NULL)
+		{
+			Log(LOG_INFO) << "Attempting to create a new window since we have none yet";
+			int winX, winY;
+			if (Options::borderless)
+			{
+				winX = SDL_WINDOWPOS_CENTERED;
+				winY = SDL_WINDOWPOS_CENTERED;
+			}
+			else
+			{
+				// FIXME: Check if this code is correct w.r.t. latest patches
+				//if ((Options::windowedModePositionX != -1) && (Options::windowedModePositionY != -1))
+				if (!Options::fullscreen && Options::rootWindowedMode)
+				{
+					winX = Options::windowedModePositionX;
+					winY = Options::windowedModePositionY;
+				}
+				else
+				{
+					winX = SDL_WINDOWPOS_UNDEFINED;
+					winY = SDL_WINDOWPOS_UNDEFINED;
+				}
+			}
+			_window = SDL_CreateWindow("OpenXcom",
+						   winX,
+						   winY,
+						   width, height, _flags);
+			/* In case something went horribly wrong */
+			if (_window == NULL)
+			{
+				Log(LOG_ERROR) << SDL_GetError();
+				throw Exception(SDL_GetError());
+			}
+			Log(LOG_INFO) << "Created a window, size is: " << width << "x" << height;
+		}
+		else
+		{
+#ifndef __ANDROID__
+			SDL_SetWindowSize(_window, width, height);
+#endif
+			SDL_SetWindowBordered(_window, Options::borderless? SDL_FALSE : SDL_TRUE);
+			SDL_SetWindowFullscreen(_window, Options::fullscreen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+		}
+
+		/* By this point we have a window and no renderer, so it's time to make one! */
+		if (switchRenderer)
+		{
+			delete _renderer;
+			_renderer = NULL;
+		}
+
+		if (!_renderer)
+		{
+#ifndef __NO_OPENGL
+			if (Options::useOpenGL)
+			{
+				_renderer = new OpenGLRenderer(_window);
+			}
+			else
+			{
+				_renderer = new SDLRenderer(_window, -1, SDL_RENDERER_ACCELERATED);
+			}
+#else
+			_renderer = new SDLRenderer(_window, -1, SDL_RENDERER_ACCELERATED);
+#endif
+			//_renderer = new OpenGLRenderer(_window/*, -1, SDL_RENDERER_ACCELERATED */);
+			_renderer->setPixelFormat(_surface->getSurface()->format->format);
+		}
+		SDL_Rect baseRect;
+		baseRect.x = baseRect.y = 0;
+		baseRect.w = _baseWidth;
+		baseRect.h = _baseHeight;
+		_renderer->setInternalRect(&baseRect);
+		Log(LOG_INFO) << "Display set to " << getWidth() << "x" << getHeight() << "x32";
+		
+		/* Save new baseWidth and baseHeight */
+		_prevWidth = _baseWidth;
+		_prevHeight = _baseHeight;
 	}
 	else
 	{
 		clear();
 	}
+	assert (_window != 0 && _renderer != 0);
 
 	Options::displayWidth = getWidth();
 	Options::displayHeight = getHeight();
 	_scaleX = getWidth() / (double)_baseWidth;
 	_scaleY = getHeight() / (double)_baseHeight;
+	Log(LOG_INFO) << "Pre-bar scales: _scaleX = " << _scaleX << ", _scaleY = " << _scaleY;
+	//_scale = std::min(getWidth() / (double) _baseWidth, getHeight() / (double) _baseHeight);
+	//_scaleX = _scale;
+	//_scaleY = _scale;
+#if 1
 	_clear.x = 0;
 	_clear.y = 0;
-	_clear.w = getWidth();
-	_clear.h = getHeight();
+	/* _clear.w = getWidth();
+	_clear.h = getHeight(); */
+	_clear.w = _baseWidth;
+	_clear.h = _baseHeight;
+#endif
 
 	double pixelRatioY = 1.0;
 	if (Options::nonSquarePixelRatio && !Options::allowResize)
@@ -379,6 +471,7 @@ void Screen::resetDisplay(bool resetVideo)
 	{
 		cursorInBlackBands = false;
 	}
+#ifndef __ANDROID__
 	else if (Options::fullscreen)
 	{
 		cursorInBlackBands = Options::cursorInBlackBandsInFullscreen;
@@ -391,6 +484,12 @@ void Screen::resetDisplay(bool resetVideo)
 	{
 		cursorInBlackBands = Options::cursorInBlackBandsInBorderlessWindow;
 	}
+#else
+	else {
+	// Force the scales to be equal?
+		cursorInBlackBands = true;
+	}
+#endif
 
 	if (_scaleX > _scaleY && Options::keepAspectRatio)
 	{
@@ -444,28 +543,14 @@ void Screen::resetDisplay(bool resetVideo)
 	{
 		_topBlackBand = _bottomBlackBand = _leftBlackBand = _rightBlackBand = _cursorTopBlackBand = _cursorLeftBlackBand = 0;
 	}
-
-	if (isOpenGLEnabled()) 
-	{
-#ifndef __NO_OPENGL
-		OpenGL::checkErrors = Options::checkOpenGLErrors;
-		glOutput.init(_baseWidth, _baseHeight);
-		glOutput.linear = Options::useOpenGLSmoothing; // setting from shader file will override this, though
-		if (!FileMap::isResourcesEmpty())
-		{
-			if (!glOutput.set_shader(FileMap::getFilePath(Options::useOpenGLShader).c_str()))
-			{
-				Options::useOpenGLShader = "";
-			}
-		}
-		glOutput.setVSync(Options::vSyncForOpenGL);
-#endif
-	}
-
-	if (_screen->format->BitsPerPixel == 8)
-	{
-		setPalette(getPalette());
-	}
+	Log(LOG_INFO) << "Scale (post-bar): scaleX = " << _scaleX << ", scaleY = " << _scaleY;
+	Log(LOG_INFO) << "Black bars: top: " << _topBlackBand << ", left: " << _leftBlackBand;
+	SDL_Rect outRect;
+	outRect.x = _leftBlackBand;
+	outRect.y = _topBlackBand;
+	outRect.w = getWidth() - _leftBlackBand - _rightBlackBand;
+	outRect.h = getHeight() - _topBlackBand - _bottomBlackBand;
+	_renderer->setOutputRect(&outRect);
 }
 
 /**
@@ -484,6 +569,11 @@ double Screen::getXScale() const
 double Screen::getYScale() const
 {
 	return _scaleY;
+}
+
+double Screen::getScale() const
+{
+	return _scale;
 }
 
 /**
@@ -510,6 +600,10 @@ int Screen::getCursorLeftBlackBand() const
  */
 void Screen::screenshot(const std::string &filename) const
 {
+	_renderer->screenshot(filename);
+//	assert (0 && "FIXME: no time for screenshots");
+#if 0
+	SDL_Surface *screenshot = SDL_CreateRGBSurface(0, getWidth(), getHeight(), 24, 0xff, 0xff00, 0xff0000, 0);
 	SDL_Surface *screenshot = SDL_AllocSurface(0, getWidth() - getWidth()%4, getHeight(), 24, 0xff, 0xff00, 0xff0000, 0);
 	
 	if (isOpenGLEnabled())
@@ -536,6 +630,7 @@ void Screen::screenshot(const std::string &filename) const
 	}
 
 	SDL_FreeSurface(screenshot);
+#endif
 }
 
 
@@ -646,4 +741,8 @@ void Screen::updateScale(int &type, int selection, int &width, int &height, bool
 	}
 }
 
+SDL_Window * Screen::getWindow() const
+{
+	return _window;
+}
 }

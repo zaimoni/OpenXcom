@@ -192,6 +192,8 @@ CraftEquipmentState::CraftEquipmentState(Base *base, size_t craft) : _sel(0), _c
 	_lstEquipment->onRightArrowClick((ActionHandler)&CraftEquipmentState::lstEquipmentRightArrowClick);
 	_lstEquipment->onMousePress((ActionHandler)&CraftEquipmentState::lstEquipmentMousePress);
 
+	_lstEquipment->onMouseWheel((ActionHandler)&CraftEquipmentState::lstEquipmentMouseWheel);
+
 	_btnQuickSearch->setText(L""); // redraw
 	_btnQuickSearch->onEnter((ActionHandler)&CraftEquipmentState::btnQuickSearchApply);
 	_btnQuickSearch->setVisible(false);
@@ -487,37 +489,40 @@ void CraftEquipmentState::lstEquipmentRightArrowClick(Action *action)
 }
 
 /**
- * Handles the mouse-wheels on the arrow-buttons.
+ * Handles middle-click
  * @param action Pointer to an action.
  */
 void CraftEquipmentState::lstEquipmentMousePress(Action *action)
 {
 	_sel = _lstEquipment->getSelectedRow();
-	if (action->getDetails()->button.button == SDL_BUTTON_WHEELUP)
-	{
-		_timerRight->stop();
-		_timerLeft->stop();
-		if (action->getAbsoluteXMouse() >= _lstEquipment->getArrowsLeftEdge() &&
-			action->getAbsoluteXMouse() <= _lstEquipment->getArrowsRightEdge())
-		{
-			moveRightByValue(Options::changeValueByMouseWheel);
-		}
-	}
-	else if (action->getDetails()->button.button == SDL_BUTTON_WHEELDOWN)
-	{
-		_timerRight->stop();
-		_timerLeft->stop();
-		if (action->getAbsoluteXMouse() >= _lstEquipment->getArrowsLeftEdge() &&
-			action->getAbsoluteXMouse() <= _lstEquipment->getArrowsRightEdge())
-		{
-			moveLeftByValue(Options::changeValueByMouseWheel);
-		}
-	}
-	else if (action->getDetails()->button.button == SDL_BUTTON_MIDDLE)
+	if (action->getDetails()->button.button == SDL_BUTTON_MIDDLE)
 	{
 		RuleItem *rule = _game->getMod()->getItem(_items[_sel]);
 		std::string articleId = rule->getType();
 		Ufopaedia::openArticle(_game, articleId);
+	}
+}
+
+/**
+ * Handles the mouse-wheels on the arrow-buttons.
+ * @param action Pointer to an action.
+ */
+void CraftEquipmentState::lstEquipmentMouseWheel(Action *action)
+{
+	_sel = _lstEquipment->getSelectedRow();
+	const SDL_Event &ev(*action->getDetails());
+	if (ev.type == SDL_MOUSEWHEEL)
+	{
+		_timerRight->stop();
+		_timerLeft->stop();
+		if (action->getAbsoluteXMouse() >= _lstEquipment->getArrowsLeftEdge() &&
+			action->getAbsoluteXMouse() <= _lstEquipment->getArrowsRightEdge())
+		{
+			if (ev.wheel.y > 0)
+				moveRightByValue(Options::changeValueByMouseWheel);
+			else
+				moveLeftByValue(Options::changeValueByMouseWheel);
+		}
 	}
 }
 

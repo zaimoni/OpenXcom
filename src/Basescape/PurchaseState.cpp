@@ -133,6 +133,7 @@ PurchaseState::PurchaseState(Base *base) : _base(base), _sel(0), _total(0), _pQt
 	_lstItems->onRightArrowRelease((ActionHandler)&PurchaseState::lstItemsRightArrowRelease);
 	_lstItems->onRightArrowClick((ActionHandler)&PurchaseState::lstItemsRightArrowClick);
 	_lstItems->onMousePress((ActionHandler)&PurchaseState::lstItemsMousePress);
+	_lstItems->onMouseWheel((ActionHandler)&PurchaseState::lstItemsMouseWheel);
 
 	_cats.push_back("STR_ALL_ITEMS");
 
@@ -582,33 +583,13 @@ void PurchaseState::lstItemsRightArrowClick(Action *action)
 }
 
 /**
- * Handles the mouse-wheels on the arrow-buttons.
+ * Handles the middle-click.
  * @param action Pointer to an action.
  */
 void PurchaseState::lstItemsMousePress(Action *action)
 {
 	_sel = _lstItems->getSelectedRow();
-	if (action->getDetails()->button.button == SDL_BUTTON_WHEELUP)
-	{
-		_timerInc->stop();
-		_timerDec->stop();
-		if (action->getAbsoluteXMouse() >= _lstItems->getArrowsLeftEdge() &&
-			action->getAbsoluteXMouse() <= _lstItems->getArrowsRightEdge())
-		{
-			increaseByValue(Options::changeValueByMouseWheel);
-		}
-	}
-	else if (action->getDetails()->button.button == SDL_BUTTON_WHEELDOWN)
-	{
-		_timerInc->stop();
-		_timerDec->stop();
-		if (action->getAbsoluteXMouse() >= _lstItems->getArrowsLeftEdge() &&
-			action->getAbsoluteXMouse() <= _lstItems->getArrowsRightEdge())
-		{
-			decreaseByValue(Options::changeValueByMouseWheel);
-		}
-	}
-	else if (action->getDetails()->button.button == SDL_BUTTON_MIDDLE)
+	if (action->getDetails()->button.button == SDL_BUTTON_MIDDLE)
 	{
 		if (getRow().type == TRANSFER_ITEM)
 		{
@@ -627,6 +608,29 @@ void PurchaseState::lstItemsMousePress(Action *action)
 				std::string articleId = rule->getType();
 				Ufopaedia::openArticle(_game, articleId);
 			}
+		}
+	}
+}
+
+/**
+ * Handles the mousewheel event on the arrow buttons (hopefully)
+ * @param action Pointer to an action
+ */
+void PurchaseState::lstItemsMouseWheel(Action *action)
+{
+	_sel = _lstItems->getSelectedRow();
+	const SDL_Event &ev(*action->getDetails());
+	if (ev.type == SDL_MOUSEWHEEL)
+	{
+		_timerInc->stop();
+		_timerDec->stop();
+		if (action->getAbsoluteXMouse() >= _lstItems->getArrowsLeftEdge() &&
+			action->getAbsoluteXMouse() <= _lstItems->getArrowsRightEdge())
+		{
+			if (ev.wheel.y > 0)
+				increaseByValue(Options::changeValueByMouseWheel);
+			else
+				decreaseByValue(Options::changeValueByMouseWheel);
 		}
 	}
 }

@@ -81,6 +81,7 @@ protected:
 	int _overlaps;
 	bool _danger;
 	std::list<Particle*> _particles;
+	bool _aimed;
 public:
 	/// Creates a tile.
 	Tile(Position pos);

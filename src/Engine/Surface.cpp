@@ -74,7 +74,7 @@ inline void* NewAligned(int bpp, int width, int height)
 
 #ifndef _WIN32
 
-	#ifdef __MORPHOS__
+	#if defined(__MORPHOS__) || defined(__ANDROID__)
 
 	buffer = calloc( total, 1 );
 	if (!buffer)
@@ -123,6 +123,11 @@ inline void DeleteAligned(void* buffer)
 
 } //namespace
 
+
+const int Surface::RMASK = 0x00FF0000;
+const int Surface::GMASK = 0x0000FF00;
+const int Surface::BMASK = 0x000000FF;
+const int Surface::AMASK = 0xFF000000;
 /**
  * Sets up a blank 8bpp surface with the specified size and position,
  * with pure black as the transparent color.
@@ -138,14 +143,17 @@ inline void DeleteAligned(void* buffer)
 Surface::Surface(int width, int height, int x, int y, int bpp) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false), _tftdMode(false), _alignedBuffer(0)
 {
 	_alignedBuffer = NewAligned(bpp, width, height);
-	_surface = SDL_CreateRGBSurfaceFrom(_alignedBuffer, width, height, bpp, GetPitch(bpp, width), 0, 0, 0, 0);
+	if (bpp == 32)
+		_surface = SDL_CreateRGBSurfaceFrom(_alignedBuffer, width, height, 32, GetPitch(32, width), RMASK, GMASK, BMASK, AMASK);
+	else
+		_surface = SDL_CreateRGBSurfaceFrom(_alignedBuffer, width, height, bpp, GetPitch(bpp, width), 0, 0, 0, 0);
 
 	if (_surface == 0)
 	{
 		throw Exception(SDL_GetError());
 	}
 
-	SDL_SetColorKey(_surface, SDL_SRCCOLORKEY, 0);
+	SDL_SetColorKey(_surface, SDL_TRUE, 0);
 
 	_crop.w = 0;
 	_crop.h = 0;
@@ -172,9 +180,9 @@ Surface::Surface(const Surface& other)
 		int pitch = GetPitch(bpp, width);
 		_alignedBuffer = NewAligned(bpp, width, height);
 		_surface = SDL_CreateRGBSurfaceFrom(_alignedBuffer, width, height, bpp, pitch, 0, 0, 0, 0);
-		SDL_SetColorKey(_surface, SDL_SRCCOLORKEY, 0);
+		SDL_SetColorKey(_surface, SDL_TRUE, 0);
 		//cant call `setPalette` because its virtual function and it dont work correctly in constructor
-		SDL_SetColors(_surface, other.getPalette(), 0, 255);
+		SDL_SetPaletteColors(_surface->format->palette, other.getPalette(), 0, 255);
 		memcpy(_alignedBuffer, other._alignedBuffer, height*pitch);
 	}
 	else
@@ -288,13 +296,13 @@ void Surface::loadImage(const std::string &filename)
 					for (int c = 0; c < _surface->format->palette->ncolors; ++c)
 					{
 						SDL_Color *palColor = _surface->format->palette->colors + c;
-						if (palColor->unused == 0)
+						if (palColor->a == 0)
 						{
 							transparent = c;
 							break;
 						}
 					}
-					SDL_SetColorKey(_surface, SDL_SRCCOLORKEY, transparent);
+					SDL_SetColorKey(_surface, SDL_TRUE, transparent);
 				}
 			}
 		}
@@ -816,7 +824,7 @@ SDL_Rect *Surface::getCrop()
 void Surface::setPalette(SDL_Color *colors, int firstcolor, int ncolors)
 {
 	if (_surface->format->BitsPerPixel == 8)
-		SDL_SetColors(_surface, colors, firstcolor, ncolors);
+		SDL_SetPaletteColors(_surface->format->palette, colors, firstcolor, ncolors);
 }
 
 /**
@@ -932,8 +940,8 @@ void Surface::resize(int width, int height)
 	}
 
 	// Copy old contents
-	SDL_SetColorKey(surface, SDL_SRCCOLORKEY, 0);
-	SDL_SetColors(surface, getPalette(), 0, 256);
+	SDL_SetColorKey(surface, SDL_TRUE, 0);
+	SDL_SetPaletteColors(surface->format->palette, getPalette(), 0, 256);
 	SDL_BlitSurface(_surface, 0, surface, 0);
 
 	// Delete old surface

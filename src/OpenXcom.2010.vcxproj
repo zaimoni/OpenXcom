@@ -103,7 +103,7 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>yaml-cppd.lib;SDL_image.lib;SDL_mixer.lib;SDL_gfx.lib;SDLmain.lib;SDL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>yaml-cppd.lib;SDL2_image.lib;SDL2_mixer.lib;SDL_gfx.lib;SDL2main.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -137,7 +137,7 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>yaml-cppd.lib;SDL_image.lib;SDL_mixer.lib;SDL_gfx.lib;SDLmain.lib;SDL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>yaml-cppd.lib;SDL2_image.lib;SDL2_mixer.lib;SDL_gfx.lib;SDL2main.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -171,7 +171,7 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>yaml-cpp.lib;SDL_image.lib;SDL_mixer.lib;SDL_gfx.lib;SDLmain.lib;SDL.lib;SDL_gfx.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>yaml-cpp.lib;SDL2_image.lib;SDL2_mixer.lib;SDL_gfx.lib;SDL2main.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -207,7 +207,7 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>yaml-cpp.lib;SDL_image.lib;SDL_mixer.lib;SDL_gfx.lib;SDLmain.lib;SDL.lib;SDL_gfx.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>yaml-cpp.lib;SDL2_image.lib;SDL2_mixer.lib;SDL_gfx.lib;SDL2main.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -348,10 +348,11 @@
     <ClCompile Include="Engine\LocalizedText.cpp" />
     <ClCompile Include="Engine\ModInfo.cpp" />
     <ClCompile Include="Engine\Music.cpp" />
-    <ClCompile Include="Engine\OpenGL.cpp" />
+    <ClCompile Include="Engine\OpenGLRenderer.cpp" />
     <ClCompile Include="Engine\OptionInfo.cpp" />
     <ClCompile Include="Engine\Options.cpp" />
     <ClCompile Include="Engine\Palette.cpp" />
+    <ClCompile Include="Engine\Renderer.cpp" />
     <ClCompile Include="Engine\RNG.cpp" />
     <ClCompile Include="Engine\Scalers\hq2x.cpp" />
     <ClCompile Include="Engine\Scalers\hq3x.cpp" />
@@ -363,12 +364,14 @@
     <ClCompile Include="Engine\Scalers\xbrz.cpp" />
     <ClCompile Include="Engine\Screen.cpp" />
     <ClCompile Include="Engine\Script.cpp" />
+    <ClCompile Include="Engine\SDLRenderer.cpp" />
     <ClCompile Include="Engine\Sound.cpp" />
     <ClCompile Include="Engine\SoundSet.cpp" />
     <ClCompile Include="Engine\State.cpp" />
     <ClCompile Include="Engine\Surface.cpp" />
     <ClCompile Include="Engine\SurfaceSet.cpp" />
     <ClCompile Include="Engine\Timer.cpp" />
+    <ClCompile Include="Engine\UIBuilder.cpp" />
     <ClCompile Include="Engine\Zoom.cpp" />
     <ClCompile Include="Geoscape\AlienBaseState.cpp" />
     <ClCompile Include="Geoscape\AllocateTrainingState.cpp" />
@@ -452,6 +455,7 @@
     <ClCompile Include="Menu\OptionsControlsState.cpp" />
     <ClCompile Include="Menu\OptionsModsState.cpp" />
     <ClCompile Include="Menu\OptionsNoAudioState.cpp" />
+    <ClCompile Include="Menu\OptionsSystemState.cpp" />
     <ClCompile Include="Menu\OptionsVideoState.cpp" />
     <ClCompile Include="Menu\PauseState.cpp" />
     <ClCompile Include="Menu\SaveGameState.cpp" />
@@ -702,11 +706,12 @@
     <ClInclude Include="Engine\Logger.h" />
     <ClInclude Include="Engine\ModInfo.h" />
     <ClInclude Include="Engine\Music.h" />
-    <ClInclude Include="Engine\OpenGL.h" />
+    <ClInclude Include="Engine\OpenGLRenderer.h" />
     <ClInclude Include="Engine\OptionInfo.h" />
     <ClInclude Include="Engine\Options.h" />
     <ClInclude Include="Engine\Options.inc.h" />
     <ClInclude Include="Engine\Palette.h" />
+    <ClInclude Include="Engine\Renderer.h" />
     <ClInclude Include="Engine\RNG.h" />
     <ClInclude Include="Engine\Scalers\common.h" />
     <ClInclude Include="Engine\Scalers\config.h" />
@@ -718,6 +723,7 @@
     <ClInclude Include="Engine\Screen.h" />
     <ClInclude Include="Engine\Script.h" />
     <ClInclude Include="Engine\ScriptBind.h" />
+    <ClInclude Include="Engine\SDLRenderer.h" />
     <ClInclude Include="Engine\ShaderDraw.h" />
     <ClInclude Include="Engine\ShaderDrawHelper.h" />
     <ClInclude Include="Engine\ShaderMove.h" />
@@ -728,6 +734,7 @@
     <ClInclude Include="Engine\Surface.h" />
     <ClInclude Include="Engine\SurfaceSet.h" />
     <ClInclude Include="Engine\Timer.h" />
+    <ClInclude Include="Engine\UIBuilder.h" />
     <ClInclude Include="Engine\Zoom.h" />
     <ClInclude Include="fmath.h" />
     <ClInclude Include="Geoscape\AlienBaseState.h" />
@@ -812,6 +819,7 @@
     <ClInclude Include="Menu\OptionsControlsState.h" />
     <ClInclude Include="Menu\OptionsModsState.h" />
     <ClInclude Include="Menu\OptionsNoAudioState.h" />
+    <ClInclude Include="Menu\OptionsSystemState.h" />
     <ClInclude Include="Menu\OptionsVideoState.h" />
     <ClInclude Include="Menu\PauseState.h" />
     <ClInclude Include="Menu\SaveGameState.h" />

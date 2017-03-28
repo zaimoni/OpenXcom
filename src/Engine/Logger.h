@@ -24,6 +24,9 @@
 #include <string>
 #include <stdio.h>
 #include "CrossPlatform.h"
+#ifdef ANDROID
+#include <android/log.h>
+#endif
 
 namespace OpenXcom
 {
@@ -57,7 +60,12 @@ public:
 	
 	static SeverityLevel& reportingLevel();
 	static std::string& logFile();
-	static std::string toString(SeverityLevel level);
+    	static std::string toString(SeverityLevel level);
+	// These functions set whether we should write our log to a file and to the system log (where available)
+	static bool& logToFile();
+	static bool& logToSystem();
+	// Do you even log?
+	static bool logEnabled();
 protected:
 	std::ostringstream os;
 private:
@@ -80,17 +88,26 @@ inline Logger::~Logger()
 	os << std::endl;
 	std::ostringstream ss;
 	ss << "[" << CrossPlatform::now() << "]" << "\t" << os.str();
-	FILE *file = fopen(logFile().c_str(), "a");
-	if (file)
+#ifdef __ANDROID__
+	if (logToSystem())
 	{
-		fprintf(file, "%s", ss.str().c_str());
-		fflush(file);
-		fclose(file);
+		__android_log_print(ANDROID_LOG_INFO, "OpenXcom", "%s", ss.str().c_str());
 	}
-	if (!file || reportingLevel() == LOG_DEBUG || reportingLevel() == LOG_VERBOSE)
+#endif
+	if (logToFile())
 	{
-		fprintf(stderr, "%s", os.str().c_str());
-		fflush(stderr);
+		FILE *file = fopen(logFile().c_str(), "a");
+		if (file)
+		{
+			fprintf(file, "%s", ss.str().c_str());
+			fflush(file);
+			fclose(file);
+		}
+		if (!file || reportingLevel() == LOG_DEBUG || reportingLevel() == LOG_VERBOSE)
+		{
+			fprintf(stderr, "%s", os.str().c_str());
+			fflush(stderr);
+		}
 	}
 }
 
@@ -110,6 +127,23 @@ inline std::string Logger::toString(SeverityLevel level)
 {
 	static const char* const buffer[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG", "VERB"};
 	return buffer[level];
+}
+
+inline bool& Logger::logToFile()
+{
+	static bool _logToFile = false;
+	return _logToFile;
+}
+
+inline bool& Logger::logToSystem()
+{
+	static bool _logToSystem = true;
+	return _logToSystem;
+}
+
+inline bool Logger::logEnabled()
+{
+	return logToFile() || logToSystem();
 }
 
 #define Log(level) \

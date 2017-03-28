@@ -53,6 +53,18 @@ private:
 	NumberText *_stackNumber;
 	std::wstring _searchString;
 	Timer *_animTimer;
+#ifdef __MOBILE__
+	Timer *_longPressTimer;
+	// SDL_Event for long press action
+	SDL_Event _longPressEvent;
+	// A fake Action pointer for long press events.
+	Action *_longPressAction;
+	State *_longPressState;
+#endif
+	// Cursor placement for drag-and-drop
+	int _xBeforeDrag, _yBeforeDrag;
+	bool _dragging, _clicked;
+
 	int _depth;
 	/// Moves an item to a specified slot.
 	void moveItem(BattleItem *item, RuleInventory *slot, int x, int y);
@@ -117,6 +129,14 @@ public:
 	void drawPrimers();
 	/// Animate surface.
 	void animate();
+#ifdef __MOBILE__
+	/// Start long press timer
+	void mousePress(Action *action, State *state);
+	/// Stop long press timer
+	void mouseRelease(Action *action, State *state);
+	/// Handle long press on grenade
+	void longPressAction();
+#endif
 };
 
 }

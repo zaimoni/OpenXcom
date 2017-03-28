@@ -117,8 +117,8 @@ public:
 	void polarToCart(double lon, double lat, Sint16 *x, Sint16 *y) const;
 	/// Converts polar coordinates to cartesian coordinates.
 	void polarToCart(double lon, double lat, double *x, double *y) const;
-	/// Converts cartesian coordinates to polar coordinates.
-	void cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const;
+	/// Converts cartesian coordinates to polar coordinates. Returns false if conversion is not possible.
+	bool cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const;
 	/// Starts rotating the globe left.
 	void rotateLeft();
 	/// Starts rotating the globe right.
@@ -191,6 +191,8 @@ public:
 	void mousePress(Action *action, State *state);
 	/// Special handling for mouse releases.
 	void mouseRelease(Action *action, State *state);
+	/// Special handling for mouse wheel.
+	void mouseWheel(Action *action, State *state);
 	/// Special handling for mouse clicks.
 	void mouseClick(Action *action, State *state);
 	/// Special handling for key presses.
@@ -213,6 +215,8 @@ public:
 	void setupRadii(int width, int height);
 	/// Move the mouse back to where it started after we finish drag scrolling.
 	void stopScrolling(Action *action);
+	/// Special handling for multifinger gestures
+	void multiGesture(Action *action, State *state);
 };
 
 }

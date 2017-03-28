@@ -10,6 +10,8 @@
 #define _SCL_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 #endif
+#define NOMINMAX
+
 #define _USE_MATH_DEFINES
 #include <algorithm>
 #include <assert.h>
@@ -108,7 +110,7 @@
 #include <SDL_endian.h>
 #include <SDL_gfxPrimitives.h>
 #include <SDL_image.h>
-#include <SDL_keysym.h>
+//#include <SDL_keysym.h>
 #include <SDL_mixer.h>
 #include <SDL_opengl.h>
 #include <SDL_syswm.h>
@@ -157,12 +159,14 @@
 #include "./Engine/Logger.h"
 #include "./Engine/ModInfo.h"
 #include "./Engine/Music.h"
-#include "./Engine/OpenGL.h"
+#include "./Engine/OpenGLRenderer.h"
 #include "./Engine/OptionInfo.h"
 #include "./Engine/Options.h"
 #include "./Engine/Palette.h"
+#include "./Engine/Renderer.h"
 #include "./Engine/RNG.h"
 #include "./Engine/Screen.h"
+#include "./Engine/SDLRenderer.h"
 #include "./Engine/ShaderDraw.h"
 #include "./Engine/ShaderDrawHelper.h"
 #include "./Engine/ShaderMove.h"

@@ -55,6 +55,14 @@ enum ScaleType
 	SCALE_SCREEN_DIV_2,
 	SCALE_SCREEN
 };
+
+// System-specific UI setting
+enum SystemUIStyle
+{
+	SYSTEMUI_ALWAYS_SHOWN,
+	SYSTEMUI_LOW_PROFILE,
+	SYSTEMUI_IMMERSIVE
+};
 /**
  * Container for all the various global game options
  * and customizable settings.
@@ -109,6 +117,10 @@ namespace Options
 	const std::map<std::string, ModInfo> &getModInfos();
 	/// Refreshes the mods and filemaps.
 	void updateMods();
+	/// Sets the user folder (should be called from Java)
+	void setUserFolder(const std::string &userFolder);
+	/// Sets the config folder (should be called from Java)
+	void setConfFolder(const std::string &confFolder);
 }
 
 }

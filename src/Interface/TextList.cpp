@@ -1073,15 +1073,10 @@ void TextList::think()
  */
 void TextList::mousePress(Action *action, State *state)
 {
-	bool allowScroll = true;
-	if (Options::changeValueByMouseWheel != 0)
+	if (_dragScrollable)
 	{
-		allowScroll = (action->getAbsoluteXMouse() < _arrowsLeftEdge || action->getAbsoluteXMouse() > _arrowsRightEdge);
-	}
-	if (allowScroll)
-	{
-		if (action->getDetails()->button.button == SDL_BUTTON_WHEELUP) scrollUp(false, true);
-		else if (action->getDetails()->button.button == SDL_BUTTON_WHEELDOWN) scrollDown(false, true);
+		_accumulatedDelta = 0;
+		_overThreshold = false;
 	}
 	if (_selectable)
 	{
@@ -1096,6 +1091,34 @@ void TextList::mousePress(Action *action, State *state)
 	}
 }
 
+/**
+ * Handles mousewheel scrolling
+ */
+void TextList::mouseWheel(Action *action, State *state)
+{
+  	bool allowScroll = true;
+	if (Options::changeValueByMouseWheel != 0)
+	{
+		allowScroll = (action->getAbsoluteXMouse() < _arrowsLeftEdge || action->getAbsoluteXMouse() > _arrowsRightEdge);
+	}
+	if (allowScroll && action->getDetails()->type == SDL_MOUSEWHEEL)
+	{
+		if (action->getDetails()->wheel.y > 0) scrollUp(false, true);
+		else scrollDown(false, true);
+	}
+	if (_selectable)
+	{
+		if (_selRow < _rows.size())
+		{
+			InteractiveSurface::mouseWheel(action, state);
+		}
+	}
+	else
+	{
+		InteractiveSurface::mouseWheel(action, state);
+	}
+}
+
 /*
  * Ignores any mouse clicks that aren't on a row.
  * @param action Pointer to an action.
@@ -1103,6 +1126,7 @@ void TextList::mousePress(Action *action, State *state)
  */
 void TextList::mouseRelease(Action *action, State *state)
 {
+	_accumulatedDelta = 0;
 	if (_selectable)
 	{
 		if (_selRow < _rows.size())
@@ -1123,6 +1147,13 @@ void TextList::mouseRelease(Action *action, State *state)
  */
 void TextList::mouseClick(Action *action, State *state)
 {
+	if (_overThreshold && _dragScrollable)
+	{
+		// End scrolling action.
+		_overThreshold = false;
+		_accumulatedDelta = 0;
+		return;
+	}
 	if (_selectable)
 	{
 		if (_selRow < _rows.size())
@@ -1148,6 +1179,29 @@ void TextList::mouseClick(Action *action, State *state)
  */
 void TextList::mouseOver(Action *action, State *state)
 {
+	if (_scrolling && _dragScrollable)
+	{
+		const int threshold = (_font->getHeight() + _font->getSpacing()) * action->getYScale();
+		const SDL_Event *ev = action->getDetails();
+		if (ev->type == SDL_MOUSEMOTION && ev->motion.state != 0)
+		{
+			// Only accumulate delta while mouse button is pressed
+			_accumulatedDelta += action->getDetails()->motion.yrel;
+		}
+		if (std::abs(_accumulatedDelta) >= threshold)
+		{
+			_overThreshold = action->getDetails()->motion.state != 0;
+		}
+		if (_overThreshold && action->getDetails()->motion.state)
+		{
+			if (std::abs(_accumulatedDelta) >= threshold)
+			{
+				if (_accumulatedDelta < 0) { scrollDown(false, false);      } // Finger moving up
+				else					   { scrollUp(false, false);        } // Finger moving down
+				_accumulatedDelta = 0;
+			}
+		}
+	}
 	if (_selectable)
 	{
 		int rowHeight = _font->getHeight() + _font->getSpacing(); //theorethical line height
@@ -1270,4 +1324,21 @@ void TextList::setFlooding(bool flooding)
 	_flooding = flooding;
 }
 
+/**
+*  Sets drag-scrolling option, taking into account the option to actually drag-scroll.
+*  @param scrollable Desired drag-scrolling state.
+*/
+void TextList::setDragScrollable(bool scrollable)
+{
+	_dragScrollable = scrollable && Options::listDragScroll;
+}
+
+/**
+*  Checks if the TextList supports drag-scrolling.
+*  @return true if the list is drag-scrollable.
+*/
+bool TextList::isDragScrollable()
+{
+	return _dragScrollable;
+}
 }

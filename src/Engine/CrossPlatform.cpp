@@ -64,13 +64,23 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <pwd.h>
+#ifndef __ANDROID__
 #include <execinfo.h>
+#endif
 #endif
 #include <SDL.h>
 #include <SDL_syswm.h>
 #ifdef __HAIKU__
 #include <FindDirectory.h>
 #include <StorageDefs.h>
+#endif
+
+#ifdef __ANDROID__
+#include <android/log.h>
+#include <jni.h>
+#include "State.h"
+#include "Game.h"
+#include "../Menu/StartState.h"
 #endif
 
 namespace OpenXcom
@@ -109,6 +119,8 @@ void showError(const std::string &error)
 {
 #ifdef _WIN32
 	MessageBoxA(NULL, error.c_str(), "OpenXcom Error", MB_ICONERROR | MB_OK);
+#elif defined (__ANDROID__)
+	__android_log_print(ANDROID_LOG_ERROR, "OpenXcom", "%s", error.c_str());
 #else
 	if (errorDlg.empty())
 	{
@@ -153,6 +165,13 @@ std::vector<std::string> findDataFolders()
 	std::vector<std::string> list;
 #ifdef __MORPHOS__
 	list.push_back("PROGDIR:");
+	return list;
+#endif
+
+#ifdef __ANDROID__
+	// Stop being smart about finding data - it frustrates the users.
+	//list.push_back("/sdcard/openxcom/data/");
+	//list.push_back("/storage/extSdCard/openxcom/data/");
 	return list;
 #endif
 	
@@ -246,6 +265,13 @@ std::vector<std::string> findUserFolders()
 	return list;
 #endif
 
+#ifdef __ANDROID__
+	list.push_back("/sdcard/openxcom/");
+	list.push_back("/storage/extSdCard/openxcom/");
+	return list;
+#endif
+
+	
 #ifdef _WIN32
 	char path[MAX_PATH];
 
@@ -314,6 +340,10 @@ std::string findConfigFolder()
 {
 #ifdef __MORPHOS__
 	return "PROGDIR:";
+#endif
+
+#ifdef __ANDROID__
+	return "/sdcard/openxcom/";
 #endif
 
 #if defined(_WIN32) || defined(__APPLE__)
@@ -613,6 +643,13 @@ std::string noExt(const std::string &filename)
  */
 std::string getLocale()
 {
+#ifdef __ANDROID__
+	if (Options::systemLocale.length() > 0)
+	{
+		return Options::systemLocale;
+	}
+	return std::string("en-US");
+#endif
 #ifdef _WIN32
 	char language[9], country[9];
 
@@ -735,11 +772,51 @@ std::pair<std::wstring, std::wstring> timeToString(time_t time)
 	GetDateFormatW(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &st, NULL, localDate, 25);
 	GetTimeFormatW(LOCALE_USER_DEFAULT, TIME_NOSECONDS, &st, NULL, localTime, 25);
 #endif*/
-
 	struct tm *timeinfo = localtime(&(time));
+#ifdef __ANDROID__
+	/* oh android, why do you have to be so broken...*/
+	std::wostringstream aLocalDate, aLocalTime;
+
+	/*char cLocalDate[25], cLocalTime[25];
+	strftime(cLocalDate, 25, "%Y-%m-%d", timeinfo);
+	strftime(cLocalTime, 25, "%H:%M", timeinfo);
+	for(int i=0; i < 25; ++i)
+	{
+		localDate[i] = cLocalDate[i];
+		localTime[i] = cLocalTime[i];
+	}*/
+	
+	aLocalDate << (1900 + timeinfo->tm_year);
+	aLocalDate << L"-";
+	if (timeinfo->tm_mon < 9) 
+	{ 
+		aLocalDate << L"0";
+	}
+	aLocalDate << timeinfo->tm_mon + 1;
+	aLocalDate << L"-";
+	if (timeinfo->tm_mday < 10)
+	{
+		aLocalDate << L"0";
+	}
+	aLocalDate << timeinfo->tm_mday;
+	
+	if (timeinfo->tm_hour < 10)
+	{
+		aLocalTime << L"0";
+	}
+	aLocalTime << timeinfo->tm_hour;
+	aLocalTime << L":";
+	if (timeinfo->tm_min < 10)
+	{
+		aLocalTime << L"0";
+	}
+	aLocalTime << timeinfo->tm_min;
+	return std::make_pair(aLocalDate.str(), aLocalTime.str());
+	
+#else
 	wcsftime(localDate, 25, L"%Y-%m-%d", timeinfo);
 	wcsftime(localTime, 25, L"%H:%M", timeinfo);
-
+#endif
 	return std::make_pair(localDate, localTime);
 }
 
@@ -797,14 +874,14 @@ bool moveFile(const std::string &src, const std::string &dest)
 /**
  * Notifies the user that maybe he should have a look.
  */
-void flashWindow()
+void flashWindow(SDL_Window *winPtr)
 {
 #ifdef _WIN32
 	SDL_SysWMinfo wminfo;
 	SDL_VERSION(&wminfo.version)
-	if (SDL_GetWMInfo(&wminfo))
+	if (SDL_GetWindowWMInfo(winPtr, &wminfo) == SDL_TRUE)
 	{
-		HWND hwnd = wminfo.window;
+		HWND hwnd = wminfo.info.win.window;
 		FlashWindow(hwnd, true);
 	}
 #endif
@@ -863,7 +940,7 @@ std::string getDosPath()
  * @param winResource ID for Windows icon.
  * @param unixPath Path to PNG icon for Unix.
  */
-void setWindowIcon(int winResource, const std::string &unixPath)
+void setWindowIcon(int winResource, const std::string &unixPath, SDL_Window *winPtr)
 {
 #ifdef _WIN32
 	HINSTANCE handle = GetModuleHandle(NULL);
@@ -871,11 +948,14 @@ void setWindowIcon(int winResource, const std::string &unixPath)
 
 	SDL_SysWMinfo wminfo;
 	SDL_VERSION(&wminfo.version)
-	if (SDL_GetWMInfo(&wminfo))
+	if (SDL_GetWindowWMInfo(winPtr, &wminfo))
 	{
-		HWND hwnd = wminfo.window;
+		HWND hwnd = wminfo.info.win.window;
 		SetClassLongPtr(hwnd, GCLP_HICON, (LONG_PTR)icon);
 	}
+#elif __ANDROID__
+	/* Android app has its icon and title set by the Java portion, no need to do anything here */
+	return;
 #else
 	// SDL only takes UTF-8 filenames
 	// so here's an ugly hack to match this ugly reasoning
@@ -883,19 +963,152 @@ void setWindowIcon(int winResource, const std::string &unixPath)
 	SDL_Surface *icon = IMG_Load(utf8.c_str());
 	if (icon != 0)
 	{
-		SDL_WM_SetIcon(icon, NULL);
+		SDL_SetWindowIcon(winPtr, icon);
 		SDL_FreeSurface(icon);
 	}
 #endif
 }
 
+void findDirDialog()
+{
+#ifdef __ANDROID__
+	JNIEnv *env = (JNIEnv*) SDL_AndroidGetJNIEnv();
+	jobject instance = (jobject) SDL_AndroidGetActivity();
+	jclass oxcJClass = env->GetObjectClass(instance);
+	jmethodID showDirDialogMethod = env->GetMethodID(oxcJClass, "showDirDialog", "()V");
+	if (showDirDialogMethod != NULL)
+	{
+		Log(LOG_INFO) << "Found candidate method ID: " << showDirDialogMethod;
+		env->CallVoidMethod(instance, showDirDialogMethod);
+	}
+	else
+	{
+		Log(LOG_INFO) << "Could not find showDirDialog method!";
+	}
+	env->DeleteLocalRef(instance);
+	Log(LOG_INFO) << "Returned to native code!";
+#endif
+}
+
+void setSystemUI()
+{
+#ifdef __ANDROID__
+	JNIEnv *env = (JNIEnv*) SDL_AndroidGetJNIEnv();
+	jobject instance = (jobject) SDL_AndroidGetActivity();
+	jclass oxcJClass = env->GetObjectClass(instance);
+	jmethodID changeSystemUIMethod = env->GetMethodID(oxcJClass, "changeSystemUI", "(I)V");
+	jvalue SysUIArg;
+	SysUIArg.i = Options::systemUI;
+	if (changeSystemUIMethod != NULL)
+	{
+		env->CallVoidMethodA(instance, changeSystemUIMethod, &SysUIArg);
+	}
+	else
+	{
+		Log(LOG_INFO) << "Could not find changeSystemUI method!";
+	}
+	env->DeleteLocalRef(instance);
+#endif
+}
+
+#ifdef __ANDROID__
+	// This loads up new paths for the game and restarts. Called from Java.
+	void Java_org_libsdl_openxcom_OpenXcom_nativeSetPaths(JNIEnv* env, jclass cls, jstring gamePath, jstring savePath, jstring confPath)
+	{
+		Log(LOG_INFO) << "Re-setting paths...";
+		const char *gamePathString = env->GetStringUTFChars(gamePath, 0);
+		const char *savePathString = env->GetStringUTFChars(savePath, 0);
+		const char *confPathString = env->GetStringUTFChars(confPath, 0);
+		std::string dataFolder(gamePathString);
+		std::string saveFolder(savePathString);
+		std::string confFolder(confPathString);
+		Log(LOG_INFO) << "Data folder is: " << dataFolder;
+		Log(LOG_INFO) << "User folder is: " << saveFolder;
+		Log(LOG_INFO) << "Conf folder is: " << confFolder;
+	    env->ReleaseStringUTFChars(gamePath, gamePathString);
+	    env->ReleaseStringUTFChars(savePath, savePathString);
+	    env->ReleaseStringUTFChars(confPath, confPathString);
+		// The correct resource reloading requires us to
+		// re-initialize the whole game. Oh well.
+		const char* argv[] = {"openxcom.apk",
+						"-locale", Options::systemLocale.c_str(),
+						"-data", dataFolder.c_str(),
+						"-user", saveFolder.c_str(),
+						"-cfg", confFolder.c_str()};
+		// Bad practice!
+		Options::init(sizeof(argv) / sizeof(char*), (char**)argv);
+		Game *game = State::getGame();
+		game->setState(new StartState);
+	}
+
+
+#endif
+
+// Get system version (for Androids)
+int getSystemVersion() 
+{
+#ifdef __ANDROID__
+	static int version;
+	if (version)
+	{
+		return version;
+	}
+	JNIEnv* env = (JNIEnv*) SDL_AndroidGetJNIEnv();
+	jclass versionClass = env->FindClass("android/os/Build$VERSION");
+	if (versionClass)
+	{
+		jfieldID versionField = env->GetStaticFieldID(versionClass,
+					"SDK_INT",
+					"I");
+		version = env->GetStaticIntField(versionClass,
+					versionField);
+	}
+	return version;
+#else
+	return 10;
+#endif
+}
+
+// Get pointing device status (replaces SDL_GetMouseState)
+int getPointerState(int *x, int *y)
+{
+        unsigned int mouseState = SDL_GetMouseState(x, y);
+        if (mouseState)
+        {
+                return mouseState;
+        }
+        int numTouch = SDL_GetNumTouchDevices();
+        for (int i = 0; i < numTouch; i++)
+        {
+                SDL_TouchID touchDevice = SDL_GetTouchDevice(i);
+                if (SDL_GetNumTouchFingers(touchDevice))
+                {
+                        // Emulate mouse behavior
+                        if (x || y) {
+                                // WARNING: May be broken as hell.
+                                SDL_Finger *finger = SDL_GetTouchFinger(touchDevice, 0);
+                                if (x) {
+                                        *x = finger->x * Options::displayWidth;
+                                }
+                                
+                                if (y) {
+                                        *y = finger->y * Options::displayHeight;
+                                }
+                        }
+                        // TODO: Maybe use multiple fingers to simulate middle and right buttons?
+                        return SDL_BUTTON(SDL_BUTTON_LEFT);
+                }
+        }
+        // No mouse presses or touches detected.
+        return mouseState;
+}
 /**
  * Logs the stack back trace leading up to this function call.
  * @param ex Pointer to stack context (PCONTEXT on Windows), NULL to use current context.
  */
 void stackTrace(void *ctx)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
 	const int MAX_SYMBOL_LENGTH = 1024;
 	CONTEXT context;
 	if (ctx != 0)
@@ -986,6 +1199,9 @@ void stackTrace(void *ctx)
 		Log(LOG_FATAL) << "No stack trace generated: " << err;
 	}
 	SymCleanup(process);
+#elif defined(__ANDROID__)
+#warning Stack trace not supported on Android yet!
+	Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
 #else
 	const int MAX_STACK_FRAMES = 16;
 	void *array[MAX_STACK_FRAMES];

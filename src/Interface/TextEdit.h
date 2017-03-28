@@ -46,6 +46,14 @@ private:
 	State *_state;
 	/// Checks if a character will exceed the maximum width.
 	bool exceedsMaxWidth(wchar_t c);
+#ifdef __MOBILE__
+	/// Shows keyboard on touchscreen devices
+	void _startTextInput();
+	/// Hides keyboard on touchscreen devices
+	void _stopTextInput();
+	/// Flag to see if keyboard is on the screen
+	bool _isKeyboardActive;
+#endif
 	/// Checks if character is valid to be inserted at caret position.
 	bool isValidChar(Uint16 key);
 public:
@@ -101,6 +109,7 @@ public:
 	void keyboardPress(Action *action, State *state);
 	/// Hooks an action handler to when the slider changes.
 	void onChange(ActionHandler handler);
+	void textInput(Action *action, State *state);
 	/// Sets a function to be called every time ENTER is pressed.
 	void onEnter(ActionHandler handler);
 };
