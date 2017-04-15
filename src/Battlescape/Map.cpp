@@ -1298,7 +1298,7 @@ void Map::drawTerrain(Surface *surface)
 								{
 									if (unit && (unit->getVisible() || _save->getDebugMode()))
 									{
-										tmpSurface = _game->getMod()->getSurfaceSet("CURSOR.PCK")->getFrame(7 + _animFrame / 2);
+										tmpSurface = _game->getMod()->getSurfaceSet("CURSOR.PCK")->getFrame(7 + halfAnimFrame);
 									}
 									else
 									{
