@@ -207,6 +207,7 @@ void create()
 	_info.push_back(OptionInfo("storageLimitsEnforced", &storageLimitsEnforced, false, "STR_STORAGELIMITSENFORCED", "STR_GEOSCAPE"));
 	_info.push_back(OptionInfo("canSellLiveAliens", &canSellLiveAliens, false, "STR_CANSELLLIVEALIENS", "STR_GEOSCAPE"));
 	_info.push_back(OptionInfo("anytimePsiTraining", &anytimePsiTraining, false, "STR_ANYTIMEPSITRAINING", "STR_GEOSCAPE"));
+	_info.push_back(OptionInfo("anytimeMartialTraining", &anytimeMartialTraining, true, "STR_ANYTIMEMARTIALTRAINING", "STR_GEOSCAPE"));
 	_info.push_back(OptionInfo("globeSeasons", &globeSeasons, false, "STR_GLOBESEASONS", "STR_GEOSCAPE"));
 	_info.push_back(OptionInfo("psiStrengthEval", &psiStrengthEval, false, "STR_PSISTRENGTHEVAL", "STR_GEOSCAPE"));
 	_info.push_back(OptionInfo("canTransferCraftsWhileAirborne", &canTransferCraftsWhileAirborne, false, "STR_CANTRANSFERCRAFTSWHILEAIRBORNE", "STR_GEOSCAPE")); // When the craft can reach the destination base with its fuel
@@ -281,7 +282,8 @@ void create()
 	_info.push_back(OptionInfo("removeWoundedFromTraining", &removeWoundedFromTraining, false, "STR_REMOVE_WOUNDED_FROM_TRAINING", "STR_OXCE"));
 	_info.push_back(OptionInfo("autoAssignPilots", &autoAssignPilots, false, "STR_AUTO_ASSIGN_PILOTS", "STR_OXCE"));
 	_info.push_back(OptionInfo("fullNightVision", &fullNightVision, false, "STR_FULL_NIGHT_VISION", "STR_OXCE"));
-	_info.push_back(OptionInfo("nightVisionColor", &nightVisionColor, 5, "STR_NIGHT_VISION_COLOR", "STR_OXCE"));
+	_info.push_back(OptionInfo("nightVisionColor", &nightVisionColor, 8, "STR_NIGHT_VISION_COLOR", "STR_OXCE"));
+	_info.push_back(OptionInfo("autoNightVision", &autoNightVision, false, "STR_AUTO_NIGHT_VISION", "STR_OXCE"));
 	_info.push_back(OptionInfo("autoSell", &autoSell, false, "STR_AUTO_SELL", "STR_OXCE"));
 	_info.push_back(OptionInfo("techTreeViewerSpoilerProtection", &techTreeViewerSpoilerProtection, false, "STR_TECH_SPOILER_PROTECTION", "STR_OXCE"));
 
@@ -1096,6 +1098,52 @@ void load(const std::string &filename)
 	}
 }
 
+void writeNode(const YAML::Node& node, YAML::Emitter& emitter)
+{
+	switch (node.Type())
+	{
+		case YAML::NodeType::Sequence:
+		{
+			emitter << YAML::BeginSeq;
+			for (size_t i = 0; i < node.size(); i++)
+			{
+				writeNode(node[i], emitter);
+			}
+			emitter << YAML::EndSeq;
+			break;
+		}
+		case YAML::NodeType::Map:
+		{
+			emitter << YAML::BeginMap;
+
+			// First collect all the keys
+			std::vector<std::string> keys(node.size());
+			int key_it = 0;
+			for (YAML::const_iterator it = node.begin(); it != node.end(); ++it)
+			{
+				keys[key_it++] = it->first.as<std::string>();
+			}
+
+			// Then sort them
+			std::sort(keys.begin(), keys.end());
+
+			// Then emit all the entries in sorted order.
+			for(size_t i = 0; i < keys.size(); i++)
+			{
+				emitter << YAML::Key;
+				emitter << keys[i];
+				emitter << YAML::Value;
+				writeNode(node[keys[i]], emitter);
+			}
+			emitter << YAML::EndMap;
+			break;
+		}
+		default:
+			emitter << node;
+			break;
+	}
+}
+
 /**
  * Saves options to a YAML file.
  * @param filename YAML filename.
@@ -1128,9 +1176,9 @@ void save(const std::string &filename)
 			doc["mods"].push_back(mod);
 		}
 
-		out << doc;
+		writeNode(doc, out);
 
-		sav << out.c_str();
+		sav << out.c_str() << std::endl;
 	}
 	catch (YAML::Exception &e)
 	{

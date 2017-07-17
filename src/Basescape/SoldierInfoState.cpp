@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2016 OpenXcom Developers.
+ * Copyright 2010-2017 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -23,6 +23,7 @@
 #include "../Engine/Game.h"
 #include "../Engine/Action.h"
 #include "../Mod/Mod.h"
+#include "../Engine/Language.h"
 #include "../Engine/LocalizedText.h"
 #include "../Engine/Options.h"
 #include "../Interface/Bar.h"
@@ -353,7 +354,7 @@ void SoldierInfoState::init()
 
 	std::ostringstream flagId;
 	flagId << "Flag";
-	flagId << _soldier->getNationality();
+	flagId << _soldier->getNationality() + _soldier->getRules()->getFlagOffset();
 	Surface *flagTexture = _game->getMod()->getSurface(flagId.str().c_str(), false);
 	_flag->clear();
 	if (flagTexture != 0)
@@ -522,11 +523,11 @@ void SoldierInfoState::init()
 		_txtDead->setVisible(true);
 		if (_soldier->getDeath() && _soldier->getDeath()->getCause())
 		{
-			_txtDead->setText(tr("STR_KILLED_IN_ACTION"));
+			_txtDead->setText(_game->getLanguage()->getString("STR_KILLED_IN_ACTION", _soldier->getGender()));
 		}
 		else
 		{
-			_txtDead->setText(tr("STR_MISSING_IN_ACTION"));
+			_txtDead->setText(_game->getLanguage()->getString("STR_MISSING_IN_ACTION", _soldier->getGender()));
 		}
 	}
 	else

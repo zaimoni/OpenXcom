@@ -517,6 +517,7 @@ void TileEngine::addLight(GraphSubset gs, Position center, int power, LightLayer
 	const auto offsetCenter = (accuracy / 2 + Position(-1, -1, (ground ? 0 : accuracy.z/4) - tileHeight * accuracy.z / 24));
 	const auto offsetTarget = (accuracy / 2 + Position(-1, -1, 0));
 	const auto clasicLighting = !(getEnhancedLighting() & ((fire ? 1 : 0) | (items ? 2 : 0) | (units ? 4 : 0)));
+	const auto topVoxel = (_blockVisibility[_save->getTileIndex(center)].blockUp ? (center.z + 1) : _save->getMapSizeZ()) * accuracy.z - 1;
 
 	iterateTiles(
 		_save,
@@ -557,6 +558,13 @@ void TileEngine::addLight(GraphSubset gs, Position center, int power, LightLayer
 			auto stepsB = 0;
 			auto lightA = currLight;
 			auto lightB = currLight;
+
+			if (startVoxel.z > topVoxel)
+			{
+				//Do not peek out your head outside map
+				startVoxel.z = topVoxel;
+			}
+
 			auto calculateBlock = [&](Position point, Position &lastPoint, int &light, int &steps)
 			{
 				auto height = (point.z % accuracy.z) * divide;
@@ -632,6 +640,7 @@ void TileEngine::addLight(GraphSubset gs, Position center, int power, LightLayer
 				}
 				return false;
 			};
+
 			calculateLineHitHelper(startVoxel, endVoxel,
 				[&](Position voxel)
 				{
@@ -1071,10 +1080,11 @@ bool TileEngine::visible(BattleUnit *currentUnit, Tile *tile)
 				densityOfFire += t->getFire();
 			}
 		}
-		auto visibilityQuality = visibleDistanceMaxVoxel - visibleDistanceVoxels - densityOfSmoke * getMaxViewDistance()/(3 * 20);
-		ModScript::VisibilityUnitParser::Output arg{ visibilityQuality, visibilityQuality, ScriptTag<BattleUnitVisibility>::getNullTag() };
-		ModScript::VisibilityUnitParser::Worker worker{ currentUnit, tile->getUnit(), visibleDistanceVoxels, visibleDistanceMaxVoxel, densityOfSmoke * smokeDensityFactor / 100, densityOfFire };
-		worker.execute(currentUnit->getArmor()->getVisibilityUnitScript(), arg);
+		visibleDistanceMaxVoxel = getMaxVoxelViewDistance(); // reset again (because of smoke formula)
+		auto visibilityQuality = visibleDistanceMaxVoxel - visibleDistanceVoxels - densityOfSmoke * smokeDensityFactor * getMaxViewDistance()/(3 * 20 * 100);
+		ModScript::VisibilityUnit::Output arg{ visibilityQuality, visibilityQuality, ScriptTag<BattleUnitVisibility>::getNullTag() };
+		ModScript::VisibilityUnit::Worker worker{ currentUnit, tile->getUnit(), visibleDistanceVoxels, visibleDistanceMaxVoxel, densityOfSmoke * smokeDensityFactor / 100, densityOfFire };
+		worker.execute(currentUnit->getArmor()->getScript<ModScript::VisibilityUnit>(), arg);
 		unitSeen = 0 < arg.getFirst();
 	}
 	return unitSeen;
@@ -1633,11 +1643,12 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
 		distance(unit->getPosition(), target->getPosition()) < weapon->getRules()->getMaxRange() &&
 		(	// has a melee weapon and is in melee range
 			(weapon->getRules()->getBattleType() == BT_MELEE &&
+				weapon->getAmmoForAction(BA_HIT) &&
 				validMeleeRange(unit, target, unit->getDirection()) &&
 				BattleActionCost(BA_HIT, unit, weapon).haveTU()) ||
 			// has a gun capable of snap shot with ammo
-			(weapon->getRules()->getBattleType() != BT_MELEE &&
-				weapon->getAmmoItem() &&
+			(weapon->getRules()->getBattleType() == BT_FIREARM &&
+				weapon->getAmmoForAction(BA_SNAPSHOT) &&
 				BattleActionCost(BA_SNAPSHOT, unit, weapon).haveTU())))
 	{
 		reaction.attackType = BA_SNAPSHOT;
@@ -1677,7 +1688,8 @@ bool TileEngine::tryReaction(BattleUnit *unit, BattleUnit *target, BattleActionT
 	action.target = target->getPosition();
 	action.updateTU();
 
-	if (action.weapon->getAmmoItem() && action.weapon->getAmmoItem()->getAmmoQuantity() && action.haveTU())
+	auto ammo = action.weapon->getAmmoForAction(attackType);
+	if (ammo && action.haveTU())
 	{
 		action.targeting = true;
 
@@ -1692,7 +1704,7 @@ bool TileEngine::tryReaction(BattleUnit *unit, BattleUnit *target, BattleActionT
 				unit->setAIModule(ai);
 			}
 
-			int radius = action.weapon->getAmmoItem()->getRules()->getExplosionRadius(unit);
+			int radius = ammo->getRules()->getExplosionRadius(unit);
 			if (radius > 0 &&
 				ai->explosiveEfficacy(action.target, unit, radius, -1) == 0)
 			{
@@ -1707,16 +1719,16 @@ bool TileEngine::tryReaction(BattleUnit *unit, BattleUnit *target, BattleActionT
 			int dist = distance(unit->getPositionVexels(), target->getPositionVexels());
 			auto *origTarg = _save->getTile(originalAction.target) ? _save->getTile(originalAction.target)->getUnit() : nullptr;
 
-			ModScript::ReactionUnitParser::Output arg{ reactionChance, dist };
-			ModScript::ReactionUnitParser::Worker worker{ target, unit, originalAction.weapon, originalAction.type, origTarg, moveType };
+			ModScript::ReactionCommon::Output arg{ reactionChance, dist };
+			ModScript::ReactionCommon::Worker worker{ target, unit, originalAction.weapon, originalAction.type, origTarg, moveType };
 			if (originalAction.weapon)
 			{
-				worker.execute(originalAction.weapon->getRules()->getReacActionScript(), arg);
+				worker.execute(originalAction.weapon->getRules()->getScript<ModScript::ReactionWeaponAction>(), arg);
 			}
 
-			worker.execute(target->getArmor()->getReacActionScript(), arg);
+			worker.execute(target->getArmor()->getScript<ModScript::ReactionUnitAction>(), arg);
 
-			worker.execute(unit->getArmor()->getReacReactionScript(), arg);
+			worker.execute(unit->getArmor()->getScript<ModScript::ReactionUnitReaction>(), arg);
 
 			if (RNG::percent(arg.getFirst()))
 			{
@@ -1791,28 +1803,27 @@ int TileEngine::hitTile(Tile* tile, int damage, const RuleDamageType* type)
  */
 bool TileEngine::awardExperience(BattleUnit *unit, BattleItem *weapon, BattleUnit *target, bool rangeAtack)
 {
+	if (!target)
+	{
+		return false;
+	}
+
 	if (!weapon)
 	{
 		return false;
 	}
 
-	if (!target)
-	{
-		return false;
-	}
-	else if (weapon->getRules()->getBattleType() != BT_MEDIKIT)
-	{
-		// only enemies count, not friends or neutrals
-		if (target->getOriginalFaction() != FACTION_HOSTILE) return false;
+	using upExpType = void (BattleUnit::*)();
 
-		// mind-controlled enemies don't count though!
-		if (target->getFaction() != FACTION_HOSTILE) return false;
-	}
+	ExperienceTrainingMode expType = weapon->getRules()->getExperienceTrainingMode();
+	upExpType expFuncA = nullptr;
+	upExpType expFuncB = nullptr;
+	int expMultiply = 100;
 
-	if (weapon->getRules()->getExperienceTrainingMode() > ETM_DEFAULT)
+	if (expType > ETM_DEFAULT)
 	{
 		// can train psi strength and psi skill only if psi skill is already > 0
-		if (weapon->getRules()->getExperienceTrainingMode() >= ETM_PSI_STRENGTH && weapon->getRules()->getExperienceTrainingMode() <= ETM_PSI_STRENGTH_OR_SKILL_2X)
+		if (expType >= ETM_PSI_STRENGTH && expType <= ETM_PSI_STRENGTH_OR_SKILL_2X)
 		{
 			// cannot use "unit->getBaseStats()->psiSkill", because armor can give +psiSkill bonus
 			if (unit->getGeoscapeSoldier() && unit->getGeoscapeSoldier()->getCurrentStats()->psiSkill <= 0)
@@ -1821,86 +1832,120 @@ bool TileEngine::awardExperience(BattleUnit *unit, BattleItem *weapon, BattleUni
 
 		switch (weapon->getRules()->getExperienceTrainingMode())
 		{
-		case ETM_MELEE_100: unit->addMeleeExp(); break;
-		case ETM_MELEE_50: if (RNG::percent(50)) { unit->addMeleeExp(); } break;
-		case ETM_MELEE_33: if (RNG::percent(33)) { unit->addMeleeExp(); } break;
-		case ETM_FIRING_100: unit->addFiringExp(); break;
-		case ETM_FIRING_50: if (RNG::percent(50)) { unit->addFiringExp(); } break;
-		case ETM_FIRING_33: if (RNG::percent(33)) { unit->addFiringExp(); } break;
-		case ETM_THROWING_100: unit->addThrowingExp(); break;
-		case ETM_THROWING_50: if (RNG::percent(50)) { unit->addThrowingExp(); } break;
-		case ETM_THROWING_33: if (RNG::percent(33)) { unit->addThrowingExp(); } break;
-		case ETM_FIRING_AND_THROWING: unit->addFiringExp(); unit->addThrowingExp(); break;
-		case ETM_FIRING_OR_THROWING: if (RNG::percent(50)) { unit->addFiringExp(); } else { unit->addThrowingExp(); } break;
-		case ETM_REACTIONS: unit->addReactionExp(); break;
-		case ETM_REACTIONS_AND_MELEE: unit->addReactionExp(); unit->addMeleeExp(); break;
-		case ETM_REACTIONS_AND_FIRING: unit->addReactionExp(); unit->addFiringExp(); break;
-		case ETM_REACTIONS_AND_THROWING: unit->addReactionExp(); unit->addThrowingExp(); break;
-		case ETM_REACTIONS_OR_MELEE: if (RNG::percent(50)) { unit->addReactionExp(); } else { unit->addMeleeExp(); } break;
-		case ETM_REACTIONS_OR_FIRING: if (RNG::percent(50)) { unit->addReactionExp(); } else { unit->addFiringExp(); } break;
-		case ETM_REACTIONS_OR_THROWING: if (RNG::percent(50)) { unit->addReactionExp(); } else { unit->addThrowingExp(); } break;
-		case ETM_BRAVERY: unit->addBraveryExp(); break;
-		case ETM_BRAVERY_2X: unit->addBraveryExp(); unit->addBraveryExp(); break;
-		case ETM_BRAVERY_AND_REACTIONS: unit->addBraveryExp(); unit->addReactionExp(); break;
-		case ETM_BRAVERY_OR_REACTIONS: if (RNG::percent(50)) { unit->addBraveryExp(); } else { unit->addReactionExp(); } break;
-		case ETM_BRAVERY_OR_REACTIONS_2X: if (RNG::percent(50)) { unit->addBraveryExp(); unit->addBraveryExp(); } else { unit->addReactionExp(); unit->addReactionExp(); } break;
-		case ETM_PSI_STRENGTH: unit->addPsiStrengthExp(); break;
-		case ETM_PSI_STRENGTH_2X: unit->addPsiStrengthExp(); unit->addPsiStrengthExp(); break;
-		case ETM_PSI_SKILL: unit->addPsiSkillExp(); break;
-		case ETM_PSI_SKILL_2X: unit->addPsiSkillExp(); unit->addPsiSkillExp(); break;
-		case ETM_PSI_STRENGTH_AND_SKILL: unit->addPsiStrengthExp(); unit->addPsiSkillExp(); break;
-		case ETM_PSI_STRENGTH_AND_SKILL_2X: unit->addPsiStrengthExp(); unit->addPsiStrengthExp(); unit->addPsiSkillExp(); unit->addPsiSkillExp(); break;
-		case ETM_PSI_STRENGTH_OR_SKILL: if (RNG::percent(50)) { unit->addPsiStrengthExp(); } else { unit->addPsiSkillExp(); } break;
-		case ETM_PSI_STRENGTH_OR_SKILL_2X: if (RNG::percent(50)) { unit->addPsiStrengthExp(); unit->addPsiStrengthExp(); } else { unit->addPsiSkillExp(); unit->addPsiSkillExp(); } break;
+		case ETM_MELEE_100: expFuncA = &BattleUnit::addMeleeExp; break;
+		case ETM_MELEE_50: expMultiply = 50; expFuncA = &BattleUnit::addMeleeExp; break;
+		case ETM_MELEE_33: expMultiply = 33; expFuncA = &BattleUnit::addMeleeExp; break;
+		case ETM_FIRING_100: expFuncA = &BattleUnit::addFiringExp; break;
+		case ETM_FIRING_50: expMultiply = 50; expFuncA = &BattleUnit::addFiringExp; break;
+		case ETM_FIRING_33: expMultiply = 33; expFuncA = &BattleUnit::addFiringExp; break;
+		case ETM_THROWING_100: expFuncA = &BattleUnit::addThrowingExp; break;
+		case ETM_THROWING_50: expMultiply = 50; expFuncA = &BattleUnit::addThrowingExp; break;
+		case ETM_THROWING_33: expMultiply = 33; expFuncA = &BattleUnit::addThrowingExp; break;
+		case ETM_FIRING_AND_THROWING: expFuncA = &BattleUnit::addFiringExp; expFuncB = &BattleUnit::addThrowingExp; break;
+		case ETM_FIRING_OR_THROWING: if (RNG::percent(50)) { expFuncA = &BattleUnit::addFiringExp; } else { expFuncA = &BattleUnit::addThrowingExp; } break;
+		case ETM_REACTIONS: expMultiply = 100; expFuncA = &BattleUnit::addReactionExp; break;
+		case ETM_REACTIONS_AND_MELEE: expFuncA = &BattleUnit::addReactionExp; expFuncB = &BattleUnit::addMeleeExp; break;
+		case ETM_REACTIONS_AND_FIRING: expFuncA = &BattleUnit::addReactionExp; expFuncB = &BattleUnit::addFiringExp; break;
+		case ETM_REACTIONS_AND_THROWING: expFuncA = &BattleUnit::addReactionExp; expFuncB = &BattleUnit::addThrowingExp; break;
+		case ETM_REACTIONS_OR_MELEE: if (RNG::percent(50)) { expFuncA = &BattleUnit::addReactionExp; } else { expFuncA = &BattleUnit::addMeleeExp; } break;
+		case ETM_REACTIONS_OR_FIRING: if (RNG::percent(50)) { expFuncA = &BattleUnit::addReactionExp; } else { expFuncA = &BattleUnit::addFiringExp; } break;
+		case ETM_REACTIONS_OR_THROWING: if (RNG::percent(50)) { expFuncA = &BattleUnit::addReactionExp; } else { expFuncA = &BattleUnit::addThrowingExp; } break;
+		case ETM_BRAVERY: expFuncA = &BattleUnit::addBraveryExp; break;
+		case ETM_BRAVERY_2X: expMultiply = 200; expFuncA = &BattleUnit::addBraveryExp; break;
+		case ETM_BRAVERY_AND_REACTIONS: expFuncA = &BattleUnit::addBraveryExp; expFuncB = &BattleUnit::addReactionExp; break;
+		case ETM_BRAVERY_OR_REACTIONS: if (RNG::percent(50)) { expFuncA = &BattleUnit::addBraveryExp; } else { expFuncA = &BattleUnit::addReactionExp; } break;
+		case ETM_BRAVERY_OR_REACTIONS_2X: expMultiply = 200; if (RNG::percent(50)) { expFuncA = &BattleUnit::addBraveryExp; } else { expFuncA = &BattleUnit::addReactionExp; } break;
+		case ETM_PSI_STRENGTH: expFuncA = &BattleUnit::addPsiStrengthExp; break;
+		case ETM_PSI_STRENGTH_2X: expMultiply = 200; expFuncA = &BattleUnit::addPsiStrengthExp; break;
+		case ETM_PSI_SKILL: expFuncA = &BattleUnit::addPsiSkillExp; break;
+		case ETM_PSI_SKILL_2X: expMultiply = 200; expFuncA = &BattleUnit::addPsiSkillExp; break;
+		case ETM_PSI_STRENGTH_AND_SKILL: expFuncA = &BattleUnit::addPsiStrengthExp; expFuncB = &BattleUnit::addPsiSkillExp; break;
+		case ETM_PSI_STRENGTH_AND_SKILL_2X: expMultiply = 200; expFuncA = &BattleUnit::addPsiStrengthExp; expFuncB = &BattleUnit::addPsiSkillExp; break;
+		case ETM_PSI_STRENGTH_OR_SKILL: if (RNG::percent(50)) { expFuncA = &BattleUnit::addPsiStrengthExp; } else { expFuncA = &BattleUnit::addPsiSkillExp; } break;
+		case ETM_PSI_STRENGTH_OR_SKILL_2X: expMultiply = 200; if (RNG::percent(50)) { expFuncA = &BattleUnit::addPsiStrengthExp; } else { expFuncA = &BattleUnit::addPsiSkillExp; } break;
 		case ETM_NOTHING:
 		default:
 			return false;
 		}
-
-		return true;
 	}
-
-	// GRENADES AND PROXIES
-	if (weapon->getRules()->getBattleType() == BT_GRENADE || weapon->getRules()->getBattleType() == BT_PROXIMITYGRENADE)
-	{
-		unit->addThrowingExp(); // e.g. willie pete, acid grenade, stun grenade, HE grenade, smoke grenade, proxy grenade, ...
-	}
-	// MELEE
-	else if (weapon->getRules()->getBattleType() == BT_MELEE)
-	{
-		unit->addMeleeExp(); // e.g. cattle prod, cutlass, rope, ...
-	}
-	// FIREARMS and other
 	else
 	{
-		if (!rangeAtack)
+		// GRENADES AND PROXIES
+		if (weapon->getRules()->getBattleType() == BT_GRENADE || weapon->getRules()->getBattleType() == BT_PROXIMITYGRENADE)
 		{
-			unit->addMeleeExp(); // e.g. rifle/shotgun gun butt, ...
+			expType = ETM_THROWING_100;
+			expFuncA = &BattleUnit::addThrowingExp; // e.g. willie pete, acid grenade, stun grenade, HE grenade, smoke grenade, proxy grenade, ...
 		}
-		else if (weapon->getRules()->getArcingShot())
+		// MELEE
+		else if (weapon->getRules()->getBattleType() == BT_MELEE)
 		{
-			unit->addThrowingExp(); // e.g. flamethrower, javelins, combat bow, grenade launcher, molotov, black powder bomb, stick grenade, acid flask, apple, ...
+			expType = ETM_MELEE_100;
+			expFuncA = &BattleUnit::addMeleeExp; // e.g. cattle prod, cutlass, rope, ...
 		}
+		// FIREARMS and other
 		else
 		{
-			int maxRange = weapon->getRules()->getMaxRange();
-			if (maxRange > 10)
+			if (!rangeAtack)
 			{
-				unit->addFiringExp(); // e.g. panzerfaust, harpoon gun, shotgun, assault rifle, rocket launcher, small launcher, heavy cannon, blaster launcher, ...
+				expType = ETM_MELEE_100;
+				expFuncA = &BattleUnit::addMeleeExp; // e.g. rifle/shotgun gun butt, ...
 			}
-			else if (maxRange > 1)
+			else if (weapon->getRules()->getArcingShot())
 			{
-				unit->addThrowingExp(); // e.g. fuso knives, zapper, ...
-			}
-			else if (maxRange == 1)
-			{
-				unit->addMeleeExp(); // e.g. hammer, chainsaw, fusion torch, ...
+				expType = ETM_THROWING_100;
+				expFuncA = &BattleUnit::addThrowingExp; // e.g. flamethrower, javelins, combat bow, grenade launcher, molotov, black powder bomb, stick grenade, acid flask, apple, ...
 			}
 			else
 			{
-				return false; // what is this? no training!
+				int maxRange = weapon->getRules()->getMaxRange();
+				if (maxRange > 10)
+				{
+					expType = ETM_FIRING_100;
+					expFuncA = &BattleUnit::addFiringExp; // e.g. panzerfaust, harpoon gun, shotgun, assault rifle, rocket launcher, small launcher, heavy cannon, blaster launcher, ...
+				}
+				else if (maxRange > 1)
+				{
+					expType = ETM_THROWING_100;
+					expFuncA = &BattleUnit::addThrowingExp; // e.g. fuso knives, zapper, ...
+				}
+				else if (maxRange == 1)
+				{
+					expType = ETM_MELEE_100;
+					expFuncA = &BattleUnit::addMeleeExp; // e.g. hammer, chainsaw, fusion torch, ...
+				}
+				else
+				{
+					return false; // what is this? no training!
+				}
 			}
 		}
+	}
+
+	if (weapon->getRules()->getBattleType() != BT_MEDIKIT)
+	{
+		// only enemies count, not friends or neutrals
+		if (target->getOriginalFaction() != FACTION_HOSTILE) expMultiply = 0;
+
+		// mind-controlled enemies don't count though!
+		if (target->getFaction() != FACTION_HOSTILE) expMultiply = 0;
+	}
+
+	ModScript::AwardExperience::Output arg{ expMultiply, expType, };
+	ModScript::AwardExperience::Worker work{ unit, target, weapon, };
+
+	work.execute(target->getArmor()->getScript<ModScript::AwardExperience>(), arg);
+
+	expMultiply = arg.getFirst();
+
+	for (int i = expMultiply / 100; i > 0; --i)
+	{
+		if (expFuncA) (unit->*expFuncA)();
+		if (expFuncB) (unit->*expFuncB)();
+	}
+	if (RNG::percent(expMultiply % 100))
+	{
+		if (expFuncA) (unit->*expFuncA)();
+		if (expFuncB) (unit->*expFuncB)();
 	}
 
 	return true;
@@ -1973,7 +2018,7 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
 		if (type->IgnoreSelfDestruct == false)
 		{
 			Position p = Position(target->getPosition().x * 16, target->getPosition().y * 16, target->getPosition().z * 24);
-			_save->getBattleGame()->statePushNext(new ExplosionBState(_save->getBattleGame(), p, { BA_NONE, target, nullptr }, 0));
+			_save->getBattleGame()->statePushNext(new ExplosionBState(_save->getBattleGame(), p, BattleActionAttack{ BA_NONE, target, }, 0));
 		}
 	}
 
@@ -2002,6 +2047,23 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
 		{
 			// bullet/ammo
 			target->setFire(0);
+		}
+	}
+
+	if (attack.attacker)
+	{
+		// Record the last unit to hit our victim. If a victim dies without warning*, this unit gets the credit.
+		// *Because the unit died in a fire or bled out.
+		target->setMurdererId(attack.attacker->getId());
+		target->setMurdererWeapon("STR_WEAPON_UNKNOWN");
+		target->setMurdererWeaponAmmo("STR_WEAPON_UNKNOWN");
+		if (attack.weapon_item)
+		{
+			target->setMurdererWeapon(attack.weapon_item->getRules()->getName());
+		}
+		if (attack.damage_item)
+		{
+			target->setMurdererWeaponAmmo(attack.damage_item->getRules()->getName());
 		}
 	}
 
@@ -3517,17 +3579,9 @@ bool TileEngine::psiAttack(BattleAction *action)
 			victim->allowReselect();
 			victim->abortTurn(); // resets unit status to STANDING
 			// if all units from either faction are mind controlled - auto-end the mission.
-			if (_save->getSide() == FACTION_PLAYER && Options::battleAutoEnd && Options::allowPsionicCapture)
+			if (_save->getSide() == FACTION_PLAYER && Options::allowPsionicCapture)
 			{
-				int liveAliens = 0;
-				int liveSoldiers = 0;
-				_save->getBattleGame()->tallyUnits(liveAliens, liveSoldiers);
-				if (liveAliens == 0 || liveSoldiers == 0)
-				{
-					_save->setSelectedUnit(0);
-					_save->getBattleGame()->cancelCurrentAction(true);
-					_save->getBattleGame()->requestEndTurn(liveAliens == 0);
-				}
+				_save->getBattleGame()->autoEndBattle();
 			}
 		}
 		return true;
@@ -3555,7 +3609,16 @@ bool TileEngine::meleeAttack(BattleAction *action)
 		targetUnit = _save->getTile(action->target - Position(0, 0, 1))->getUnit();
 	}
 
-	int hitChance = action->actor->getFiringAccuracy(BA_HIT, action->weapon, _save->getBattleGame()->getMod());
+	int hitChance;
+	if (action->type == BA_CQB)
+	{
+		hitChance = action->actor->getFiringAccuracy(BA_CQB, action->weapon, _save->getBattleGame()->getMod());
+	}
+	else
+	{
+		hitChance = action->actor->getFiringAccuracy(BA_HIT, action->weapon, _save->getBattleGame()->getMod());
+	}
+
 	if (targetUnit)
 	{
 		int arc = _save->getTileEngine()->getArcDirection(_save->getTileEngine()->getDirectionTo(targetUnit->getPositionVexels(), action->actor->getPositionVexels()), targetUnit->getDirection());
@@ -3870,7 +3933,7 @@ bool TileEngine::validateThrow(BattleAction &action, Position originVoxel, Posit
 	double curvature = 0.5;
 	if (action.type == BA_THROW)
 	{
-		curvature = std::max(0.48, 1.73 / sqrt(sqrt((double)(action.actor->getBaseStats()->strength) / (double)(action.weapon->getRules()->getWeight()))) + (action.actor->isKneeled()? 0.1 : 0.0));
+		curvature = std::max(0.48, 1.73 / sqrt(sqrt((double)(action.actor->getBaseStats()->strength) / (double)(action.weapon->getTotalWeight()))) + (action.actor->isKneeled()? 0.1 : 0.0));
 	}
 	else
 	{

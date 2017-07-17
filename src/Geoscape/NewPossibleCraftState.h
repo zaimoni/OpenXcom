@@ -22,34 +22,33 @@
 namespace OpenXcom
 {
 
-class TextButton;
-class ToggleTextButton;
+class Game;
 class Window;
+class TextButton;
 class Text;
-class AlienDeployment;
+class Base;
+class TextList;
+class RuleCraft;
 
 /**
- * Briefing screen which displays basic info
- * about a mission site or an alien base.
+ * Window which informs the player of new possible craft to buy/rent.
+ * Also allows to go to the PurchaseState to order some new craft.
  */
-class BriefingLightState : public State
+class NewPossibleCraftState : public State
 {
 private:
-	TextButton *_btnOk;
-	ToggleTextButton *_btnArmors;
 	Window *_window;
-	Text *_txtTitle, *_txtBriefing, *_txtArmors;
-	// Checks the starting condition
-	std::wstring checkStartingCondition(AlienDeployment *deployment);
+	Text *_txtTitle;
+	TextList * _lstPossibilities;
+	TextButton *_btnPurchase, *_btnOk;
+	Base * _base;
 public:
-	/// Creates the BriefingLight state.
-	BriefingLightState(AlienDeployment *deployment);
-	/// Cleans up the BriefingLight state.
-	~BriefingLightState();
-	/// Handler for clicking the Ok button.
+	/// Creates the NewPossibleCraftState state.
+	NewPossibleCraftState(Base * base, const std::vector<RuleCraft *> & possibilities);
+	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
-	/// Handler for clicking the Armors button.
-	void btnArmorsClick(Action *action);
+	/// Handler for clicking the Purchase button.
+	void btnPurchaseClick(Action *action);
 };
 
 }

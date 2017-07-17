@@ -22,34 +22,35 @@
 namespace OpenXcom
 {
 
-class TextButton;
-class ToggleTextButton;
+class Game;
 class Window;
+class TextButton;
 class Text;
-class AlienDeployment;
+class Base;
+class Globe;
+class TextList;
+class RuleBaseFacility;
 
 /**
- * Briefing screen which displays basic info
- * about a mission site or an alien base.
+ * Window which informs the player of new possible base facility to build.
+ * Also allows to go to the BaseView to build some new facilities.
  */
-class BriefingLightState : public State
+class NewPossibleFacilityState : public State
 {
 private:
-	TextButton *_btnOk;
-	ToggleTextButton *_btnArmors;
 	Window *_window;
-	Text *_txtTitle, *_txtBriefing, *_txtArmors;
-	// Checks the starting condition
-	std::wstring checkStartingCondition(AlienDeployment *deployment);
+	Text *_txtTitle;
+	TextList * _lstPossibilities;
+	TextButton *_btnOpen, *_btnOk;
+	Base *_base;
+	Globe *_globe;
 public:
-	/// Creates the BriefingLight state.
-	BriefingLightState(AlienDeployment *deployment);
-	/// Cleans up the BriefingLight state.
-	~BriefingLightState();
-	/// Handler for clicking the Ok button.
+	/// Creates the NewPossibleFacilityState state.
+	NewPossibleFacilityState(Base *base, Globe *globe, const std::vector<RuleBaseFacility *> & possibilities);
+	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
-	/// Handler for clicking the Armors button.
-	void btnArmorsClick(Action *action);
+	/// Handler for clicking the Open button.
+	void btnOpenClick(Action *action);
 };
 
 }

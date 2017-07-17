@@ -93,7 +93,16 @@ void ProjectileFlyBState::init()
 
 	_unit = _action.actor;
 
-	_ammo = weapon->getAmmoItem();
+	bool reactionShoot = _unit->getFaction() != _parent->getSave()->getSide();
+	if (_action.type != BA_THROW)
+	{
+		_ammo = _action.weapon->getAmmoForAction(_action.type, reactionShoot ? nullptr : &_action.result);
+		if (!_ammo)
+		{
+			_parent->popState();
+			return;
+		}
+	}
 
 	if (_unit->isOut() || _unit->getHealth() <= 0 || _unit->getHealth() < _unit->getStunlevel())
 	{
@@ -103,13 +112,11 @@ void ProjectileFlyBState::init()
 	}
 
 	// reaction fire
-	if (_unit->getFaction() != _parent->getSave()->getSide())
+	if (reactionShoot)
 	{
-		// no ammo or target is dead: give the time units back and cancel the shot.
-		if (_ammo == 0
-			|| !_parent->getSave()->getTile(_action.target)->getUnit()
-			|| _parent->getSave()->getTile(_action.target)->getUnit()->isOut()
-			|| _parent->getSave()->getTile(_action.target)->getUnit() != _parent->getSave()->getSelectedUnit())
+		auto target = _parent->getSave()->getTile(_action.target)->getUnit();
+		// target is dead: cancel the shot.
+		if (!target || target->isOut() || target != _parent->getSave()->getSelectedUnit())
 		{
 			_parent->popState();
 			return;
@@ -129,18 +136,6 @@ void ProjectileFlyBState::init()
 	case BA_AIMEDSHOT:
 	case BA_AUTOSHOT:
 	case BA_LAUNCH:
-		if (_ammo == 0)
-		{
-			_action.result = "STR_NO_AMMUNITION_LOADED";
-			_parent->popState();
-			return;
-		}
-		if (_ammo->getAmmoQuantity() == 0)
-		{
-			_action.result = "STR_NO_ROUNDS_LEFT";
-			_parent->popState();
-			return;
-		}
 		if (distance > weapon->getRules()->getMaxRange())
 		{
 			// special handling for short ranges and diagonals
@@ -184,6 +179,106 @@ void ProjectileFlyBState::init()
 	default:
 		_parent->popState();
 		return;
+	}
+
+	// Check for close quarters combat
+	if (_parent->getMod()->getEnableCloseQuartersCombat() && _action.type != BA_THROW && _action.type != BA_LAUNCH && _unit->getTurretType() == -1 && !_unit->getArmor()->getIgnoresMeleeThreat())
+	{
+		// Start by finding 'targets' for the check
+		std::vector<BattleUnit*> closeQuartersTargetList;
+		int surroundingTilePositions [8][2] = {
+			{0, -1}, // north (-y direction)
+			{1, -1}, // northeast
+			{1, 0}, // east (+ x direction)
+			{1, 1}, // southeast
+			{0, 1}, // south (+y direction)
+			{-1, 1}, // southwest
+			{-1, 0}, // west (-x direction)
+			{-1, -1}}; // northwest
+		for (int dir = 0; dir < 8; dir++)
+		{
+			Position tileToCheck = _origin;
+			tileToCheck.x += surroundingTilePositions[dir][0];
+			tileToCheck.y += surroundingTilePositions[dir][1];
+
+			if (_parent->getSave()->getTile(tileToCheck)) // Make sure the tile is in bounds
+			{
+				BattleUnit* closeQuartersTarget = _parent->getSave()->selectUnit(tileToCheck);
+				// Variable for LOS check
+				int checkDirection = _parent->getTileEngine()->getDirectionTo(tileToCheck, _unit->getPosition());
+				if (closeQuartersTarget && _unit->getFaction() != closeQuartersTarget->getFaction() // Unit must exist and not be same faction
+					&& closeQuartersTarget->getArmor()->getCreatesMeleeThreat() // Unit must be valid defender, 2x2 default false here
+					&& closeQuartersTarget->getTimeUnits() >= _parent->getMod()->getCloseQuartersTuCostGlobal() // Unit must have enough TUs
+					&& closeQuartersTarget->getEnergy() >= _parent->getMod()->getCloseQuartersEnergyCostGlobal() // Unit must have enough Energy
+					&& _parent->getTileEngine()->validMeleeRange(closeQuartersTarget, _unit, checkDirection) // Unit must be able to see the unit attempting to fire
+					&& !(_unit->getFaction() == FACTION_PLAYER && closeQuartersTarget->getFaction() == FACTION_NEUTRAL) // Civilians don't inhibit player
+					&& !(_unit->getFaction() == FACTION_NEUTRAL && closeQuartersTarget->getFaction() == FACTION_PLAYER)) // Player doesn't inhibit civilians
+				{
+					closeQuartersTargetList.push_back(closeQuartersTarget);
+				}
+			}
+		}	
+
+		if (!closeQuartersTargetList.empty())
+		{
+			int closeQuartersFailedResults[6] = {
+				0,   // Fire straight down
+				0,   // Fire straight up
+				6,   // Fire left 90 degrees
+				7,   // Fire left 45 degrees
+				1,   // Fire right 45 degrees
+				2 }; // Fire right 90 degrees
+
+			for (std::vector<BattleUnit*>::iterator bu = closeQuartersTargetList.begin(); bu != closeQuartersTargetList.end(); ++bu)
+			{
+				// Create a dummy action for the CQB check
+				BattleAction closeQuartersCheck = _action;
+				closeQuartersCheck.type = BA_CQB;
+				closeQuartersCheck.target = (*bu)->getPosition();
+
+				// Roll for the check
+				if (!_parent->getTileEngine()->meleeAttack(&closeQuartersCheck))
+				{
+					// Failed the check, roll again to see result
+					if (_parent->getSave()->getSide() == FACTION_PLAYER) // Only show message during player's turn
+					{
+						_action.result = "STR_FAILED_CQB_CHECK";
+					}
+					int rng = RNG::generate(0, 5);
+					Position closeQuartersFailedNewTarget = _unit->getPosition();
+					if (rng == 1)
+					{
+						closeQuartersFailedNewTarget.z += 1;
+					}
+					else if (rng > 1)
+					{
+						int newFacing = (_unit->getDirection() + closeQuartersFailedResults[rng]) % 8;
+						closeQuartersFailedNewTarget.x += surroundingTilePositions[newFacing][0];
+						closeQuartersFailedNewTarget.y += surroundingTilePositions[newFacing][1];
+					}
+
+					// Make sure the new target is in bounds
+					if (!_parent->getSave()->getTile(closeQuartersFailedNewTarget))
+					{
+						// Default to firing at our feet
+						closeQuartersFailedNewTarget = _unit->getPosition();
+					}
+
+					// Turn to look at new target
+					_action.target = closeQuartersFailedNewTarget;
+					_unit->lookAt(_action.target, _unit->getTurretType() != -1);
+					while (_unit->getStatus() == STATUS_TURNING)
+					{
+						_unit->turn();
+					}
+
+					// We're done, spend TUs and Energy; and don't check remaining CQB candidates anymore
+					(*bu)->spendTimeUnits(_parent->getMod()->getCloseQuartersTuCostGlobal());
+					(*bu)->spendEnergy(_parent->getMod()->getCloseQuartersEnergyCostGlobal());
+					break;
+				}
+			}
+		}
 	}
 
 	if (_action.type == BA_LAUNCH || (Options::forceFire && (SDL_GetModState() & KMOD_CTRL) != 0 && _parent->getSave()->getSide() == FACTION_PLAYER) || !_parent->getPanicHandled())
@@ -347,10 +442,9 @@ bool ProjectileFlyBState::createNewProjectile()
 			{
 				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition()));
 			}
-			if (!_parent->getSave()->getDebugMode() && _action.type != BA_LAUNCH && _ammo->spendBullet() == false)
+			if (_action.type != BA_LAUNCH)
 			{
-				_parent->getSave()->removeItem(_ammo);
-				_action.weapon->setAmmoItem(0);
+				_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
 			}
 		}
 		else
@@ -390,10 +484,9 @@ bool ProjectileFlyBState::createNewProjectile()
 			{
 				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(projectile->getOrigin()));
 			}
-			if (!_parent->getSave()->getDebugMode() && _action.type != BA_LAUNCH && _ammo->spendBullet() == false)
+			if (_action.type != BA_LAUNCH)
 			{
-				_parent->getSave()->removeItem(_ammo);
-				_action.weapon->setAmmoItem(0);
+				_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
 			}
 		}
 		else
@@ -433,8 +526,7 @@ void ProjectileFlyBState::think()
 		bool hasFloor = t && !t->hasNoFloor(bt);
 		bool unitCanFly = _action.actor->getMovementType() == MT_FLY;
 
-		if (_action.type == BA_AUTOSHOT
-			&& _action.autoShotCounter < _action.weapon->getRules()->getAutoShots()
+		if (_action.weapon->haveNextShotsForAction(_action.type, _action.autoShotCounter)
 			&& !_action.actor->isOut()
 			&& _ammo->getAmmoQuantity() != 0
 			&& (hasFloor || unitCanFly))
@@ -497,7 +589,7 @@ void ProjectileFlyBState::think()
 				if (ruleItem->getBattleType() == BT_GRENADE && RNG::percent(ruleItem->getSpecialChance()) && ((Options::battleInstantGrenade && _action.weapon->getFuseTimer() == 0) || ruleItem->getFuseTimerType() == BFT_INSTANT))
 				{
 					// it's a hot grenade to explode immediately
-					_parent->statePushFront(new ExplosionBState(_parent, _parent->getMap()->getProjectile()->getPosition(-1), { _action, nullptr }));
+					_parent->statePushFront(new ExplosionBState(_parent, _parent->getMap()->getProjectile()->getPosition(-1), BattleActionAttack{ _action, _action.weapon, }));
 				}
 				else
 				{
@@ -530,10 +622,9 @@ void ProjectileFlyBState::think()
 				}
 
 				_parent->getMap()->resetCameraSmoothing();
-				if (!_parent->getSave()->getDebugMode() && _ammo && _action.type == BA_LAUNCH && _ammo->spendBullet() == false)
+				if (_action.type == BA_LAUNCH)
 				{
-					_parent->getSave()->removeItem(_ammo);
-					_action.weapon->setAmmoItem(0);
+					_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
 				}
 
 				if (_projectileImpact != V_OUTOFBOUNDS)
@@ -549,7 +640,7 @@ void ProjectileFlyBState::think()
 					_parent->statePushFront(new ExplosionBState(
 						_parent, _parent->getMap()->getProjectile()->getPosition(offset),
 						{ _action, _ammo }, 0,
-						(_action.type != BA_AUTOSHOT || _action.autoShotCounter == _action.weapon->getRules()->getAutoShots() || !_action.weapon->getAmmoItem()),
+						_action.weapon->haveNextShotsForAction(_action.type, _action.autoShotCounter) || !_action.weapon->getAmmoForAction(_action.type),
 						shotgun ? 0 : _range + _parent->getMap()->getProjectile()->getDistance()
 					));
 
@@ -646,17 +737,10 @@ void ProjectileFlyBState::think()
 									_unit->setTurnsSinceSpotted(0);
 								}
 							}
-							// Record the last unit to hit our victim. If a victim dies without warning*, this unit gets the credit.
-							// *Because the unit died in a fire or bled out.
-							victim->setMurdererId(_unit->getId());
-							if (_action.weapon != 0)
-								victim->setMurdererWeapon(_action.weapon->getRules()->getName());
-							if (_ammo != 0)
-								victim->setMurdererWeaponAmmo(_ammo->getRules()->getName());
 						}
 					}
 				}
-				else if (_action.type != BA_AUTOSHOT || _action.autoShotCounter == _action.weapon->getRules()->getAutoShots() || !_action.weapon->getAmmoItem())
+				else if (!_action.weapon->haveNextShotsForAction(_action.type, _action.autoShotCounter) || !_action.weapon->getAmmoForAction(_action.type))
 				{
 					_unit->aim(false);
 				}
@@ -699,11 +783,7 @@ bool ProjectileFlyBState::validThrowRange(BattleAction *action, Position origin,
 	}
 	int offset = 2;
 	int zd = (origin.z)-((action->target.z * 24 + offset) - target->getTerrainLevel());
-	int weight = action->weapon->getRules()->getWeight();
-	if (action->weapon->getAmmoItem() && action->weapon->getAmmoItem() != action->weapon)
-	{
-		weight += action->weapon->getAmmoItem()->getRules()->getWeight();
-	}
+	int weight = action->weapon->getTotalWeight();
 	double maxDistance = (getMaxThrowDistance(weight, action->actor->getBaseStats()->strength, zd) + 8) / 16.0;
 	int xdiff = action->target.x - action->actor->getPosition().x;
 	int ydiff = action->target.y - action->actor->getPosition().y;

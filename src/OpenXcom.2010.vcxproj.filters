@@ -1018,6 +1018,12 @@
     <ClCompile Include="Geoscape\NewPossiblePurchaseState.cpp">
       <Filter>Geoscape</Filter>
     </ClCompile>
+    <ClCompile Include="Geoscape\NewPossibleCraftState.cpp">
+      <Filter>Geoscape</Filter>
+    </ClCompile>
+    <ClCompile Include="Geoscape\NewPossibleFacilityState.cpp">
+      <Filter>Geoscape</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\OpenGLRenderer.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
@@ -2093,6 +2099,12 @@
       <Filter>Geoscape</Filter>
     </ClInclude>
     <ClInclude Include="Geoscape\NewPossiblePurchaseState.h">
+      <Filter>Geoscape</Filter>
+    </ClInclude>
+    <ClInclude Include="Geoscape\NewPossibleCraftState.h">
+      <Filter>Geoscape</Filter>
+    </ClInclude>
+    <ClInclude Include="Geoscape\NewPossibleFacilityState.h">
       <Filter>Geoscape</Filter>
     </ClInclude>
     <ClInclude Include="Engine\OpenGLRenderer.h">

@@ -66,6 +66,12 @@ private:
 	bool _dragging, _clicked;
 
 	int _depth;
+	RuleInventory *_inventorySlotRightHand = nullptr;
+	RuleInventory *_inventorySlotLeftHand = nullptr;
+	RuleInventory *_inventorySlotBackPack = nullptr;
+	RuleInventory *_inventorySlotBelt = nullptr;
+	RuleInventory *_inventorySlotGround = nullptr;
+
 	/// Moves an item to a specified slot.
 	void moveItem(BattleItem *item, RuleInventory *slot, int x, int y);
 	/// Gets the slot in the specified position.
@@ -129,6 +135,8 @@ public:
 	void drawPrimers();
 	/// Animate surface.
 	void animate();
+	/// Get current animation frame for invenotry.
+	int getAnimFrame() const { return _animFrame; }
 #ifdef __MOBILE__
 	/// Start long press timer
 	void mousePress(Action *action, State *state);

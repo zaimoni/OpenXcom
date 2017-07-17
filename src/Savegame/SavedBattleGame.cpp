@@ -259,7 +259,7 @@ void SavedBattleGame::load(const YAML::Node &node, Mod *mod, SavedGame* savedGam
 			{
 				BattleItem *item = new BattleItem(mod->getItem(type), &_itemId);
 				item->load(*i, this->getMod()->getScriptGlobal());
-				type = (*i)["inventoryslot"].as<std::string>();
+				type = (*i)["inventoryslot"].as<std::string>("NULL");
 				if (type != "NULL")
 				{
 					if (mod->getInventory(type))
@@ -318,19 +318,44 @@ void SavedBattleGame::load(const YAML::Node &node, Mod *mod, SavedGame* savedGam
 	{
 		if (mod->getItem((*i)["type"].as<std::string>()))
 		{
-			int ammo = (*i)["ammoItem"].as<int>();
-			if (ammo != -1)
+			auto setItem = [&](int slot, const YAML::Node& n)
 			{
-				for (std::vector<BattleItem*>::iterator ammoi = _items.begin(); ammoi != _items.end(); ++ammoi)
+				if (n)
 				{
-					if ((*ammoi)->getId() == ammo)
+					int ammoId = n.as<int>();
+					if (ammoId != -1)
 					{
-						(*weaponi)->setAmmoItem((*ammoi));
-						break;
+						if (ammoId == (*weaponi)->getId())
+						{
+							(*weaponi)->setAmmoForSlot(slot, (*weaponi));
+						}
+						else
+						{
+							for (auto item : _items)
+							{
+								if (item->getId() == ammoId)
+								{
+									(*weaponi)->setAmmoForSlot(slot, item);
+									break;
+								}
+							}
+						}
 					}
 				}
+			};
+
+			if (const YAML::Node& ammoSlots = (*i)["ammoItemSlots"])
+			{
+				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+				{
+					setItem(slot, ammoSlots[slot]);
+				}
 			}
-			 ++weaponi;
+			else
+			{
+				setItem(0, (*i)["ammoItem"]);
+			}
+			++weaponi;
 		}
 	}
 	_objectiveType = node["objectiveType"].as<int>(_objectiveType);
@@ -1012,18 +1037,18 @@ void SavedBattleGame::endTurn()
 			(*i)->setVisible(false);
 		}
 
-		ModScript::NewTurnUnitParser::Output arg{};
-		ModScript::NewTurnUnitParser::Worker work{ (*i), this, this->getTurn(), _side };
+		ModScript::NewTurnUnit::Output arg{};
+		ModScript::NewTurnUnit::Worker work{ (*i), this, this->getTurn(), _side };
 
-		work.execute((*i)->getArmor()->getEventUnitTurnScript(), arg);
+		work.execute((*i)->getArmor()->getScript<ModScript::NewTurnUnit>(), arg);
 	}
 
 	for (auto& item : _items)
 	{
-		ModScript::NewTurnItemParser::Output arg{};
-		ModScript::NewTurnItemParser::Worker work{ item, this, this->getTurn(), _side };
+		ModScript::NewTurnItem::Output arg{};
+		ModScript::NewTurnItem::Worker work{ item, this, this->getTurn(), _side };
 
-		work.execute(item->getRules()->getEventItemTurnScript(), arg);
+		work.execute(item->getRules()->getScript<ModScript::NewTurnItem>(), arg);
 	}
 
 	// re-run calculateFOV() *after* all aliens have been set not-visible
@@ -1318,10 +1343,10 @@ void SavedBattleGame::initUnit(BattleUnit *unit, size_t itemLevel)
 		}
 	}
 
-	ModScript::CreateUnitParser::Output arg{};
-	ModScript::CreateUnitParser::Worker work{ unit, this, this->getTurn(), };
+	ModScript::CreateUnit::Output arg{};
+	ModScript::CreateUnit::Worker work{ unit, this, this->getTurn(), };
 
-	work.execute(armor->getEventUnitCreateScript(), arg);
+	work.execute(armor->getScript<ModScript::CreateUnit>(), arg);
 }
 
 /**
@@ -1330,10 +1355,10 @@ void SavedBattleGame::initUnit(BattleUnit *unit, size_t itemLevel)
  */
 void SavedBattleGame::initItem(BattleItem *item)
 {
-	ModScript::CreateItemParser::Output arg{};
-	ModScript::CreateItemParser::Worker work{ item, this, this->getTurn(), };
+	ModScript::CreateItem::Output arg{};
+	ModScript::CreateItem::Worker work{ item, this, this->getTurn(), };
 
-	work.execute(item->getRules()->getEventCreateItemScript(), arg);
+	work.execute(item->getRules()->getScript<ModScript::CreateItem>(), arg);
 }
 
 /**
@@ -1436,12 +1461,7 @@ void SavedBattleGame::addDestroyedObjective()
 		{
 			if (getObjectiveType() == MUST_DESTROY)
 			{
-				if (Options::battleAutoEnd)
-				{
-					setSelectedUnit(0);
-					_battleState->getBattleGame()->cancelCurrentAction(true);
-					_battleState->getBattleGame()->requestEndTurn(false);
-				}
+				_battleState->getBattleGame()->autoEndBattle();
 			}
 			else
 			{

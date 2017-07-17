@@ -1177,11 +1177,11 @@ void Map::drawTerrain(Surface *surface)
 									{
 										rule = weapon;
 									}
-									else if (action->weapon->needsAmmo())
+									else if (action->weapon->needsAmmoForAction(action->type))
 									{
-										if (action->weapon->getAmmoItem() != 0)
+										if (action->weapon->getAmmoForAction(action->type) != 0)
 										{
-											rule = action->weapon->getAmmoItem()->getRules();
+											rule = action->weapon->getAmmoForAction(action->type)->getRules();
 										}
 										else
 										{

@@ -184,7 +184,7 @@ void AIModule::think(BattleAction *action)
 		{
 			if (rule->getBattleType() == BT_FIREARM)
 			{
-				if (rule->getWaypoints() != 0 || (action->weapon->getAmmoItem() && action->weapon->getAmmoItem()->getRules()->getWaypoints() != 0))
+				if (action->weapon->getCurrentWaypoints() != 0)
 				{
 					_blaster = true;
 					_reachableWithAttack = _save->getPathfinding()->findReachable(_unit, BattleActionCost(BA_AIMEDSHOT, _unit, action->weapon));
@@ -497,8 +497,8 @@ void AIModule::setupPatrol()
 			if (_fromNode->isTarget() &&
 				_attackAction->weapon &&
 				_attackAction->weapon->getRules()->getAccuracySnap() &&
-				_attackAction->weapon->getAmmoItem() &&
-				_attackAction->weapon->getAmmoItem()->getRules()->getDamageType()->isDirect() &&
+				_attackAction->weapon->getAmmoForAction(BA_SNAPSHOT) &&
+				_attackAction->weapon->getAmmoForAction(BA_SNAPSHOT)->getRules()->getDamageType()->isDirect() &&
 				_save->getModuleMap()[_fromNode->getPosition().x / 10][_fromNode->getPosition().y / 10].second > 0)
 			{
 				// scan this room for objects to destroy
@@ -1517,6 +1517,14 @@ bool AIModule::findFirePoint()
  */
 int AIModule::explosiveEfficacy(Position targetPos, BattleUnit *attackingUnit, int radius, int diff, bool grenade) const
 {
+	Tile *targetTile = _save->getTile(targetPos);
+
+	// don't throw grenades at flying enemies.
+	if (grenade && targetPos.z > 0 && targetTile->hasNoFloor(_save->getTile(targetPos - Position(0,0,1))))
+	{
+		return false;
+	}
+
 	if (diff == -1)
 	{
 		diff = _save->getBattleState()->getGame()->getSavedGame()->getDifficultyCoefficient();
@@ -1541,8 +1549,8 @@ int AIModule::explosiveEfficacy(Position targetPos, BattleUnit *attackingUnit, i
 	efficacy += diff/2;
 
 	// account for the unit we're targetting
-	BattleUnit *target = _save->getTile(targetPos)->getUnit();
-	if (target && !_save->getTile(targetPos)->getDangerous())
+	BattleUnit *target = targetTile->getUnit();
+	if (target && !targetTile->getDangerous())
 	{
 		++enemiesAffected;
 		++efficacy;
@@ -1680,7 +1688,7 @@ void AIModule::wayPointAction()
 			continue;
 		_save->getPathfinding()->calculate(_unit, (*i)->getPosition(), *i, -1);
 		if (_save->getPathfinding()->getStartDirection() != -1 &&
-			explosiveEfficacy((*i)->getPosition(), _unit, (_attackAction->weapon->getAmmoItem()->getRules()->getPower()/20)+1, _attackAction->diff))
+			explosiveEfficacy((*i)->getPosition(), _unit, _attackAction->weapon->getAmmoForAction(BA_LAUNCH)->getRules()->getExplosionRadius(_unit), _attackAction->diff))
 		{
 			_aggroTarget = *i;
 		}
@@ -1700,11 +1708,7 @@ void AIModule::wayPointAction()
 
 		int PathDirection;
 		int CollidesWith;
-		int maxWaypoints = _attackAction->weapon->getRules()->getWaypoints();
-		if (maxWaypoints == 0)
-		{
-			maxWaypoints = _attackAction->weapon->getAmmoItem()->getRules()->getWaypoints();
-		}
+		int maxWaypoints = _attackAction->weapon->getCurrentWaypoints();
 		if (maxWaypoints == -1)
 		{
 			maxWaypoints = 6 + (_attackAction->diff * 2);
@@ -1756,24 +1760,28 @@ void AIModule::wayPointAction()
 void AIModule::projectileAction()
 {
 	_attackAction->target = _aggroTarget->getPosition();
-	int radius = _attackAction->weapon->getAmmoItem()->getRules()->getExplosionRadius(_unit);
-	if (radius == 0 || explosiveEfficacy(_aggroTarget->getPosition(), _unit, radius, _attackAction->diff))
+	auto testEffect = [&](BattleActionCost& cost, BattleActionType type)
 	{
-		selectFireMethod();
-	}
-}
+		if (cost.haveTU())
+		{
+			int radius = _attackAction->weapon->getAmmoForAction(type)->getRules()->getExplosionRadius(_unit);
+			if (radius != 0 && explosiveEfficacy(_attackAction->target, _unit, radius, _attackAction->diff) == 0)
+			{
+				cost.clearTU();
+			}
+		}
+	};
 
-/**
- * Selects a fire method based on range, time units, and time units reserved for cover.
- */
-void AIModule::selectFireMethod()
-{
 	int distance = _save->getTileEngine()->distance(_unit->getPosition(), _attackAction->target);
 	_attackAction->type = BA_RETHINK;
 
 	BattleActionCost costAuto(BA_AUTOSHOT, _attackAction->actor, _attackAction->weapon);
 	BattleActionCost costSnap(BA_SNAPSHOT, _attackAction->actor, _attackAction->weapon);
 	BattleActionCost costAimed(BA_AIMEDSHOT, _attackAction->actor, _attackAction->weapon);
+
+	testEffect(costAuto, BA_AUTOSHOT);
+	testEffect(costSnap, BA_SNAPSHOT);
+	testEffect(costAimed, BA_AIMEDSHOT);
 
 	if (distance < 4)
 	{
@@ -2015,11 +2023,37 @@ bool AIModule::psiAction()
 
 		if (!_aggroTarget || !weightToAttack) return false;
 
-		if (_visibleEnemies && _attackAction->weapon && _attackAction->weapon->getAmmoItem())
+		if (_visibleEnemies)
 		{
-			if (_attackAction->weapon->getAmmoItem()->getRules()->getPowerBonus(_attackAction->actor) >= weightToAttack)
+			BattleActionType actions[] = {
+				BA_AIMEDSHOT,
+				BA_AUTOSHOT,
+				BA_SNAPSHOT,
+				BA_HIT,
+			};
+			for (auto action : actions)
 			{
-				return false;
+				auto ammo = _attackAction->weapon->getAmmoForAction(action);
+				if (!ammo)
+				{
+					continue;
+				}
+
+				int weightPower = ammo->getRules()->getPowerBonus(_attackAction->actor);
+				if (action == BA_HIT)
+				{
+					// prefer psi over melee
+					weightPower /= 2;
+				}
+				else
+				{
+					// prefer machineguns
+					weightPower *= _attackAction->weapon->getActionConf(action)->shots;
+				}
+				if (weightPower >= weightToAttack)
+				{
+					return false;
+				}
 			}
 		}
 		else if (RNG::generate(35, 155) >= weightToAttack)
@@ -2098,25 +2132,26 @@ BattleActionType AIModule::getReserveMode()
  */
 void AIModule::selectMeleeOrRanged()
 {
+	BattleItem *range = _attackAction->weapon;
 	BattleItem *melee = _unit->getUtilityWeapon(BT_MELEE);
-	const RuleItem *rangedWeapon = _attackAction->weapon->getRules();
-	const RuleItem *meleeWeapon = melee ? melee->getRules() : 0;
 
-	if (!meleeWeapon)
+	if (!melee || !melee->haveAnyAmmo())
 	{
 		// no idea how we got here, but melee is definitely out of the question.
 		_melee = false;
 		return;
 	}
-	if (!rangedWeapon || _attackAction->weapon->getAmmoItem() == 0)
+	if (!range || !range->haveAnyAmmo())
 	{
 		_rifle = false;
 		return;
 	}
 
+	const RuleItem *meleeRule = melee->getRules();
+
 	int meleeOdds = 10;
 
-	int dmg = _aggroTarget->reduceByResistance(meleeWeapon->getPowerBonus(_unit), meleeWeapon->getDamageType()->ResistType);
+	int dmg = _aggroTarget->reduceByResistance(meleeRule->getPowerBonus(_unit), meleeRule->getDamageType()->ResistType);
 
 	if (dmg > 50)
 	{
@@ -2142,7 +2177,7 @@ void AIModule::selectMeleeOrRanged()
 		{
 			_rifle = false;
 			_attackAction->weapon = melee;
-			_reachableWithAttack = _save->getPathfinding()->findReachable(_unit, BattleActionCost(BA_HIT, _unit, _unit->getUtilityWeapon(BT_MELEE)));
+			_reachableWithAttack = _save->getPathfinding()->findReachable(_unit, BattleActionCost(BA_HIT, _unit, melee));
 			return;
 		}
 	}

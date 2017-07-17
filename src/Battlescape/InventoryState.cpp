@@ -593,17 +593,7 @@ void InventoryState::saveEquipmentLayout()
 		// note: with using getInventory() we are skipping the ammos loaded, (they're not owned) because we handle the loaded-ammos separately (inside)
 		for (std::vector<BattleItem*>::iterator j = (*i)->getInventory()->begin(); j != (*i)->getInventory()->end(); ++j)
 		{
-			std::string ammo;
-			if ((*j)->needsAmmo() && 0 != (*j)->getAmmoItem()) ammo = (*j)->getAmmoItem()->getRules()->getType();
-			else ammo = "NONE";
-			layoutItems->push_back(new EquipmentLayoutItem(
-				(*j)->getRules()->getType(),
-				(*j)->getSlot()->getId(),
-				(*j)->getSlotX(),
-				(*j)->getSlotY(),
-				ammo,
-				(*j)->getFuseTimer()
-			));
+			layoutItems->push_back(new EquipmentLayoutItem((*j)));
 		}
 	}
 }
@@ -930,23 +920,7 @@ void InventoryState::_createInventoryTemplate(std::vector<EquipmentLayoutItem*> 
 			continue;
 		}
 
-		std::string ammo;
-		if ((*j)->needsAmmo() && (*j)->getAmmoItem())
-		{
-			ammo = (*j)->getAmmoItem()->getRules()->getType();
-		}
-		else
-		{
-			ammo = "NONE";
-		}
-
-		inventoryTemplate.push_back(new EquipmentLayoutItem(
-				(*j)->getRules()->getType(),
-				(*j)->getSlot()->getId(),
-				(*j)->getSlotX(),
-				(*j)->getSlotY(),
-				ammo,
-				(*j)->getFuseTimer()));
+		inventoryTemplate.push_back(new EquipmentLayoutItem((*j)));
 	}
 }
 
@@ -988,91 +962,131 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 	{
 		// search for template item in ground inventory
 		std::vector<BattleItem*>::iterator groundItem;
-		const bool needsAmmo = !_game->getMod()->getItem((*templateIt)->getItemType(), true)->getCompatibleAmmo()->empty();
 		bool found = false;
-		bool rescan = true;
-		while (rescan)
+
+		bool needsAmmo[RuleItem::AmmoSlotMax] = { };
+		std::string targetAmmo[RuleItem::AmmoSlotMax] = { };
+		BattleItem *matchedWeapon = nullptr;
+		BattleItem *matchedAmmo[RuleItem::AmmoSlotMax] = { };
+
+		for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 		{
-			rescan = false;
+			targetAmmo[slot] = (*templateIt)->getAmmoItemForSlot(slot);
+			needsAmmo[slot] = (targetAmmo[slot] != "NONE");
+			matchedAmmo[slot] = nullptr;
+		}
 
-			const std::string targetAmmo = (*templateIt)->getAmmoItem();
-			BattleItem *matchedWeapon = NULL;
-			BattleItem *matchedAmmo   = NULL;
-			for (groundItem = groundInv->begin(); groundItem != groundInv->end(); ++groundItem)
+		for (groundItem = groundInv->begin(); groundItem != groundInv->end(); ++groundItem)
+		{
+			// if we find the appropriate ammo, remember it for later for if we find
+			// the right weapon but with the wrong ammo
+			const std::string groundItemName = (*groundItem)->getRules()->getType();
+
+			bool skipAmmo = false;
+			for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 			{
-				// if we find the appropriate ammo, remember it for later for if we find
-				// the right weapon but with the wrong ammo
-				const std::string groundItemName = (*groundItem)->getRules()->getType();
-				if (needsAmmo && targetAmmo == groundItemName)
+				if (needsAmmo[slot] && !matchedAmmo[slot] && targetAmmo[slot] == groundItemName)
 				{
-					matchedAmmo = *groundItem;
+					matchedAmmo[slot] = *groundItem;
+					skipAmmo = true;
 				}
+			}
+			if (skipAmmo)
+			{
+				continue;
+			}
 
-				if ((*templateIt)->getItemType() == groundItemName)
+			if ((*templateIt)->getItemType() == groundItemName)
+			{
+				// if the loaded ammo doesn't match the template item's,
+				// remember the weapon for later and continue scanning
+				bool skipWeapon = false;
+				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 				{
-					// if the loaded ammo doesn't match the template item's,
-					// remember the weapon for later and continue scanning
-					BattleItem *loadedAmmo = (*groundItem)->getAmmoItem();
-					if ((needsAmmo && loadedAmmo && targetAmmo != loadedAmmo->getRules()->getType())
-					 || (needsAmmo && !loadedAmmo))
+					if (!(*groundItem)->needsAmmoForSlot(slot))
+					{
+						continue;
+					}
+					BattleItem *loadedAmmo = (*groundItem)->getAmmoForSlot(slot);
+					if ((needsAmmo[slot] && (!loadedAmmo || targetAmmo[slot] != loadedAmmo->getRules()->getType()))
+						|| (!needsAmmo[slot] && loadedAmmo))
 					{
 						// remember the last matched weapon for simplicity (but prefer empty weapons if any are found)
-						if (!matchedWeapon || matchedWeapon->getAmmoItem())
+						if (!matchedWeapon || matchedWeapon->getAmmoForSlot(slot))
 						{
 							matchedWeapon = *groundItem;
 						}
-						continue;
+						skipWeapon = true;
 					}
-
-					// check if the slot is not occupied already (e.g. by a fixed weapon)
-					if (!_inv->overlapItems(
-						unit,
-						*groundItem,
-						_game->getMod()->getInventory((*templateIt)->getSlot(), true),
-						(*templateIt)->getSlotX(),
-						(*templateIt)->getSlotY()))
-					{
-						// move matched item from ground to the appropriate inv slot
-						(*groundItem)->setOwner(unit);
-						(*groundItem)->setTile(0);
-						(*groundItem)->setSlot(_game->getMod()->getInventory((*templateIt)->getSlot()));
-						(*groundItem)->setSlotX((*templateIt)->getSlotX());
-						(*groundItem)->setSlotY((*templateIt)->getSlotY());
-						(*groundItem)->setFuseTimer((*templateIt)->getFuseTimer());
-						unitInv->push_back(*groundItem);
-						groundInv->erase(groundItem);
-					}
-					else
-					{
-						// let the user know or not? probably not... should be obvious why
-					}
+				}
+				if (!skipWeapon)
+				{
+					matchedWeapon = *groundItem;
 					found = true; // found = true, even if not equiped
 					break;
 				}
 			}
+		}
 
-			// if we failed to find an exact match, but found unloaded ammo and
-			// the right weapon, unload the target weapon, load the right ammo, and use it
-			if (!found && matchedWeapon && (!needsAmmo || matchedAmmo))
+		// if we failed to find an exact match, but found unloaded ammo and
+		// the right weapon, unload the target weapon, load the right ammo, and use it
+		if (!found && matchedWeapon)
+		{
+			found = true;
+			auto allMatch = true;
+			for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 			{
-				// unload the existing ammo (if any) from the weapon
-				BattleItem *loadedAmmo = matchedWeapon->getAmmoItem();
-				if (loadedAmmo)
-				{
-					groundTile->addItem(loadedAmmo, groundRuleInv);
-					matchedWeapon->setAmmoItem(NULL);
-				}
-
-				// load the correct ammo into the weapon
-				if (matchedAmmo)
-				{
-					matchedWeapon->setAmmoItem(matchedAmmo);
-					groundTile->removeItem(matchedAmmo);
-				}
-
-				// rescan and pick up the newly-loaded/unloaded weapon
-				rescan = true;
+				allMatch &= (needsAmmo[slot] && matchedAmmo[slot]) || (!needsAmmo[slot]);
 			}
+			if (allMatch)
+			{
+				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+				{
+					if ((*groundItem)->needsAmmoForSlot(slot) && (!needsAmmo[slot] || matchedAmmo[slot]))
+					{
+						// unload the existing ammo (if any) from the weapon
+						BattleItem *loadedAmmo = matchedWeapon->setAmmoForSlot(slot, matchedAmmo[slot]);
+						if (loadedAmmo)
+						{
+							groundTile->addItem(loadedAmmo, groundRuleInv);
+						}
+
+						// load the correct ammo into the weapon
+						if (matchedAmmo[slot])
+						{
+							groundTile->removeItem(matchedAmmo[slot]);
+						}
+					}
+				}
+			}
+			else
+			{
+				// nope we can't do it.
+				found = false;
+				matchedWeapon = nullptr;
+			}
+		}
+
+		// check if the slot is not occupied already (e.g. by a fixed weapon)
+		if (matchedWeapon && !_inv->overlapItems(
+			unit,
+			matchedWeapon,
+			_game->getMod()->getInventory((*templateIt)->getSlot(), true),
+			(*templateIt)->getSlotX(),
+			(*templateIt)->getSlotY()))
+		{
+			// move matched item from ground to the appropriate inv slot
+			matchedWeapon->setOwner(unit);
+			matchedWeapon->setSlot(_game->getMod()->getInventory((*templateIt)->getSlot()));
+			matchedWeapon->setSlotX((*templateIt)->getSlotX());
+			matchedWeapon->setSlotY((*templateIt)->getSlotY());
+			matchedWeapon->setFuseTimer((*templateIt)->getFuseTimer());
+			unitInv->push_back(matchedWeapon);
+			groundTile->removeItem(matchedWeapon);
+		}
+		else
+		{
+			// let the user know or not? probably not... should be obvious why
 		}
 
 		if (!found)
@@ -1191,6 +1205,11 @@ void InventoryState::invMouseOver(Action *)
 	}
 
 	BattleItem *item = _inv->getMouseOverItem();
+	if (item != _mouseHoverItem)
+	{
+		_mouseHoverItemFrame = _inv->getAnimFrame();
+		_mouseHoverItem = item;
+	}
 	if (item != 0)
 	{
 		std::wstring itemName;
@@ -1200,26 +1219,44 @@ void InventoryState::invMouseOver(Action *)
 		}
 		else
 		{
-			if (_game->getSavedGame()->isResearched(item->getRules()->getRequirements()))
+			auto save = _game->getSavedGame();
+			if (save->isResearched(item->getRules()->getRequirements()))
 			{
-				itemName = tr(item->getRules()->getName());
+				std::wstring text = tr(item->getRules()->getName());
+				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+				{
+					if (!item->needsAmmoForSlot(slot))
+					{
+						continue;
+					}
+
+					auto ammo = item->getAmmoForSlot(slot);
+					if (!ammo || !save->isResearched(ammo->getRules()->getRequirements()))
+					{
+						continue;
+					}
+
+					const auto& ammoName = ammo->getRules()->getNameAsAmmo();
+					if (!ammoName.empty())
+					{
+						text += L" ";
+						text += tr(ammoName);
+					}
+				}
+				itemName = text;
 			}
 			else
 			{
 				itemName = tr("STR_ALIEN_ARTIFACT");
 			}
 		}
+
 		if (Options::showItemNameAndWeightInInventory)
 		{
-			int weight = item->getRules()->getWeight();
-			if (item->getAmmoItem() != item && item->getAmmoItem())
-			{
-				weight += item->getAmmoItem()->getRules()->getWeight();
-			}
 			std::wostringstream ss;
 			ss << itemName;
 			ss << L" [";
-			ss << weight;
+			ss << item->getTotalWeight();
 			ss << L"]";
 			_txtItem->setText(ss.str().c_str());
 		}
@@ -1228,38 +1265,27 @@ void InventoryState::invMouseOver(Action *)
 			_txtItem->setText(itemName);
 		}
 
-		std::wstring s;
-		if (item->getAmmoItem() != 0 && (item->needsAmmo() || item->getRules()->getClipSize() > 0))
+		_selAmmo->clear();
+		if ((item->isWeaponWithAmmo() || item->getRules()->getClipSize() > 0) && item->haveAnyAmmo())
 		{
-			s = tr("STR_AMMO_ROUNDS_LEFT").arg(item->getAmmoItem()->getAmmoQuantity());
-			SDL_Rect r;
-			r.x = 0;
-			r.y = 0;
-			r.w = RuleInventory::HAND_W * RuleInventory::SLOT_W;
-			r.h = RuleInventory::HAND_H * RuleInventory::SLOT_H;
-			_selAmmo->drawRect(&r, _game->getMod()->getInterface("inventory")->getElement("grid")->color);
-			r.x++;
-			r.y++;
-			r.w -= 2;
-			r.h -= 2;
-			_selAmmo->drawRect(&r, Palette::blockOffset(0)+15);
-			item->getAmmoItem()->getRules()->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), _selAmmo);
 			updateTemplateButtons(false);
+			_txtAmmo->setText(L"");
 		}
 		else
 		{
-			_selAmmo->clear();
+			_mouseHoverItem = nullptr;
 			updateTemplateButtons(!_tu);
+			std::wstring s;
+			if (item->getAmmoQuantity() != 0)
+			{
+				s = tr("STR_AMMO_ROUNDS_LEFT").arg(item->getAmmoQuantity());
+			}
+			else if (item->getRules()->getBattleType() == BT_MEDIKIT)
+			{
+				s = tr("STR_MEDI_KIT_QUANTITIES_LEFT").arg(item->getPainKillerQuantity()).arg(item->getStimulantQuantity()).arg(item->getHealQuantity());
+			}
+			_txtAmmo->setText(s);
 		}
-		if (item->getAmmoQuantity() != 0 && item->needsAmmo())
-		{
-			s = tr("STR_AMMO_ROUNDS_LEFT").arg(item->getAmmoQuantity());
-		}
-		else if (item->getRules()->getBattleType() == BT_MEDIKIT)
-		{
-			s = tr("STR_MEDI_KIT_QUANTITIES_LEFT").arg(item->getPainKillerQuantity()).arg(item->getStimulantQuantity()).arg(item->getHealQuantity());
-		}
-		_txtAmmo->setText(s);
 	}
 	else
 	{
@@ -1282,6 +1308,7 @@ void InventoryState::invMouseOut(Action *)
 	_txtItem->setText(L"");
 	_txtAmmo->setText(L"");
 	_selAmmo->clear();
+	_mouseHoverItem = nullptr;
 	updateTemplateButtons(!_tu);
 }
 
@@ -1323,17 +1350,21 @@ void InventoryState::onMoveGroundInventoryToBase(Action *)
 	for (std::vector<BattleItem*>::iterator i = groundInv->begin(); i != groundInv->end(); ++i)
 	{
 		std::string weaponRule = (*i)->getRules()->getType();
-		// don't forget the ammo!
-		if ((*i)->getAmmoItem())
+		// check all ammo slots first
+		for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 		{
-			std::string ammoRule = (*i)->getAmmoItem()->getRules()->getType();
-			// only real ammo
-			if (weaponRule != ammoRule)
+			if ((*i)->getAmmoForSlot(slot))
 			{
-				c->getItems()->removeItem(ammoRule);
-				_base->getStorageItems()->addItem(ammoRule);
+				std::string ammoRule = (*i)->getAmmoForSlot(slot)->getRules()->getType();
+				// only real ammo
+				if (weaponRule != ammoRule)
+				{
+					c->getItems()->removeItem(ammoRule);
+					_base->getStorageItems()->addItem(ammoRule);
+				}
 			}
 		}
+		// and the weapon as last
 		c->getItems()->removeItem(weaponRule);
 		_base->getStorageItems()->addItem(weaponRule);
 	}
@@ -1394,6 +1425,66 @@ void InventoryState::handle(Action *action)
 		}
 	}
 #endif
+}
+
+/**
+ * Cycle throug loaded ammo in hover over item.
+ */
+void InventoryState::think()
+{
+	if (_mouseHoverItem)
+	{
+		auto anim = _inv->getAnimFrame();
+		auto seq = std::max(((anim - _mouseHoverItemFrame) / 10) - 1, 0); // `-1` cause that first item will be show bit more longer
+		auto modulo = 0;
+		for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+		{
+			bool showSelfAmmo = slot == 0 && _mouseHoverItem->getRules()->getClipSize() > 0;
+			if ((_mouseHoverItem->needsAmmoForSlot(slot) || showSelfAmmo) && _mouseHoverItem->getAmmoForSlot(slot))
+			{
+				++modulo;
+			}
+		}
+		if (modulo)
+		{
+			seq %= modulo;
+		}
+
+		BattleItem* firstAmmo = nullptr;
+		for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+		{
+			bool showSelfAmmo = slot == 0 && _mouseHoverItem->getRules()->getClipSize() > 0;
+			if ((_mouseHoverItem->needsAmmoForSlot(slot) || showSelfAmmo) && _mouseHoverItem->getAmmoForSlot(slot))
+			{
+				firstAmmo = _mouseHoverItem->getAmmoForSlot(slot);
+				if (slot >= seq)
+				{
+					break;
+				}
+			}
+		}
+		if (firstAmmo)
+		{
+			_txtAmmo->setText(tr("STR_AMMO_ROUNDS_LEFT").arg(firstAmmo->getAmmoQuantity()));
+			SDL_Rect r;
+			r.x = 0;
+			r.y = 0;
+			r.w = RuleInventory::HAND_W * RuleInventory::SLOT_W;
+			r.h = RuleInventory::HAND_H * RuleInventory::SLOT_H;
+			_selAmmo->drawRect(&r, _game->getMod()->getInterface("inventory")->getElement("grid")->color);
+			r.x++;
+			r.y++;
+			r.w -= 2;
+			r.h -= 2;
+			_selAmmo->drawRect(&r, Palette::blockOffset(0)+15);
+			firstAmmo->getRules()->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), _selAmmo, firstAmmo, anim);
+		}
+		else
+		{
+			_selAmmo->clear();
+		}
+	}
+	State::think();
 }
 
 /**

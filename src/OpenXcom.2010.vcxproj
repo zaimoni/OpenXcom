@@ -113,6 +113,7 @@
       <TargetMachine>MachineX86</TargetMachine>
       <GenerateMapFile>false</GenerateMapFile>
       <MapExports>false</MapExports>
+      <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\*.dll" "$(ProjectDir)..\bin\$(Platform)\"</Command>
@@ -160,7 +161,7 @@
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_DEPRECATE;NDEBUG;_CONSOLE;YAML_CPP_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -390,6 +391,8 @@
     <ClCompile Include="Geoscape\ConfirmNewBaseState.cpp" />
     <ClCompile Include="Geoscape\CraftPatrolState.cpp" />
     <ClCompile Include="Geoscape\DogfightState.cpp" />
+    <ClCompile Include="Geoscape\NewPossibleCraftState.cpp" />
+    <ClCompile Include="Geoscape\NewPossibleFacilityState.cpp" />
     <ClCompile Include="Geoscape\NewPossiblePurchaseState.cpp" />
     <ClCompile Include="Geoscape\ResearchRequiredState.cpp" />
     <ClCompile Include="Geoscape\NewPossibleManufactureState.cpp" />
@@ -756,6 +759,8 @@
     <ClInclude Include="Geoscape\CraftPatrolState.h" />
     <ClInclude Include="Geoscape\DogfightState.h" />
     <ClInclude Include="Geoscape\FundingState.h" />
+    <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
+    <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
     <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
     <ClInclude Include="Geoscape\ResearchRequiredState.h" />
     <ClInclude Include="Geoscape\GeoscapeCraftState.h" />
