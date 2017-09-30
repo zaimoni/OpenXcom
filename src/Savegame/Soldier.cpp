@@ -687,10 +687,8 @@ void Soldier::trainPsi()
 			else if (_currentStats.psiStrength < psiStrengthCap) _psiStrImprovement = RNG::generate(1, 3);
 		}
 	}
-	_currentStats.psiSkill += _improvement;
-	_currentStats.psiStrength += _psiStrImprovement;
-	if (_currentStats.psiSkill > psiSkillCap) _currentStats.psiSkill = psiSkillCap;
-	if (_currentStats.psiStrength > psiStrengthCap) _currentStats.psiStrength = psiStrengthCap;
+	_currentStats.psiSkill = std::max(_currentStats.psiSkill, std::min(_currentStats.psiSkill+_improvement, psiSkillCap));
+	_currentStats.psiStrength = std::max(_currentStats.psiStrength, std::min(_currentStats.psiStrength+_psiStrImprovement, psiStrengthCap));
 }
 
 /**
@@ -824,7 +822,14 @@ void Soldier::resetDiary()
  */
 void Soldier::calcStatString(const std::vector<StatString *> &statStrings, bool psiStrengthEval)
 {
-	_statString = StatString::calcStatString(_currentStats, statStrings, psiStrengthEval, _psiTraining);
+	if (_rules->getStatStrings().empty())
+	{
+		_statString = StatString::calcStatString(_currentStats, statStrings, psiStrengthEval, _psiTraining);
+	}
+	else
+	{
+		_statString = StatString::calcStatString(_currentStats, _rules->getStatStrings(), psiStrengthEval, _psiTraining);
+	}
 }
 
 /**
@@ -853,6 +858,28 @@ void Soldier::trainPhys(int customTrainingFactor)
 			_currentStats.stamina++;
 	}
 }
+
+/**
+ * Is the soldier already fully trained?
+ * @return True, if the soldier cannot gain any more stats in the training facility.
+ */
+bool Soldier::isFullyTrained()
+{
+	UnitStats trainingCaps = _rules->getTrainingStatCaps();
+
+	if (_currentStats.firing < trainingCaps.firing
+		|| _currentStats.health < trainingCaps.health
+		|| _currentStats.melee < trainingCaps.melee
+		|| _currentStats.throwing < trainingCaps.throwing
+		|| _currentStats.strength < trainingCaps.strength
+		|| _currentStats.tu < trainingCaps.tu
+		|| _currentStats.stamina < trainingCaps.stamina)
+	{
+		return false;
+	}
+	return true;
+}
+
 /**
  * returns whether or not the unit is in physical training
  */

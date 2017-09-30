@@ -117,6 +117,11 @@ SavedGame::SavedGame() : _difficulty(DIFF_BEGINNER), _end(END_NONE), _ironman(fa
 	_incomes.push_back(0);
 	_expenditures.push_back(0);
 	_lastselectedArmor="STR_NONE_UC";
+
+	for (int j = 0; j < MAX_CRAFT_LOADOUT_TEMPLATES; ++j)
+	{
+		_globalCraftLoadout[j] = new ItemContainer();
+	}
 }
 
 /**
@@ -168,6 +173,10 @@ SavedGame::~SavedGame()
 		{
 			delete *i;
 		}
+	}
+	for (int j = 0; j < MAX_CRAFT_LOADOUT_TEMPLATES; ++j)
+	{
+		delete _globalCraftLoadout[j];
 	}
 	for (std::vector<MissionStatistics*>::iterator i = _missionStatistics.begin(); i != _missionStatistics.end(); ++i)
 	{
@@ -597,6 +606,24 @@ void SavedGame::load(const std::string &filename, Mod *mod)
 		}
 	}
 
+	for (int j = 0; j < MAX_CRAFT_LOADOUT_TEMPLATES; ++j)
+	{
+		std::ostringstream oss;
+		oss << "globalCraftLoadout" << j;
+		std::string key = oss.str();
+		if (const YAML::Node &loadout = doc[key])
+		{
+			_globalCraftLoadout[j]->load(loadout);
+		}
+		std::ostringstream oss2;
+		oss2 << "globalCraftLoadoutName" << j;
+		std::string key2 = oss2.str();
+		if (doc[key2])
+		{
+			_globalCraftLoadoutName[j] = Language::utf8ToWstr(doc[key2].as<std::string>());
+		}
+	}
+
 	for (YAML::const_iterator i = doc["missionStatistics"].begin(); i != doc["missionStatistics"].end(); ++i)
 	{
 		MissionStatistics *ms = new MissionStatistics();
@@ -763,6 +790,23 @@ void SavedGame::save(const std::string &filename) const
 		if (!_globalEquipmentLayoutName[j].empty())
 		{
 			node[key2] = Language::wstrToUtf8(_globalEquipmentLayoutName[j]);
+		}
+	}
+	for (int j = 0; j < MAX_CRAFT_LOADOUT_TEMPLATES; ++j)
+	{
+		std::ostringstream oss;
+		oss << "globalCraftLoadout" << j;
+		std::string key = oss.str();
+		if (_globalCraftLoadout[j])
+		{
+			node[key] = _globalCraftLoadout[j]->save();
+		}
+		std::ostringstream oss2;
+		oss2 << "globalCraftLoadoutName" << j;
+		std::string key2 = oss2.str();
+		if (!_globalCraftLoadoutName[j].empty())
+		{
+			node[key2] = Language::wstrToUtf8(_globalCraftLoadoutName[j]);
 		}
 	}
 	if (Options::soldierDiaries)
@@ -1206,6 +1250,19 @@ void SavedGame::setResearchRuleStatus(const std::string &researchRule, int newSt
 	_researchRuleStatus[researchRule] = newStatus;
 }
 
+/*
+ * Checks for and removes a research project from the "already discovered" list
+ * @param research is the project we are checking for and removing, if necessary.
+ */
+void SavedGame::removeDiscoveredResearch(const RuleResearch * research)
+{
+	std::vector<const RuleResearch*>::iterator r = std::find(_discovered.begin(), _discovered.end(), research);
+	if (r != _discovered.end())
+	{
+		_discovered.erase(r);
+	}
+}
+
 /**
  * Add a ResearchProject to the list of already discovered ResearchProject
  * @param research The newly found ResearchProject
@@ -1224,6 +1281,12 @@ void SavedGame::addFinishedResearchSimple(const RuleResearch * research)
  */
 void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * mod, Base * base, bool score)
 {
+	if (isResearchRuleStatusDisabled(research->getName()))
+	{
+		// make absolutely sure disabled research never gets re-researched again by accident
+		return;
+	}
+
 	// Not really a queue in C++ terminology (we don't need or want pop_front())
 	std::vector<const RuleResearch *> queue;
 	queue.push_back(research);
@@ -1233,15 +1296,16 @@ void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * m
 	{
 		const RuleResearch *currentQueueItem = queue.at(currentQueueIndex);
 
-		// 1. Find out and remember if the currentQueueItem has any undiscovered "protected unlocks"
+		// 1. Find out and remember if the currentQueueItem has any undiscovered non-disabled "protected unlocks" or "getOneFree"
 		bool hasUndiscoveredProtectedUnlocks = hasUndiscoveredProtectedUnlock(currentQueueItem, mod);
+		bool hasAnyUndiscoveredGetOneFrees = hasUndiscoveredGetOneFree(currentQueueItem, false);
 
 		// 2. If the currentQueueItem was *not* already discovered before, add it to discovered research
 		bool checkRelatedZeroCostTopics = true;
 		if (!isResearched(currentQueueItem->getName(), false))
 		{
 			_discovered.push_back(currentQueueItem);
-			if (!hasUndiscoveredProtectedUnlocks && isResearched(currentQueueItem->getGetOneFree(), false))
+			if (!hasUndiscoveredProtectedUnlocks && !hasAnyUndiscoveredGetOneFrees)
 			{
 				// If the currentQueueItem can't tell you anything anymore, remove it from popped research
 				// Note: this is for optimisation purposes only, functionally it is *not* required...
@@ -1251,6 +1315,16 @@ void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * m
 			if (score)
 			{
 				addResearchScore(currentQueueItem->getPoints());
+			}
+			// process "disables"
+			for (std::vector<std::string>::const_iterator dis = currentQueueItem->getDisabled().begin(); dis != currentQueueItem->getDisabled().end(); ++dis)
+			{
+				RuleResearch *tmp = mod->getResearch((*dis));
+				if (tmp)
+				{
+					removeDiscoveredResearch(tmp); // un-research
+				}
+				setResearchRuleStatus((*dis), RuleResearch::RESEARCH_STATUS_DISABLED); // mark as permanently disabled
 			}
 		}
 		else
@@ -1361,6 +1435,12 @@ void SavedGame::getAvailableResearchProjects(std::vector<RuleResearch *> & proje
 	// Create a list of research topics available for research in the given base
 	for (std::vector<std::string>::const_iterator iter = mod->getResearchList().begin(); iter != mod->getResearchList().end(); ++iter)
 	{
+		// This research topic is permanently disabled, ignore it!
+		if (isResearchRuleStatusDisabled(*iter))
+		{
+			continue;
+		}
+
 		RuleResearch *research = mod->getResearch(*iter);
 
 		if ((considerDebugMode && _debug) || std::find(unlocked.begin(), unlocked.end(), research) != unlocked.end())
@@ -1390,13 +1470,13 @@ void SavedGame::getAvailableResearchProjects(std::vector<RuleResearch *> & proje
 		// Remove the already researched topics from the list *UNLESS* they can still give you something more
 		if (isResearched(research->getName(), false))
 		{
-			if (!isResearched(research->getGetOneFree(), false))
+			if (hasUndiscoveredGetOneFree(research, true))
 			{
-				// This research topic still has some more undiscovered "getOneFree" topics, keep it!
+				// This research topic still has some more undiscovered non-disabled and *AVAILABLE* "getOneFree" topics, keep it!
 			}
 			else if (hasUndiscoveredProtectedUnlock(research, mod))
 			{
-				// This research topic still has one or more undiscovered "protected unlocks", keep it!
+				// This research topic still has one or more undiscovered non-disabled "protected unlocks", keep it!
 			}
 			else
 			{
@@ -1545,12 +1625,18 @@ void SavedGame::getDependablePurchase(std::vector<RuleItem *> & dependables, con
 	for (std::vector<std::string>::const_iterator iter = itemlist.begin(); iter != itemlist.end(); ++iter)
 	{
 		RuleItem *item = mod->getItem(*iter);
-		const std::vector<std::string> &reqs = item->getBuyRequirements();
-		if (std::find(reqs.begin(), reqs.end(), research->getName()) != reqs.end())
+		if (item->getBuyCost() != 0)
 		{
-			if (isResearched(item->getBuyRequirements()))
+			const std::vector<std::string> &reqs = item->getRequirements();
+			bool found = std::find(reqs.begin(), reqs.end(), research->getName()) != reqs.end();
+			const std::vector<std::string> &reqsBuy = item->getBuyRequirements();
+			bool foundBuy = std::find(reqsBuy.begin(), reqsBuy.end(), research->getName()) != reqsBuy.end();
+			if (found || foundBuy)
 			{
-				dependables.push_back(item);
+				if (isResearched(item->getBuyRequirements()) && isResearched(item->getRequirements()))
+				{
+					dependables.push_back(item);
+				}
 			}
 		}
 	}
@@ -1568,12 +1654,15 @@ void SavedGame::getDependableCraft(std::vector<RuleCraft *> & dependables, const
 	for (std::vector<std::string>::const_iterator iter = craftlist.begin(); iter != craftlist.end(); ++iter)
 	{
 		RuleCraft *craftItem = mod->getCraft(*iter);
-		const std::vector<std::string> &reqs = craftItem->getRequirements();
-		if (std::find(reqs.begin(), reqs.end(), research->getName()) != reqs.end())
+		if (craftItem->getBuyCost() != 0)
 		{
-			if (isResearched(craftItem->getRequirements()))
+			const std::vector<std::string> &reqs = craftItem->getRequirements();
+			if (std::find(reqs.begin(), reqs.end(), research->getName()) != reqs.end())
 			{
-				dependables.push_back(craftItem);
+				if (isResearched(craftItem->getRequirements()))
+				{
+					dependables.push_back(craftItem);
+				}
 			}
 		}
 	}
@@ -1623,26 +1712,90 @@ int SavedGame::getManufactureRuleStatus(const std::string &manufactureRule)
 }
 
 /**
-* Gets the status of a research rule.
-* @param researchRule Research rule ID.
-* @return Status (0=new, 1=normal).
-*/
-int SavedGame::getResearchRuleStatus(const std::string &researchRule)
+ * Is the research new?
+ * @param researchRule Research rule ID.
+ * @return True, if the research rule status is new.
+ */
+bool SavedGame::isResearchRuleStatusNew(const std::string &researchRule) const
 {
-	return _researchRuleStatus[researchRule];
+	auto it = _researchRuleStatus.find(researchRule);
+	if (it != _researchRuleStatus.end())
+	{
+		if (it->second != RuleResearch::RESEARCH_STATUS_NEW)
+		{
+			return false;
+		}
+	}
+	return true; // no status = new
 }
 
 /**
- * Returns if a research still has undiscovered "protected unlocks".
+ * Is the research permanently disabled?
+ * @param researchRule Research rule ID.
+ * @return True, if the research rule status is disabled.
+ */
+bool SavedGame::isResearchRuleStatusDisabled(const std::string &researchRule) const
+{
+	auto it = _researchRuleStatus.find(researchRule);
+	if (it != _researchRuleStatus.end())
+	{
+		if (it->second == RuleResearch::RESEARCH_STATUS_DISABLED)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Returns if a research still has undiscovered non-disabled "getOneFree".
+ * @param r Research to check.
+ * @param checkOnlyAvailableTopics Check only available topics (=topics with discovered prerequisite) or all topics?
+ * @return Whether it has any undiscovered non-disabled "getOneFree" or not.
+ */
+bool SavedGame::hasUndiscoveredGetOneFree(const RuleResearch * r, bool checkOnlyAvailableTopics) const
+{
+	if (!isResearched(r->getGetOneFree(), false, true))
+	{
+		return true; // found something undiscovered (and NOT disabled) already, no need to search further
+	}
+	else
+	{
+		// search through getOneFreeProtected topics too
+		for (std::map<std::string, std::vector<std::string> >::const_iterator itMap = r->getGetOneFreeProtected().begin(); itMap != r->getGetOneFreeProtected().end(); ++itMap)
+		{
+			if (checkOnlyAvailableTopics && !isResearched(itMap->first, false))
+			{
+				// skip this group, its prerequisite has not been discovered yet
+			}
+			else
+			{
+				if (!isResearched(itMap->second, false, true))
+				{
+					return true; // found something undiscovered (and NOT disabled) already, no need to search further
+				}
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * Returns if a research still has undiscovered non-disabled "protected unlocks".
  * @param r Research to check.
  * @param mod the Game Mod
- * @return Whether it has any undiscovered "protected unlocks" or not.
+ * @return Whether it has any undiscovered non-disabled "protected unlocks" or not.
  */
 bool SavedGame::hasUndiscoveredProtectedUnlock(const RuleResearch * r, const Mod * mod) const
 {
 	// Note: checking for not yet discovered unlocks protected by "requires" (which also implies cost = 0)
 	for (std::vector<std::string>::const_iterator itUnlocked = r->getUnlocked().begin(); itUnlocked != r->getUnlocked().end(); ++itUnlocked)
 	{
+		if (isResearchRuleStatusDisabled(*itUnlocked))
+		{
+			// ignore all disabled topics (as if they didn't exist)
+			continue;
+		}
 		RuleResearch *unlock = mod->getResearch(*itUnlocked, true);
 		if (!unlock->getRequirements().empty())
 		{
@@ -1680,15 +1833,31 @@ bool SavedGame::isResearched(const std::string &research, bool considerDebugMode
  * Returns if a certain list of research topics has been completed.
  * @param research List of research IDs.
  * @param considerDebugMode Should debug mode be considered or not.
+ * @param skipDisabled Should permanently disabled topics be considered or not.
  * @return Whether it's researched or not.
  */
-bool SavedGame::isResearched(const std::vector<std::string> &research, bool considerDebugMode) const
+bool SavedGame::isResearched(const std::vector<std::string> &research, bool considerDebugMode, bool skipDisabled) const
 {
 	if (research.empty())
 		return true;
 	if (considerDebugMode && _debug)
 		return true;
 	std::vector<std::string> matches = research;
+	if (skipDisabled)
+	{
+		// ignore all disabled topics (as if they didn't exist)
+		for (std::vector<std::string>::iterator j = matches.begin(); j != matches.end();)
+		{
+			if (isResearchRuleStatusDisabled(*j))
+			{
+				j = matches.erase(j);
+			}
+			else
+			{
+				++j;
+			}
+		}
+	}
 	for (std::vector<const RuleResearch *>::const_iterator i = _discovered.begin(); i != _discovered.end(); ++i)
 	{
 		for (std::vector<std::string>::iterator j = matches.begin(); j != matches.end(); ++j)
@@ -2251,6 +2420,34 @@ const std::wstring &SavedGame::getGlobalEquipmentLayoutName(int index) const
 void SavedGame::setGlobalEquipmentLayoutName(int index, const std::wstring &name)
 {
 	_globalEquipmentLayoutName[index] = name;
+}
+
+/**
+* Returns the global craft loadout at specified index.
+* @return Pointer to the ItemContainer list.
+*/
+ItemContainer *SavedGame::getGlobalCraftLoadout(int index)
+{
+	return _globalCraftLoadout[index];
+}
+
+/**
+* Returns the name of a global craft loadout at specified index.
+* @return A name.
+*/
+const std::wstring &SavedGame::getGlobalCraftLoadoutName(int index) const
+{
+	return _globalCraftLoadoutName[index];
+}
+
+/**
+* Sets the name of a global craft loadout at specified index.
+* @param index Array index.
+* @param name New name.
+*/
+void SavedGame::setGlobalCraftLoadoutName(int index, const std::wstring &name)
+{
+	_globalCraftLoadoutName[index] = name;
 }
 
 /**

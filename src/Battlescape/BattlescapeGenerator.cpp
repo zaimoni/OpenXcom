@@ -443,6 +443,7 @@ void BattlescapeGenerator::nextStage()
 			if (!(*j)->isOut())
 			{
 				(*j)->setTurnsSinceSpotted(255);
+				(*j)->setTurnsLeftSpottedForSnipers(0);
 				if (!selectedFirstSoldier && (*j)->getGeoscapeSoldier())
 				{
 					_save->setSelectedUnit(*j);
@@ -481,11 +482,14 @@ void BattlescapeGenerator::nextStage()
 	for (std::vector<BattleItem*>::iterator i = takeToNextStage.begin(); i != takeToNextStage.end(); ++i)
 	{
 		_save->getItems()->push_back(*i);
-		_craftInventoryTile->addItem(*i, ground);
-		if ((*i)->getUnit())
+		if ((*i)->getSlot() == ground)
 		{
-			_craftInventoryTile->setUnit((*i)->getUnit());
-			(*i)->getUnit()->setPosition(_craftInventoryTile->getPosition());
+			_craftInventoryTile->addItem(*i, ground);
+			if ((*i)->getUnit())
+			{
+				_craftInventoryTile->setUnit((*i)->getUnit());
+				(*i)->getUnit()->setPosition(_craftInventoryTile->getPosition());
+			}
 		}
 	}
 

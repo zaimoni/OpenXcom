@@ -47,9 +47,10 @@ RuleItem::RuleItem(const std::string &type) :
 	_psiAnimation(-1), _psiMissAnimation(-1),
 	_power(0), _powerRangeReduction(0), _powerRangeThreshold(0),
 	_accuracyUse(0), _accuracyMind(0), _accuracyPanic(20), _accuracyThrow(100), _accuracyCloseQuarters(-1),
+	_noLOSAccuracyPenalty(-1),
 	_costUse(25), _costMind(-1, -1), _costPanic(-1, -1), _costThrow(25), _costPrime(50), _costUnprime(25),
 	_clipSize(0), _specialChance(100), _tuLoad{ }, _tuUnload{ },
-	_battleType(BT_NONE), _fuseType(BFT_NONE), _psiAttackName(), _primeActionName("STR_PRIME_GRENADE"), _unprimeActionName(), _primeActionMessage("STR_GRENADE_IS_ACTIVATED"), _unprimeActionMessage("STR_GRENADE_IS_DEACTIVATED"),
+	_battleType(BT_NONE), _fuseType(BFT_NONE), _hiddenOnMinimap(false), _psiAttackName(), _primeActionName("STR_PRIME_GRENADE"), _unprimeActionName(), _primeActionMessage("STR_GRENADE_IS_ACTIVATED"), _unprimeActionMessage("STR_GRENADE_IS_DEACTIVATED"),
 	_twoHanded(false), _blockBothHands(false), _fixedWeapon(false), _fixedWeaponShow(false), _allowSelfHeal(false), _isConsumable(false), _isFireExtinguisher(false), _isExplodingInHands(false), _waypoints(0), _invWidth(1), _invHeight(1),
 	_painKiller(0), _heal(0), _stimulant(0), _medikitType(BMT_NORMAL), _woundRecovery(0), _healthRecovery(0), _stunRecovery(0), _energyRecovery(0), _moraleRecovery(0), _painKillerRecovery(1.0f), _recoveryPoints(0), _armor(20), _turretType(-1),
 	_aiUseDelay(-1), _aiMeleeHitCount(25),
@@ -434,6 +435,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_unprimeActionName = node["unprimeActionName"].as<std::string>(_unprimeActionName);
 	_unprimeActionMessage = node["unprimeActionMessage"].as<std::string>(_unprimeActionMessage);
 	_fuseType = (BattleFuseType)node["fuseType"].as<int>(_fuseType);
+	_hiddenOnMinimap = node["hiddenOnMinimap"].as<bool>(_hiddenOnMinimap);
 
 	_confAimed.accuracy = node["accuracyAimed"].as<int>(_confAimed.accuracy);
 	_confAuto.accuracy = node["accuracyAuto"].as<int>(_confAuto.accuracy);
@@ -444,6 +446,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_accuracyPanic = node["accuracyPanic"].as<int>(_accuracyPanic);
 	_accuracyThrow = node["accuracyThrow"].as<int>(_accuracyThrow);
 	_accuracyCloseQuarters = node["accuracyCloseQuarters"].as<int>(_accuracyCloseQuarters);
+	_noLOSAccuracyPenalty = node["noLOSAccuracyPenalty"].as<int>(_noLOSAccuracyPenalty);
 
 	loadCost(_confAimed.cost, node, "Aimed");
 	loadCost(_confAuto.cost, node, "Auto");
@@ -1114,6 +1117,15 @@ int RuleItem::getAccuracyCloseQuarters(Mod *mod) const
 }
 
 /**
+ * Gets the item's accuracy penalty for out-of-LOS targets
+ * @return The no-LOS accuracy penalty.
+ */
+int RuleItem::getNoLOSAccuracyPenalty(Mod *mod) const
+{
+	return _noLOSAccuracyPenalty != -1 ? _noLOSAccuracyPenalty : mod->getNoLOSAccuracyPenaltyGlobal();
+}
+
+/**
  * Gets the item's time unit percentage for aimed shots.
  * @return The aimed shot TU percentage.
  */
@@ -1328,6 +1340,15 @@ int RuleItem::getFuseTimerDefault() const
 	{
 		return -1; //can't prime
 	}
+}
+
+/**
+ * Is this item (e.g. a mine) hidden on the minimap?
+ * @return True if the item should be hidden.
+ */
+bool RuleItem::isHiddenOnMinimap() const
+{
+	return _hiddenOnMinimap;
 }
 
 /**

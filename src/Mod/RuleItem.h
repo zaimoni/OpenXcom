@@ -142,10 +142,12 @@ private:
 	RuleDamageType _damageType, _meleeType;
 	RuleItemAction _confAimed, _confAuto, _confSnap, _confMelee;
 	int _accuracyUse, _accuracyMind, _accuracyPanic, _accuracyThrow, _accuracyCloseQuarters;
+	int _noLOSAccuracyPenalty;
 	RuleItemUseCost _costUse, _costMind, _costPanic, _costThrow, _costPrime, _costUnprime;
 	int _clipSize, _specialChance, _tuLoad[AmmoSlotMax], _tuUnload[AmmoSlotMax];
 	BattleType _battleType;
 	BattleFuseType _fuseType;
+	bool _hiddenOnMinimap;
 	std::string _psiAttackName, _primeActionName, _unprimeActionName, _primeActionMessage, _unprimeActionMessage;
 	bool _twoHanded, _blockBothHands, _fixedWeapon, _fixedWeaponShow, _allowSelfHeal, _isConsumable, _isFireExtinguisher, _isExplodingInHands;
 	std::string _defaultInventorySlot;
@@ -337,6 +339,8 @@ public:
 	int getAccuracyThrow() const;
 	/// Gets the item's close quarters combat accuracy.
 	int getAccuracyCloseQuarters(Mod *mod) const;
+	/// Get penalty for firing this weapon on out-of-LOS targets
+	int getNoLOSAccuracyPenalty(Mod *mod) const;
 
 	/// Gets the item's aimed shot cost.
 	RuleItemUseCost getCostAimed() const;
@@ -397,6 +401,8 @@ public:
 	BattleFuseType getFuseTimerType() const;
 	/// Gets the item's default fuse value.
 	int getFuseTimerDefault() const;
+	/// Is this item (e.g. a mine) hidden on the minimap?
+	bool isHiddenOnMinimap() const;
 	/// Gets the item's inventory width.
 	int getInventoryWidth() const;
 	/// Gets the item's inventory height.

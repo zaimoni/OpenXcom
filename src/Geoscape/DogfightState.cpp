@@ -257,7 +257,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo) :
 	}
 
 	// pilot modifiers
-	const std::vector<Soldier*> pilots = _craft->getPilotList();
+	const std::vector<Soldier*> pilots = _craft->getPilotList(false);
 	_pilotAccuracyBonus = _craft->getPilotAccuracyBonus(pilots, _game->getMod());
 	_pilotDodgeBonus = _craft->getPilotDodgeBonus(pilots, _game->getMod());
 	_pilotApproachSpeedModifier = _craft->getPilotApproachSpeedModifier(pilots, _game->getMod());
@@ -433,17 +433,8 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo) :
 	_colors[DISABLED_WEAPON] = dogfightInterface->getElement("disabledWeapon")->color;
 	_colors[DISABLED_RANGE] = dogfightInterface->getElement("disabledWeapon")->color2;
 	_colors[DISABLED_AMMO] = dogfightInterface->getElement("disabledAmmo")->color;
-	// make sure shield stuff has proper colors, since not part of vanilla interface
-	if (dogfightInterface->getElement("shieldRange") != 0)
-	{
-		_colors[SHIELD_MIN] = dogfightInterface->getElement("shieldRange")->color;
-		_colors[SHIELD_MAX] = dogfightInterface->getElement("shieldRange")->color2;
-	}
-	else
-	{
-		_colors[SHIELD_MIN] = 80; // a nice light blue
-		_colors[SHIELD_MAX] = 85; // darker blue to match
-	}
+	_colors[SHIELD_MIN] = dogfightInterface->getElement("shieldRange")->color;
+	_colors[SHIELD_MAX] = dogfightInterface->getElement("shieldRange")->color2;
 
 	for (int i = 0; i < _weaponNum; ++i)
 	{
@@ -606,7 +597,7 @@ DogfightState::~DogfightState()
 	// award experience to the pilots
 	if (_firedAtLeastOnce && _craft && _ufo && (_ufo->isCrashed() || _ufo->isDestroyed()))
 	{
-		const std::vector<Soldier*> pilots = _craft->getPilotList();
+		const std::vector<Soldier*> pilots = _craft->getPilotList(false);
 		for (std::vector<Soldier*>::const_iterator it = pilots.begin(); it != pilots.end(); ++it)
 		{
 			if ((*it)->getCurrentStats()->firing < (*it)->getRules()->getStatCaps().firing)

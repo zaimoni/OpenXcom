@@ -1246,6 +1246,7 @@ void Map::drawTerrain(Surface *surface)
 											int totalDamage = 0;
 											totalDamage += rule->getPowerBonus(action->actor);
 											totalDamage -= rule->getPowerRangeReduction(distance * 16);
+											if (totalDamage < 0) totalDamage = 0;
 											if (_cursorType != CT_WAYPOINT)
 												ss << "\n";
 											ss << rule->getDamageType()->getRandomDamage(totalDamage, 1);
@@ -1489,7 +1490,7 @@ void Map::drawTerrain(Surface *surface)
 		c += _camera->getMapOffset() + Position(0, 16, 0);
 		d += _camera->getMapOffset() + Position(0, 16, 0);
 
-		surface->drawLine(a.x, a.y, b.x, b.y, 56); // magicNumber = 56 (green)
+		surface->drawLine(a.x, a.y, b.x, b.y, 56); // magicNumber = 56 (UFO green/TFTD blue)
 		surface->drawLine(b.x, b.y, c.x, c.y, 56);
 		surface->drawLine(c.x, c.y, d.x, d.y, 56);
 		surface->drawLine(d.x, d.y, a.x, a.y, 56);
@@ -1575,7 +1576,7 @@ int Map::reShade(Tile *tile)
 	{
 		if ((*i)->getFaction() == FACTION_PLAYER && !(*i)->isOut())
 		{
-			if (_save->getTileEngine()->distanceSq(tile->getPosition(), (*i)->getPosition(), false) <= (*i)->getArmor()->getVisibilityAtDark() * (*i)->getArmor()->getVisibilityAtDark())
+			if (_save->getTileEngine()->distanceSq(tile->getPosition(), (*i)->getPosition(), false) <= (*i)->getMaxViewDistanceAtDark(0) * (*i)->getMaxViewDistanceAtDark(0))
 			{
 				return tile->getShade() > _fadeShade ? _fadeShade : tile->getShade();
 			}

@@ -21,6 +21,7 @@
 #include "../Engine/Action.h"
 #include "../Engine/Game.h"
 #include "../Mod/Mod.h"
+#include "../Mod/RuleInterface.h"
 #include "../Mod/RuleManufacture.h"
 #include "../Mod/RuleResearch.h"
 #include "../Engine/LocalizedText.h"
@@ -63,16 +64,22 @@ TechTreeViewerState::TechTreeViewerState(const RuleResearch *selectedTopicResear
 	_btnOk = new TextButton(148, 16, 164, 176);
 
 	// Set palette
-	setInterface("researchMenu");
+	setInterface("techTreeViewer");
 
-	add(_window, "window", "researchMenu");
-	add(_txtTitle, "text", "researchMenu");
-	add(_txtSelectedTopic, "text", "researchMenu");
-	add(_txtProgress, "text", "researchMenu");
-	add(_lstLeft, "list", "researchMenu");
-	add(_lstRight, "list", "researchMenu");
-	add(_btnNew, "button", "researchMenu");
-	add(_btnOk, "button", "researchMenu");
+	_purple = _game->getMod()->getInterface("techTreeViewer")->getElement("list")->color;
+	_pink = _game->getMod()->getInterface("techTreeViewer")->getElement("list")->color2;
+	_blue = _game->getMod()->getInterface("techTreeViewer")->getElement("list")->border;
+	_white = _game->getMod()->getInterface("techTreeViewer")->getElement("listExtended")->color;
+	_gold = _game->getMod()->getInterface("techTreeViewer")->getElement("listExtended")->color2;
+
+	add(_window, "window", "techTreeViewer");
+	add(_txtTitle, "text", "techTreeViewer");
+	add(_txtSelectedTopic, "text", "techTreeViewer");
+	add(_txtProgress, "text", "techTreeViewer");
+	add(_lstLeft, "list", "techTreeViewer");
+	add(_lstRight, "list", "techTreeViewer");
+	add(_btnNew, "button", "techTreeViewer");
+	add(_btnOk, "button", "techTreeViewer");
 
 	centerAllSurfaces();
 
@@ -211,19 +218,20 @@ void TechTreeViewerState::initLists()
 		const std::vector<std::string> reqs = rule->getRequirements();
 		const std::vector<std::string> deps = rule->getDependencies();
 		std::vector<std::string> unlockedBy;
+		std::vector<std::string> disabledBy;
 		std::vector<std::string> getForFreeFrom;
 		std::vector<std::string> requiredByResearch;
 		std::vector<std::string> requiredByManufacture;
 		std::vector<std::string> leadsTo;
 		const std::vector<std::string> unlocks = rule->getUnlocked();
+		const std::vector<std::string> disables = rule->getDisabled();
 		const std::vector<std::string> free = rule->getGetOneFree();
+		const std::map<std::string, std::vector<std::string> > freeProtected = rule->getGetOneFreeProtected();
 
 		for (std::vector<std::string>::const_iterator j = manufactureList.begin(); j != manufactureList.end(); ++j)
 		{
 			RuleManufacture *temp = _game->getMod()->getManufacture(*j);
-
-			const std::vector<std::string> reqs = temp->getRequirements();
-			for (std::vector<std::string>::const_iterator i = reqs.begin(); i != reqs.end(); ++i)
+			for (std::vector<std::string>::const_iterator i = temp->getRequirements().begin(); i != temp->getRequirements().end(); ++i)
 			{
 				if (*i == rule->getName())
 				{
@@ -235,33 +243,45 @@ void TechTreeViewerState::initLists()
 		for (std::vector<std::string>::const_iterator j = researchList.begin(); j != researchList.end(); ++j)
 		{
 			RuleResearch *temp = _game->getMod()->getResearch(*j);
-
-			const std::vector<std::string> unlocks = temp->getUnlocked();
-			for (std::vector<std::string>::const_iterator i = unlocks.begin(); i != unlocks.end(); ++i)
+			for (std::vector<std::string>::const_iterator i = temp->getUnlocked().begin(); i != temp->getUnlocked().end(); ++i)
 			{
 				if (*i == rule->getName())
 				{
 					unlockedBy.push_back(*j);
 				}
 			}
-			const std::vector<std::string> free = temp->getGetOneFree();
-			for (std::vector<std::string>::const_iterator i = free.begin(); i != free.end(); ++i)
+			for (std::vector<std::string>::const_iterator i = temp->getDisabled().begin(); i != temp->getDisabled().end(); ++i)
+			{
+				if (*i == rule->getName())
+				{
+					disabledBy.push_back(*j);
+				}
+			}
+			for (std::vector<std::string>::const_iterator i = temp->getGetOneFree().begin(); i != temp->getGetOneFree().end(); ++i)
 			{
 				if (*i == rule->getName())
 				{
 					getForFreeFrom.push_back(*j);
 				}
 			}
-			const std::vector<std::string> reqs = temp->getRequirements();
-			for (std::vector<std::string>::const_iterator i = reqs.begin(); i != reqs.end(); ++i)
+			for (std::map<std::string, std::vector<std::string> >::const_iterator itMap = temp->getGetOneFreeProtected().begin(); itMap != temp->getGetOneFreeProtected().end(); ++itMap)
+			{
+				for (std::vector<std::string>::const_iterator i = itMap->second.begin(); i != itMap->second.end(); ++i)
+				{
+					if (*i == rule->getName())
+					{
+						getForFreeFrom.push_back(*j);
+					}
+				}
+			}
+			for (std::vector<std::string>::const_iterator i = temp->getRequirements().begin(); i != temp->getRequirements().end(); ++i)
 			{
 				if (*i == rule->getName())
 				{
 					requiredByResearch.push_back(*j);
 				}
 			}
-			const std::vector<std::string> deps = temp->getDependencies();
-			for (std::vector<std::string>::const_iterator i = deps.begin(); i != deps.end(); ++i)
+			for (std::vector<std::string>::const_iterator i = temp->getDependencies().begin(); i != temp->getDependencies().end(); ++i)
 			{
 				if (*i == rule->getName())
 				{
@@ -281,7 +301,7 @@ void TechTreeViewerState::initLists()
 			{
 				_lstLeft->addRow(1, tr("STR_ITEM_REQUIRED").c_str());
 			}
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -290,7 +310,7 @@ void TechTreeViewerState::initLists()
 			_lstLeft->addRow(1, itemName.c_str());
 			if (!isDiscoveredResearch(_selectedTopic))
 			{
-				_lstLeft->setRowColor(row, 241); // pink
+				_lstLeft->setRowColor(row, _pink);
 			}
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
@@ -302,7 +322,7 @@ void TechTreeViewerState::initLists()
 		if (reqFacilities.size() > 0)
 		{
 			_lstLeft->addRow(1, tr("STR_FACILITIES_REQUIRED").c_str());
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -311,7 +331,7 @@ void TechTreeViewerState::initLists()
 				std::wstring name = tr((*i));
 				name.insert(0, L"  ");
 				_lstLeft->addRow(1, name.c_str());
-				_lstLeft->setRowColor(row, 213); // gold
+				_lstLeft->setRowColor(row, _gold);
 				_leftTopics.push_back("-");
 				_leftFlags.push_back(0);
 				++row;
@@ -322,7 +342,7 @@ void TechTreeViewerState::initLists()
 		if (reqs.size() > 0)
 		{
 			_lstLeft->addRow(1, tr("STR_REQUIRES").c_str());
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -333,7 +353,7 @@ void TechTreeViewerState::initLists()
 				_lstLeft->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstLeft->setRowColor(row, 241); // pink
+					_lstLeft->setRowColor(row, _pink);
 				}
 				_leftTopics.push_back((*i));
 				_leftFlags.push_back(1);
@@ -345,7 +365,7 @@ void TechTreeViewerState::initLists()
 		if (deps.size() > 0)
 		{
 			_lstLeft->addRow(1, tr("STR_DEPENDS_ON").c_str());
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -361,7 +381,7 @@ void TechTreeViewerState::initLists()
 				_lstLeft->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstLeft->setRowColor(row, 241); // pink
+					_lstLeft->setRowColor(row, _pink);
 				}
 				_leftTopics.push_back((*i));
 				_leftFlags.push_back(1);
@@ -369,11 +389,11 @@ void TechTreeViewerState::initLists()
 			}
 		}
 
-		// 4. unlocked by
+		// 4a. unlocked by
 		if (unlockedBy.size() > 0)
 		{
 			_lstLeft->addRow(1, tr("STR_UNLOCKED_BY").c_str());
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -384,7 +404,30 @@ void TechTreeViewerState::initLists()
 				_lstLeft->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstLeft->setRowColor(row, 241); // pink
+					_lstLeft->setRowColor(row, _pink);
+				}
+				_leftTopics.push_back((*i));
+				_leftFlags.push_back(1);
+				++row;
+			}
+		}
+
+		// 4b. disabled by
+		if (disabledBy.size() > 0)
+		{
+			_lstLeft->addRow(1, tr("STR_DISABLED_BY").c_str());
+			_lstLeft->setRowColor(row, _blue);
+			_leftTopics.push_back("-");
+			_leftFlags.push_back(0);
+			++row;
+			for (std::vector<std::string>::const_iterator i = disabledBy.begin(); i != disabledBy.end(); ++i)
+			{
+				std::wstring name = tr((*i));
+				name.insert(0, L"  ");
+				_lstLeft->addRow(1, name.c_str());
+				if (!isDiscoveredResearch((*i)))
+				{
+					_lstLeft->setRowColor(row, _pink);
 				}
 				_leftTopics.push_back((*i));
 				_leftFlags.push_back(1);
@@ -396,7 +439,7 @@ void TechTreeViewerState::initLists()
 		if (getForFreeFrom.size() > 0)
 		{
 			_lstLeft->addRow(1, tr("STR_GET_FOR_FREE_FROM").c_str());
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -407,7 +450,7 @@ void TechTreeViewerState::initLists()
 				_lstLeft->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstLeft->setRowColor(row, 241); // pink
+					_lstLeft->setRowColor(row, _pink);
 				}
 				_leftTopics.push_back((*i));
 				_leftFlags.push_back(1);
@@ -421,7 +464,7 @@ void TechTreeViewerState::initLists()
 		if (requiredByResearch.size() > 0 || requiredByManufacture.size() > 0)
 		{
 			_lstRight->addRow(1, tr("STR_REQUIRED_BY").c_str());
-			_lstRight->setRowColor(row, 218); // blue
+			_lstRight->setRowColor(row, _blue);
 			_rightTopics.push_back("-");
 			_rightFlags.push_back(0);
 			++row;
@@ -437,7 +480,7 @@ void TechTreeViewerState::initLists()
 				_lstRight->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstRight->setRowColor(row, 241); // pink
+					_lstRight->setRowColor(row, _pink);
 				}
 				_rightTopics.push_back((*i));
 				_rightFlags.push_back(1);
@@ -456,7 +499,7 @@ void TechTreeViewerState::initLists()
 				_lstRight->addRow(1, name.c_str());
 				if (!isDiscoveredManufacture((*i)))
 				{
-					_lstRight->setRowColor(row, 241); // pink
+					_lstRight->setRowColor(row, _pink);
 				}
 				_rightTopics.push_back((*i));
 				_rightFlags.push_back(2);
@@ -468,7 +511,7 @@ void TechTreeViewerState::initLists()
 		if (leadsTo.size() > 0)
 		{
 			_lstRight->addRow(1, tr("STR_LEADS_TO").c_str());
-			_lstRight->setRowColor(row, 218); // blue
+			_lstRight->setRowColor(row, _blue);
 			_rightTopics.push_back("-");
 			_rightFlags.push_back(0);
 			++row;
@@ -484,7 +527,7 @@ void TechTreeViewerState::initLists()
 				_lstRight->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstRight->setRowColor(row, 241); // pink
+					_lstRight->setRowColor(row, _pink);
 				}
 				_rightTopics.push_back((*i));
 				_rightFlags.push_back(1);
@@ -492,11 +535,11 @@ void TechTreeViewerState::initLists()
 			}
 		}
 
-		// 8. unlocks
+		// 8a. unlocks
 		if (unlocks.size() > 0)
 		{
 			_lstRight->addRow(1, tr("STR_UNLOCKS").c_str());
-			_lstRight->setRowColor(row, 218); // blue
+			_lstRight->setRowColor(row, _blue);
 			_rightTopics.push_back("-");
 			_rightFlags.push_back(0);
 			++row;
@@ -507,7 +550,30 @@ void TechTreeViewerState::initLists()
 				_lstRight->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstRight->setRowColor(row, 241); // pink
+					_lstRight->setRowColor(row, _pink);
+				}
+				_rightTopics.push_back((*i));
+				_rightFlags.push_back(1);
+				++row;
+			}
+		}
+
+		// 8b. disables
+		if (disables.size() > 0)
+		{
+			_lstRight->addRow(1, tr("STR_DISABLES").c_str());
+			_lstRight->setRowColor(row, _blue);
+			_rightTopics.push_back("-");
+			_rightFlags.push_back(0);
+			++row;
+			for (std::vector<std::string>::const_iterator i = disables.begin(); i != disables.end(); ++i)
+			{
+				std::wstring name = tr((*i));
+				name.insert(0, L"  ");
+				_lstRight->addRow(1, name.c_str());
+				if (!isDiscoveredResearch((*i)))
+				{
+					_lstRight->setRowColor(row, _pink);
 				}
 				_rightTopics.push_back((*i));
 				_rightFlags.push_back(1);
@@ -518,8 +584,15 @@ void TechTreeViewerState::initLists()
 		// 9. gives one for free
 		if (free.size() > 0)
 		{
-			_lstRight->addRow(1, tr("STR_GIVES_ONE_FOR_FREE").c_str());
-			_lstRight->setRowColor(row, 218); // blue
+			if (rule->sequentialGetOneFree())
+			{
+				_lstRight->addRow(1, tr("STR_GIVES_ONE_FOR_FREE_SEQ").c_str());
+			}
+			else
+			{
+				_lstRight->addRow(1, tr("STR_GIVES_ONE_FOR_FREE").c_str());
+			}
+			_lstRight->setRowColor(row, _blue);
 			_rightTopics.push_back("-");
 			_rightFlags.push_back(0);
 			++row;
@@ -530,11 +603,42 @@ void TechTreeViewerState::initLists()
 				_lstRight->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstRight->setRowColor(row, 241); // pink
+					_lstRight->setRowColor(row, _pink);
 				}
 				_rightTopics.push_back((*i));
 				_rightFlags.push_back(1);
 				++row;
+			}
+			for (std::map<std::string, std::vector<std::string> >::const_iterator itMap = freeProtected.begin(); itMap != freeProtected.end(); ++itMap)
+			{
+				std::wstring name2 = tr(itMap->first);
+				name2.insert(0, L" ");
+				name2.append(L":");
+				_lstRight->addRow(1, name2.c_str());
+				if (isDiscoveredResearch(itMap->first))
+				{
+					_lstRight->setRowColor(row, _white);
+				}
+				else
+				{
+					_lstRight->setRowColor(row, _gold);
+				}
+				_rightTopics.push_back(itMap->first);
+				_rightFlags.push_back(1);
+				++row;
+				for (std::vector<std::string>::const_iterator i = itMap->second.begin(); i != itMap->second.end(); ++i)
+				{
+					std::wstring name = tr((*i));
+					name.insert(0, L"  ");
+					_lstRight->addRow(1, name.c_str());
+					if (!isDiscoveredResearch((*i)))
+					{
+						_lstRight->setRowColor(row, _pink);
+					}
+					_rightTopics.push_back((*i));
+					_rightFlags.push_back(1);
+					++row;
+				}
 			}
 		}
 	}
@@ -550,7 +654,7 @@ void TechTreeViewerState::initLists()
 		if (reqs.size() > 0)
 		{
 			_lstLeft->addRow(1, tr("STR_RESEARCH_REQUIRED").c_str());
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -561,7 +665,7 @@ void TechTreeViewerState::initLists()
 				_lstLeft->addRow(1, name.c_str());
 				if (!isDiscoveredResearch((*i)))
 				{
-					_lstLeft->setRowColor(row, 241); // pink
+					_lstLeft->setRowColor(row, _pink);
 				}
 				_leftTopics.push_back((*i));
 				_leftFlags.push_back(1);
@@ -574,7 +678,7 @@ void TechTreeViewerState::initLists()
 		if (reqFacilities.size() > 0)
 		{
 			_lstLeft->addRow(1, tr("STR_FACILITIES_REQUIRED").c_str());
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -583,7 +687,7 @@ void TechTreeViewerState::initLists()
 				std::wstring name = tr((*i));
 				name.insert(0, L"  ");
 				_lstLeft->addRow(1, name.c_str());
-				_lstLeft->setRowColor(row, 213); // gold
+				_lstLeft->setRowColor(row, _gold);
 				_leftTopics.push_back("-");
 				_leftFlags.push_back(0);
 				++row;
@@ -595,7 +699,7 @@ void TechTreeViewerState::initLists()
 		if (inputs.size() > 0)
 		{
 			_lstLeft->addRow(1, tr("STR_MATERIALS_REQUIRED").c_str());
-			_lstLeft->setRowColor(row, 218); // blue
+			_lstLeft->setRowColor(row, _blue);
 			_leftTopics.push_back("-");
 			_leftFlags.push_back(0);
 			++row;
@@ -607,7 +711,7 @@ void TechTreeViewerState::initLists()
 				name << L": ";
 				name << (*i).second;
 				_lstLeft->addRow(1, name.str().c_str());
-				_lstLeft->setRowColor(row, 208); // white
+				_lstLeft->setRowColor(row, _white);
 				_leftTopics.push_back("-");
 				_leftFlags.push_back(0);
 				++row;
@@ -621,7 +725,7 @@ void TechTreeViewerState::initLists()
 		if (outputs.size() > 0)
 		{
 			_lstRight->addRow(1, tr("STR_ITEMS_PRODUCED").c_str());
-			_lstRight->setRowColor(row, 218); // blue
+			_lstRight->setRowColor(row, _blue);
 			_rightTopics.push_back("-");
 			_rightFlags.push_back(0);
 			++row;
@@ -633,7 +737,7 @@ void TechTreeViewerState::initLists()
 				name << L": ";
 				name << (*i).second;
 				_lstRight->addRow(1, name.str().c_str());
-				_lstRight->setRowColor(row, 208); // white
+				_lstRight->setRowColor(row, _white);
 				_rightTopics.push_back("-");
 				_rightFlags.push_back(0);
 				++row;
@@ -644,7 +748,7 @@ void TechTreeViewerState::initLists()
 		if (rule->getSpawnedPersonType() != "")
 		{
 			_lstRight->addRow(1, tr("STR_PERSON_RECRUITED").c_str());
-			_lstRight->setRowColor(row, 218); // blue
+			_lstRight->setRowColor(row, _blue);
 			_rightTopics.push_back("-");
 			_rightFlags.push_back(0);
 			++row;
@@ -654,7 +758,7 @@ void TechTreeViewerState::initLists()
 			name << L"  ";
 			name << tr(rule->getSpawnedPersonName() != "" ? rule->getSpawnedPersonName() : rule->getSpawnedPersonType());
 			_lstRight->addRow(1, name.str().c_str());
-			_lstRight->setRowColor(row, 208); // white
+			_lstRight->setRowColor(row, _white);
 			_rightTopics.push_back("-");
 			_rightFlags.push_back(0);
 			++row;

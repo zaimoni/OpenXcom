@@ -65,7 +65,7 @@ class AlienDeployment
 private:
 	std::string _type;
 	std::string _startingCondition;
-	std::string _unlockedResearch;
+	std::string _unlockedResearch, _missionBountyItem;
 	int _bughuntMinTurn;
 	std::vector<DeploymentData> _data;
 	int _width, _length, _height, _civilians;
@@ -76,6 +76,7 @@ private:
 	bool _finalDestination, _isAlienBase;
 	std::string _winCutscene, _loseCutscene, _abortCutscene;
 	std::string _alert, _alertBackground, _alertDescription;
+	int _alertSound;
 	BriefingData _briefingData;
 	std::string _markerName, _objectivePopup, _objectiveCompleteText, _objectiveFailedText;
 	WeightedOptions _genMission;
@@ -95,6 +96,8 @@ public:
 	std::string getStartingCondition() const;
 	/// Gets the research topic to be unlocked after a successful mission.
 	std::string getUnlockedResearch() const;
+	/// Gets the item to be recovered/given after a successful mission.
+	std::string getMissionBountyItem() const;
 	/// Gets the bug hunt mode minimum turn requirement (default = 0 = not used).
 	int getBughuntMinTurn() const;
 	/// Gets a pointer to the data.
@@ -133,6 +136,8 @@ public:
 	std::string getAlertBackground() const;
 	/// Gets the alert description for this mission type.
 	std::string getAlertDescription() const;
+	/// Gets the alert sound for this mission type.
+	int getAlertSound() const;
 	/// Gets the briefing data for this mission type.
 	BriefingData getBriefingData() const;
 	/// Gets the marker name for this mission.

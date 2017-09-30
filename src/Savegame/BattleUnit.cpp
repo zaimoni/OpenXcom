@@ -61,9 +61,9 @@ BattleUnit::BattleUnit(Soldier *soldier, int depth, int maxViewDistance) :
 	_verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _walkPhase(0), _fallPhase(0), _kneeled(false), _floating(false),
 	_dontReselect(false), _fire(0), _currentAIState(0), _visible(false),
 	_expBravery(0), _expReactions(0), _expFiring(0), _expThrowing(0), _expPsiSkill(0), _expPsiStrength(0), _expMelee(0),
-	_motionPoints(0), _kills(0), _hitByFire(false), _fireMaxHit(0), _smokeMaxHit(0), _moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255),
+	_motionPoints(0), _kills(0), _hitByFire(false), _fireMaxHit(0), _smokeMaxHit(0), _moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
 	_statistics(), _murdererId(0), _mindControllerID(0), _fatalShotSide(SIDE_FRONT), _fatalShotBodyPart(BODYPART_HEAD), _armor(0),
-	_geoscapeSoldier(soldier), _unitRules(0), _rankInt(0), _turretType(-1), _hidingForTurn(false), _floorAbove(false), _respawn(false)
+	_geoscapeSoldier(soldier), _unitRules(0), _rankInt(0), _turretType(-1), _hidingForTurn(false), _floorAbove(false), _respawn(false), _alreadyRespawned(false), _isLeeroyJenkins(false)
 {
 	_name = soldier->getName(true);
 	_id = soldier->getId();
@@ -227,10 +227,10 @@ BattleUnit::BattleUnit(Unit *unit, UnitFaction faction, int id, Armor *armor, St
 	_fallPhase(0), _kneeled(false), _floating(false), _dontReselect(false), _fire(0), _currentAIState(0),
 	_visible(false), _expBravery(0), _expReactions(0), _expFiring(0),
 	_expThrowing(0), _expPsiSkill(0), _expPsiStrength(0), _expMelee(0), _motionPoints(0), _kills(0), _hitByFire(false), _fireMaxHit(0), _smokeMaxHit(0),
-	_moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255),
+	_moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
 	_statistics(), _murdererId(0), _mindControllerID(0), _fatalShotSide(SIDE_FRONT),
 	_fatalShotBodyPart(BODYPART_HEAD), _armor(armor), _geoscapeSoldier(0),  _unitRules(unit),
-	_rankInt(0), _turretType(-1), _hidingForTurn(false), _respawn(false)
+	_rankInt(0), _turretType(-1), _hidingForTurn(false), _respawn(false), _alreadyRespawned(false), _isLeeroyJenkins(false)
 {
 	_type = unit->getType();
 	_rank = unit->getRank();
@@ -249,6 +249,7 @@ BattleUnit::BattleUnit(Unit *unit, UnitFaction faction, int id, Armor *armor, St
 	_spawnUnit = unit->getSpawnUnit();
 	_value = unit->getValue();
 	_faceDirection = -1;
+	_isLeeroyJenkins = unit->isLeeroyJenkins();
 
 	_movementType = _armor->getMovementType();
 	if (_movementType == MT_FLOAT)
@@ -399,6 +400,7 @@ void BattleUnit::load(const YAML::Node &node, const ScriptGlobal *shared)
 	_turretType = node["turretType"].as<int>(_turretType);
 	_visible = node["visible"].as<bool>(_visible);
 	_turnsSinceSpotted = node["turnsSinceSpotted"].as<int>(_turnsSinceSpotted);
+	_turnsLeftSpottedForSnipers = node["turnsLeftSpottedForSnipers"].as<int>(_turnsLeftSpottedForSnipers);
 	_killedBy = (UnitFaction)node["killedBy"].as<int>(_killedBy);
 	_moraleRestored = node["moraleRestored"].as<int>(_moraleRestored);
 	_rankInt = node["rankInt"].as<int>(_rankInt);
@@ -408,6 +410,7 @@ void BattleUnit::load(const YAML::Node &node, const ScriptGlobal *shared)
 	_spawnUnit = node["spawnUnit"].as<std::string>(_spawnUnit);
 	_motionPoints = node["motionPoints"].as<int>(0);
 	_respawn = node["respawn"].as<bool>(_respawn);
+	_alreadyRespawned = node["alreadyRespawned"].as<bool>(_alreadyRespawned);
 	_activeHand = node["activeHand"].as<std::string>(_activeHand);
 	if (node["tempUnitStatistics"])
 	{
@@ -468,6 +471,7 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	node["turretType"] = _turretType;
 	node["visible"] = _visible;
 	node["turnsSinceSpotted"] = _turnsSinceSpotted;
+	node["turnsLeftSpottedForSnipers"] = _turnsLeftSpottedForSnipers;
 	node["rankInt"] = _rankInt;
 	node["moraleRestored"] = _moraleRestored;
 	if (getAIModule())
@@ -485,6 +489,7 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 		node["spawnUnit"] = _spawnUnit;
 	node["motionPoints"] = _motionPoints;
 	node["respawn"] = _respawn;
+	node["alreadyRespawned"] = _alreadyRespawned;
 	node["activeHand"] = _activeHand;
 	node["tempUnitStatistics"] = _statistics->save();
 	node["murdererId"] = _murdererId;
@@ -600,6 +605,7 @@ void BattleUnit::setDirection(int direction)
 	_direction = direction;
 	_toDirection = direction;
 	_directionTurret = direction;
+	_toDirectionTurret = direction;
 }
 
 /**
@@ -3179,12 +3185,26 @@ int BattleUnit::getMaxViewDistance(int baseVisibility, int nerf, int buff) const
 
 int BattleUnit::getMaxViewDistanceAtDark(const Armor *otherUnitArmor) const
 {
-	return getMaxViewDistance(_maxViewDistanceAtDark, otherUnitArmor->getCamouflageAtDark(), _armor->getAntiCamouflageAtDark());
+	if (otherUnitArmor)
+	{
+		return getMaxViewDistance(_maxViewDistanceAtDark, otherUnitArmor->getCamouflageAtDark(), _armor->getAntiCamouflageAtDark());
+	}
+	else
+	{
+		return _maxViewDistanceAtDark;
+	}
 }
 
 int BattleUnit::getMaxViewDistanceAtDay(const Armor *otherUnitArmor) const
 {
-	return getMaxViewDistance(_maxViewDistanceAtDay, otherUnitArmor->getCamouflageAtDay(), _armor->getAntiCamouflageAtDay());
+	if (otherUnitArmor)
+	{
+		return getMaxViewDistance(_maxViewDistanceAtDay, otherUnitArmor->getCamouflageAtDay(), _armor->getAntiCamouflageAtDay());
+	}
+	else
+	{
+		return _maxViewDistanceAtDay;
+	}
 }
 
 /**
@@ -3211,6 +3231,23 @@ void BattleUnit::setRespawn(bool respawn)
 bool BattleUnit::getRespawn() const
 {
 	return _respawn;
+}
+
+/**
+ * Marks this unit as already respawned (or not).
+ * @param alreadyRespawned whether it already respawned.
+ */
+void BattleUnit::setAlreadyRespawned(bool alreadyRespawned)
+{
+	_alreadyRespawned = alreadyRespawned;
+}
+
+/**
+ * Gets this unit's alreadyRespawned flag.
+ */
+bool BattleUnit::getAlreadyRespawned() const
+{
+	return _alreadyRespawned;
 }
 
 /**
@@ -3398,6 +3435,24 @@ void BattleUnit::setTurnsSinceSpotted (int turns)
 int BattleUnit::getTurnsSinceSpotted() const
 {
 	return _turnsSinceSpotted;
+}
+
+/**
+ * Set how many turns left snipers will know about this unit.
+ * @param turns number of turns
+ */
+void BattleUnit::setTurnsLeftSpottedForSnipers (int turns)
+{
+	_turnsLeftSpottedForSnipers = turns;
+}
+
+/**
+ * Get how many turns left snipers can fire on this unit.
+ * @return number of turns
+ */
+int BattleUnit::getTurnsLeftSpottedForSnipers() const
+{
+	return _turnsLeftSpottedForSnipers;
 }
 
 /**

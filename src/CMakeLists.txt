@@ -10,6 +10,8 @@ set ( basescape_src
   Basescape/BuildFacilitiesState.cpp
   Basescape/ChangeHeadquartersState.cpp
   Basescape/CraftArmorState.cpp
+  Basescape/CraftEquipmentLoadState.cpp
+  Basescape/CraftEquipmentSaveState.cpp
   Basescape/CraftEquipmentState.cpp
   Basescape/CraftInfoState.cpp
   Basescape/CraftPilotSelectState.cpp
@@ -162,7 +164,6 @@ set ( geoscape_src
   Geoscape/AlienBaseState.cpp
   Geoscape/AllocatePsiTrainingState.cpp
   Geoscape/AllocateTrainingState.cpp
-  Geoscape/TrainingState.cpp
   Geoscape/BaseDefenseState.cpp
   Geoscape/BaseDestroyedState.cpp
   Geoscape/BaseNameState.cpp
@@ -197,7 +198,10 @@ set ( geoscape_src
   Geoscape/ResearchCompleteState.cpp
   Geoscape/ResearchRequiredState.cpp
   Geoscape/SelectDestinationState.cpp
+  Geoscape/SelectMusicTrackState.cpp
   Geoscape/TargetInfoState.cpp
+  Geoscape/TrainingFinishedState.cpp
+  Geoscape/TrainingState.cpp
   Geoscape/UfoDetectedState.cpp
   Geoscape/UfoLostState.cpp
   Geoscape/UfoTrackerState.cpp
@@ -254,6 +258,7 @@ set ( menu_src
   Menu/SlideshowState.cpp
   Menu/StartState.cpp
   Menu/StatisticsState.cpp
+  Menu/TestPaletteState.cpp
   Menu/TestState.cpp
   Menu/VideoState.cpp
 )

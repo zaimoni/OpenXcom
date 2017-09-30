@@ -151,12 +151,15 @@ private:
 	ModScriptGlobal *_scriptGlobal;
 	int _maxViewDistance, _maxDarknessToSeeUnits;
 	int _maxStaticLightDistance, _maxDynamicLightDistance, _enhancedLighting;
+	int _costHireEngineer, _costHireScientist;
 	int _costEngineer, _costScientist, _timePersonnel, _initialFunding;
 	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayMelee, _aiUseDelayPsionic;
+	int _aiFireChoiceIntelCoeff, _aiFireChoiceAggroCoeff;
 	int _maxLookVariant, _tooMuchSmokeThreshold, _customTrainingFactor, _minReactionAccuracy;
 	int _chanceToStopRetaliation;
 	int _kneelBonusGlobal, _oneHandedPenaltyGlobal;
 	int _enableCloseQuartersCombat, _closeQuartersAccuracyGlobal, _closeQuartersTuCostGlobal, _closeQuartersEnergyCostGlobal;
+	int _noLOSAccuracyPenaltyGlobal;
 	int _surrenderMode;
 	int _bughuntMinTurn, _bughuntMaxEnemies, _bughuntRank, _bughuntLowMorale, _bughuntTimeUnitsLeft;
 	int _ufoGlancingHitThreshold, _ufoBeamWidthParameter;
@@ -166,9 +169,10 @@ private:
 	int _pilotBraveryThresholds[3];
 	int _performanceBonusFactor;
 	bool _useCustomCategories, _showDogfightDistanceInKm;
+	int _theMostUselessOptionEver, _theBiggestRipOffEver;
 	int _defeatScore, _defeatFunds;
 	std::pair<std::string, int> _alienFuel;
-	std::string _fontName, _finalResearch;
+	std::string _fontName, _finalResearch, _psiUnlockResearch;
 	YAML::Node _startingBase;
 	GameTime _startingTime;
 	int _baseDefenseMapFromLocation;
@@ -279,6 +283,8 @@ public:
 	SurfaceSet *getSurfaceSet(const std::string &name, bool error = true) const;
 	/// Gets a particular music.
 	Music *getMusic(const std::string &name, bool error = true) const;
+	/// Gets the available music tracks.
+	const std::map<std::string, Music*> &getMusicTrackList() const;
 	/// Plays a particular music.
 	void playMusic(const std::string &name, int id = 0);
 	/// Gets a particular sound.
@@ -394,9 +400,13 @@ public:
 	const RuleDamageType *getDamageType(ItemDamageType type) const;
 	/// Gets the cost of a soldier.
 	int getSoldierCost() const;
-	/// Gets the cost of an engineer.
+	/// Gets the cost of hiring an engineer.
+	int getHireEngineerCost() const;
+	/// Gets the cost of hiring a scientist.
+	int getHireScientistCost() const;
+	/// Gets the monthly cost of an engineer.
 	int getEngineerCost() const;
-	/// Gets the cost of a scientist.
+	/// Gets the monthly cost of a scientist.
 	int getScientistCost() const;
 	/// Gets the transfer time of personnel.
 	int getPersonnelTime() const;
@@ -410,6 +420,10 @@ public:
 	int getAIUseDelayMelee() const    {return _aiUseDelayMelee;}
 	/// Gets first turn when AI can use psionic abilities.
 	int getAIUseDelayPsionic() const  {return _aiUseDelayPsionic;}
+	/// Gets how much AI intelligence should be used to determine firing mode for sniping.
+	int getAIFireChoiceIntelCoeff() const {return _aiFireChoiceIntelCoeff;}
+	/// Gets how much AI aggression should be used to determine firing mode for sniping.
+	int getAIFireChoiceAggroCoeff() const {return _aiFireChoiceAggroCoeff;}
 	/// Gets maximum supported lookVariant (0-15)
 	int getMaxLookVariant() const  {return abs(_maxLookVariant) % 16;}
 	/// Gets the threshold for too much smoke (vanilla default = 10).
@@ -432,6 +446,8 @@ public:
 	int getCloseQuartersTuCostGlobal() const { return _closeQuartersTuCostGlobal; }
 	/// Gets the default close quarters combat energy cost (default = 8).
 	int getCloseQuartersEnergyCostGlobal() const { return _closeQuartersEnergyCostGlobal; }
+	/// Gets the default accuracy penalty for having no LOS to the target (default = 0 is no penalty)
+	int getNoLOSAccuracyPenaltyGlobal() const { return _noLOSAccuracyPenaltyGlobal; }
 	/// Gets the surrender mode (default = 0).
 	int getSurrenderMode() const { return _surrenderMode; }
 	/// Gets the bug hunt mode minimum turn requirement (default = 20).
@@ -478,6 +494,10 @@ public:
 	bool getUseCustomCategories() const { return _useCustomCategories; }
 	/// Should distance in dogfight GUI be shown in kilometers?
 	bool getShowDogfightDistanceInKm() const { return _showDogfightDistanceInKm; }
+	/// Self-explanatory
+	int getTheMostUselessOptionEver() const { return _theMostUselessOptionEver; }
+	/// Shame on you!
+	int getTheBiggestRipOffEver() const { return _theBiggestRipOffEver; }
 	/// Gets whether or not to load base defense terrain from globe texture
 	int getBaseDefenseMapFromLocation() const { return _baseDefenseMapFromLocation; }
 	/// Gets the ruleset for a specific research project.

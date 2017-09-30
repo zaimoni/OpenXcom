@@ -69,7 +69,7 @@ NewResearchListState::NewResearchListState(Base *base) : _base(base)
 	_btnOK->setText(tr("STR_OK"));
 	_btnOK->onMouseClick((ActionHandler)&NewResearchListState::btnOKClick);
 	_btnOK->onKeyboardPress((ActionHandler)&NewResearchListState::btnOKClick, Options::keyCancel);
-	_btnOK->onKeyboardPress((ActionHandler)&NewResearchListState::btnMarkAllAsSeenClick, Options::keyInvClear);
+	_btnOK->onKeyboardPress((ActionHandler)&NewResearchListState::btnMarkAllAsSeenClick, Options::keyMarkAllAsSeen);
 
 	_btnShowOnlyNew->setText(tr("STR_SHOW_ONLY_NEW"));
 	_btnShowOnlyNew->onMouseClick((ActionHandler)&NewResearchListState::btnShowOnlyNewClick);
@@ -119,17 +119,17 @@ void NewResearchListState::onToggleProjectStatus(Action *)
 {
 	// change status
 	const std::string rule = _projects[_lstResearch->getSelectedRow()]->getName();
-	int oldState = _game->getSavedGame()->getResearchRuleStatus(rule);
-	int newState = 1 - oldState;
-	_game->getSavedGame()->setResearchRuleStatus(rule, newState);
-
-	if (newState == RuleResearch::RESEARCH_STATUS_NEW)
+	if (_game->getSavedGame()->isResearchRuleStatusNew(rule))
 	{
-		_lstResearch->setRowColor(_lstResearch->getSelectedRow(), 241); // pink
+		// new -> normal
+		_game->getSavedGame()->setResearchRuleStatus(rule, RuleResearch::RESEARCH_STATUS_NORMAL);
+		_lstResearch->setRowColor(_lstResearch->getSelectedRow(), _lstResearch->getColor());
 	}
 	else
 	{
-		_lstResearch->setRowColor(_lstResearch->getSelectedRow(), 208); // white
+		// normal/disabled -> new
+		_game->getSavedGame()->setResearchRuleStatus(rule, RuleResearch::RESEARCH_STATUS_NEW);
+		_lstResearch->setRowColor(_lstResearch->getSelectedRow(), _lstResearch->getSecondaryColor());
 	}
 }
 
@@ -218,7 +218,7 @@ void NewResearchListState::fillProjectList(bool markAllAsSeen)
 		// filter
 		if (_btnShowOnlyNew->getPressed())
 		{
-			if (_game->getSavedGame()->getResearchRuleStatus((*it)->getName()) != RuleResearch::RESEARCH_STATUS_NEW)
+			if (!_game->getSavedGame()->isResearchRuleStatusNew((*it)->getName()))
 			{
 				it = _projects.erase(it);
 				continue;
@@ -259,9 +259,9 @@ void NewResearchListState::fillProjectList(bool markAllAsSeen)
 				// mark all (new) research items as normal
 				_game->getSavedGame()->setResearchRuleStatus((*it)->getName(), RuleResearch::RESEARCH_STATUS_NORMAL);
 			}
-			else if (_game->getSavedGame()->getResearchRuleStatus((*it)->getName()) == RuleResearch::RESEARCH_STATUS_NEW)
+			else if (_game->getSavedGame()->isResearchRuleStatusNew((*it)->getName()))
 			{
-				_lstResearch->setRowColor(row, 241); // pink
+				_lstResearch->setRowColor(row, _lstResearch->getSecondaryColor());
 				hasUnseen = true;
 			}
 			row++;

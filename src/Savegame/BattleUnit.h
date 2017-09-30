@@ -112,7 +112,7 @@ private:
 	int _moraleRestored;
 	int _coverReserve;
 	BattleUnit *_charging;
-	int _turnsSinceSpotted;
+	int _turnsSinceSpotted, _turnsLeftSpottedForSnipers;
 	std::string _spawnUnit;
 	std::string _activeHand;
 	BattleUnitStatistics* _statistics;
@@ -143,7 +143,8 @@ private:
 	int _turretType;
 	int _breathFrame;
 	bool _breathing;
-	bool _hidingForTurn, _floorAbove, _respawn;
+	bool _hidingForTurn, _floorAbove, _respawn, _alreadyRespawned;
+	bool _isLeeroyJenkins;	// always charges enemy, never retreats.
 	MovementType _movementType;
 	std::vector<std::pair<Uint8, Uint8> > _recolor;
 	ScriptValues<BattleUnit> _scriptValues;
@@ -453,6 +454,10 @@ public:
 	void setRespawn(bool respawn);
 	/// Get the units's respawn flag.
 	bool getRespawn() const;
+	/// Set the units's alreadyRespawned flag.
+	void setAlreadyRespawned(bool alreadyRespawned);
+	/// Get the units's alreadyRespawned flag.
+	bool getAlreadyRespawned() const;
 	/// Get the units's rank string.
 	std::string getRankString() const;
 	/// Get the geoscape-soldier object.
@@ -493,6 +498,10 @@ public:
 	void setTurnsSinceSpotted (int turns);
 	/// Set how many turns this unit will be exposed for.
 	int getTurnsSinceSpotted() const;
+	/// Set how many turns left snipers know about this target.
+	void setTurnsLeftSpottedForSnipers (int turns);
+	/// Get how many turns left snipers know about this target.
+	int  getTurnsLeftSpottedForSnipers() const;
 	/// Get this unit's original faction
 	UnitFaction getOriginalFaction() const;
 	/// call this after the default copy constructor deletes the cache?
@@ -576,6 +585,8 @@ public:
 	void setMindControllerId(int id);
 	/// Get the unit mind controller's id.
 	int getMindControllerId() const;
+	/// Get the unit leeroyJenkins flag
+	bool isLeeroyJenkins() const { return _isLeeroyJenkins; };
 
 };
 

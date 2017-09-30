@@ -56,6 +56,7 @@ class Target;
 class Soldier;
 class Craft;
 class EquipmentLayoutItem;
+class ItemContainer;
 struct MissionStatistics;
 struct BattleUnitKills;
 
@@ -107,6 +108,7 @@ class SavedGame
 {
 public:
 	static const int MAX_EQUIPMENT_LAYOUT_TEMPLATES = 20;
+	static const int MAX_CRAFT_LOADOUT_TEMPLATES = 10;
 private:
 	std::wstring _name;
 	GameDifficulty _difficulty;
@@ -143,6 +145,8 @@ private:
 	std::string _lastselectedArmor; //contains the last selected armour
 	std::wstring _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
 	std::vector<EquipmentLayoutItem*> _globalEquipmentLayout[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
+	std::wstring _globalCraftLoadoutName[MAX_CRAFT_LOADOUT_TEMPLATES];
+	ItemContainer *_globalCraftLoadout[MAX_CRAFT_LOADOUT_TEMPLATES];
 	std::vector<MissionStatistics*> _missionStatistics;
 	std::set<int> _ignoredUfos;
 	std::set<const RuleItem *> _autosales;
@@ -236,6 +240,8 @@ public:
 	void setManufactureRuleStatus(const std::string &manufactureRule, int newStatus);
 	/// Sets the status of a research rule
 	void setResearchRuleStatus(const std::string &researchRule, int newStatus);
+	/// Remove a research from the "already discovered" list
+	void removeDiscoveredResearch(const RuleResearch *research);
 	/// Add a finished ResearchProject
 	void addFinishedResearchSimple(const RuleResearch *research);
 	/// Add a finished ResearchProject
@@ -260,14 +266,18 @@ public:
 	int getUfopediaRuleStatus(const std::string &ufopediaRule);
 	/// Gets the status of a manufacture rule.
 	int getManufactureRuleStatus(const std::string &manufactureRule);
-	/// Gets the status of a research rule.
-	int getResearchRuleStatus(const std::string &researchRule);
-	/// Gets if a research still has undiscovered "protected unlocks".
+	/// Is the research new?
+	bool isResearchRuleStatusNew(const std::string &researchRule) const;
+	/// Is the research permanently disabled?
+	bool isResearchRuleStatusDisabled(const std::string &researchRule) const;
+	/// Gets if a research still has undiscovered non-disabled "getOneFree".
+	bool hasUndiscoveredGetOneFree(const RuleResearch * r, bool checkOnlyAvailableTopics) const;
+	/// Gets if a research still has undiscovered non-disabled "protected unlocks".
 	bool hasUndiscoveredProtectedUnlock(const RuleResearch * r, const Mod * mod) const;
 	/// Gets if a certain research has been completed.
 	bool isResearched(const std::string &research, bool considerDebugMode = true) const;
 	/// Gets if a certain list of research topics has been completed.
-	bool isResearched(const std::vector<std::string> &research, bool considerDebugMode = true) const;
+	bool isResearched(const std::vector<std::string> &research, bool considerDebugMode = true, bool skipDisabled = false) const;
 	/// Gets the soldier matching this ID.
 	Soldier *getSoldier(int id) const;
 	/// Handles the higher promotions.
@@ -352,7 +362,13 @@ public:
 	void setGlobalEquipmentLayoutName(int index, const std::wstring &name);
 	/// Gets the global equipment layout at specified index.
 	std::vector<EquipmentLayoutItem*> *getGlobalEquipmentLayout(int index);
-    /// Gets the list of missions statistics
+	/// Gets the name of a global craft loadout at specified index.
+	const std::wstring &getGlobalCraftLoadoutName(int index) const;
+	/// Sets the name of a global craft loadout at specified index.
+	void setGlobalCraftLoadoutName(int index, const std::wstring &name);
+	/// Gets the global craft loadout at specified index.
+	ItemContainer *getGlobalCraftLoadout(int index);
+	/// Gets the list of missions statistics
 	std::vector<MissionStatistics*> *getMissionStatistics();
 	/// Adds a UFO to the ignore list.
 	void addUfoToIgnoreList(int ufoId);

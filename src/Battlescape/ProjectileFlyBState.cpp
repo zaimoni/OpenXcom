@@ -124,7 +124,7 @@ void ProjectileFlyBState::init()
 		_unit->lookAt(_action.target, _unit->getTurretType() != -1);
 		while (_unit->getStatus() == STATUS_TURNING)
 		{
-			_unit->turn();
+			_unit->turn(_unit->getTurretType() != -1);
 		}
 	}
 
@@ -231,13 +231,14 @@ void ProjectileFlyBState::init()
 
 			for (std::vector<BattleUnit*>::iterator bu = closeQuartersTargetList.begin(); bu != closeQuartersTargetList.end(); ++bu)
 			{
-				// Create a dummy action for the CQB check
-				BattleAction closeQuartersCheck = _action;
-				closeQuartersCheck.type = BA_CQB;
-				closeQuartersCheck.target = (*bu)->getPosition();
+				BattleActionAttack attack;
+				attack.type = BA_CQB;
+				attack.attacker = _action.actor;
+				attack.weapon_item = _action.weapon;
+				attack.damage_item = _action.weapon;
 
 				// Roll for the check
-				if (!_parent->getTileEngine()->meleeAttack(&closeQuartersCheck))
+				if (!_parent->getTileEngine()->meleeAttack(attack, (*bu)))
 				{
 					// Failed the check, roll again to see result
 					if (_parent->getSave()->getSide() == FACTION_PLAYER) // Only show message during player's turn
@@ -269,7 +270,7 @@ void ProjectileFlyBState::init()
 					_unit->lookAt(_action.target, _unit->getTurretType() != -1);
 					while (_unit->getStatus() == STATUS_TURNING)
 					{
-						_unit->turn();
+						_unit->turn(_unit->getTurretType() != -1);
 					}
 
 					// We're done, spend TUs and Energy; and don't check remaining CQB candidates anymore
@@ -379,7 +380,7 @@ bool ProjectileFlyBState::createNewProjectile()
 	// create a new projectile
 	Projectile *projectile = new Projectile(_parent->getMod(), _parent->getSave(), _action, _origin, _targetVoxel, _ammo);
 	// hit log - new bullet
-	_parent->getSave()->hitLog << "=> ";
+	_parent->getSave()->hitLog << _parent->getSave()->getBattleState()->tr("STR_HIT_LOG_NEW_BULLET");
 
 	// add the projectile on the map
 	_parent->getMap()->setProjectile(projectile);
@@ -502,6 +503,11 @@ bool ProjectileFlyBState::createNewProjectile()
 			_parent->popState();
 			return false;
 		}
+	}
+
+	if (!projectile->getActionResult().empty())
+	{
+		_action.result = projectile->getActionResult();
 	}
 	
 	if (_action.type != BA_THROW && _action.type != BA_LAUNCH)
@@ -735,6 +741,7 @@ void ProjectileFlyBState::think()
 								{
 									ai->setWasHitBy(_unit);
 									_unit->setTurnsSinceSpotted(0);
+									_unit->setTurnsLeftSpottedForSnipers(std::max(victim->getUnitRules()->getSpotter(), _unit->getTurnsLeftSpottedForSnipers()));
 								}
 							}
 						}

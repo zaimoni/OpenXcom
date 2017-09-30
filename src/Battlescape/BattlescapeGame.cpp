@@ -172,7 +172,7 @@ BattleActionAttack::BattleActionAttack(BattleActionType action, BattleUnit *unit
 		const auto battleType = item->getRules()->getBattleType();
 		if (battleType == BT_PROXIMITYGRENADE || battleType == BT_GRENADE)
 		{
-			if (attacker && weapon_item->getPreviousOwner())
+			if (!attacker && weapon_item->getPreviousOwner())
 			{
 				attacker = weapon_item->getPreviousOwner();
 			}
@@ -451,7 +451,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
 bool BattlescapeGame::kneel(BattleUnit *bu)
 {
 	int tu = bu->isKneeled() ? 8 : 4;
-	if (bu->getType() == "SOLDIER" && !bu->isFloating() && ((!bu->isKneeled() && _save->getKneelReserved()) || checkReservedTU(bu, tu, 0)))
+	if (bu->getType() == "SOLDIER" && bu->getArmor()->allowsKneeling() && !bu->isFloating() && ((!bu->isKneeled() && _save->getKneelReserved()) || checkReservedTU(bu, tu, 0)))
 	{
 		BattleAction kneel;
 		kneel.type = BA_KNEEL;
@@ -1346,7 +1346,7 @@ bool BattlescapeGame::checkReservedTU(BattleUnit *bu, int tu, int energy, bool j
 		cost.type = BA_AIMEDSHOT;
 		cost.updateTU();
 	}
-	const int tuKneel = (_save->getKneelReserved() && !bu->isKneeled()  && bu->getType() == "SOLDIER") ? 4 : 0;
+	const int tuKneel = (_save->getKneelReserved() && !bu->isKneeled()  && bu->getType() == "SOLDIER" && bu->getArmor()->allowsKneeling()) ? 4 : 0;
 	// no aimed shot available? revert to none.
 	if (cost.Time == 0 && cost.type == BA_AIMEDSHOT)
 	{
@@ -1667,22 +1667,32 @@ void BattlescapeGame::primaryAction(Position pos)
 		}
 		else if (playableUnitSelected() /*&& !_parentState->hasScrolled()*/)
 		{
-			bool modifierPressed = (SDL_GetModState() & KMOD_CTRL) != 0;
+			bool isCtrlPressed = (SDL_GetModState() & KMOD_CTRL) != 0;
+			bool isShiftPressed = (SDL_GetModState() & KMOD_SHIFT) != 0;
 			if (bPreviewed &&
-				(_currentAction.target != pos || (_save->getPathfinding()->isModifierUsed() != modifierPressed)))
+				(_currentAction.target != pos || (_save->getPathfinding()->isModifierUsed() != isCtrlPressed)))
 			{
 				_save->getPathfinding()->removePreview();
 			}
 			_currentAction.target = pos;
 			_save->getPathfinding()->calculate(_currentAction.actor, _currentAction.target);
+
+			_currentAction.strafe = false;
 			_currentAction.run = false;
-			_currentAction.strafe = Options::strafe && modifierPressed && _save->getSelectedUnit()->getArmor()->getSize() == 1;
-			if (_currentAction.strafe && _save->getPathfinding()->getPath().size() > 1)
+			if (Options::strafe && isCtrlPressed && _save->getSelectedUnit()->getArmor()->getSize() == 1)
 			{
-				_currentAction.run = true;
-				_currentAction.strafe = false;
+				if (_save->getPathfinding()->getPath().size() > 1)
+				{
+					_currentAction.run = _save->getSelectedUnit()->getArmor()->allowsRunning();
+				}
+				else
+				{
+					_currentAction.strafe = _save->getSelectedUnit()->getArmor()->allowsStrafing();
+				}
 			}
-			_currentAction.ignoreSpottedEnemies = _currentAction.run || ((SDL_GetModState() & KMOD_SHIFT) != 0);
+			// if running or shifting, ignore spotted enemies (i.e. don't stop)
+			_currentAction.ignoreSpottedEnemies = _currentAction.run || isShiftPressed;
+
 			if (bPreviewed && !_save->getPathfinding()->previewPath() && _save->getPathfinding()->getStartDirection() != -1)
 			{
 				_save->getPathfinding()->removePreview();
@@ -1755,34 +1765,28 @@ void BattlescapeGame::psiButtonAction()
 }
 
 /**
- * Handler for the psi atack action.
+ * Handler for the psi atack result message.
  */
-bool BattlescapeGame::psiAttack(BattleAction *action)
+void BattlescapeGame::psiAttackMessage(BattleActionAttack attack, BattleUnit *victim)
 {
-	if (getTileEngine()->psiAttack(action))
+	if (victim)
 	{
 		Game *game = getSave()->getBattleState()->getGame();
-		if (action->actor->getFaction() == FACTION_HOSTILE)
+		if (attack.attacker->getFaction() == FACTION_HOSTILE)
 		{
 			// show a little infobox with the name of the unit and "... is under alien control"
-			BattleUnit *unit = getSave()->getTile(action->target)->getUnit();
-			if (action->type == BA_MINDCONTROL)
-				game->pushState(new InfoboxState(game->getLanguage()->getString("STR_IS_UNDER_ALIEN_CONTROL", unit->getGender()).arg(unit->getName(game->getLanguage()))));
+			if (attack.type == BA_MINDCONTROL)
+				game->pushState(new InfoboxState(game->getLanguage()->getString("STR_IS_UNDER_ALIEN_CONTROL", victim->getGender()).arg(victim->getName(game->getLanguage()))));
 		}
 		else
 		{
 			// show a little infobox if it's successful
-			if (action->type == BA_PANIC)
+			if (attack.type == BA_PANIC)
 				game->pushState(new InfoboxState(game->getLanguage()->getString("STR_MORALE_ATTACK_SUCCESSFUL")));
-			else if (action->type == BA_MINDCONTROL)
+			else if (attack.type == BA_MINDCONTROL)
 				game->pushState(new InfoboxState(game->getLanguage()->getString("STR_MIND_CONTROL_SUCCESSFUL")));
 			getSave()->getBattleState()->updateSoldierInfo();
 		}
-		return true;
-	}
-	else
-	{
-		return false;
 	}
 }
 
@@ -1925,6 +1929,9 @@ void BattlescapeGame::dropItem(Position position, BattleItem *item, bool removeI
  */
 BattleUnit *BattlescapeGame::convertUnit(BattleUnit *unit)
 {
+	// only ever respawn once
+	unit->setAlreadyRespawned(true);
+
 	bool visible = unit->getVisible();
 
 	getSave()->getBattleState()->showPsiButton(false);
