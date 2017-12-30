@@ -57,6 +57,7 @@ private:
 	/// Sets the _flags and _bpp variables based on game options; needed in more than one place now
 	void makeVideoFlags();
 	int _prevWidth, _prevHeight;
+	Renderer *createRenderer();
 
 public:
 	static const int ORIGINAL_WIDTH;

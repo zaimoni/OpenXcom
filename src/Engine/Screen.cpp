@@ -44,6 +44,23 @@ namespace OpenXcom
 const int Screen::ORIGINAL_WIDTH = 320;
 const int Screen::ORIGINAL_HEIGHT = 200;
 
+
+Renderer *Screen::createRenderer()
+{
+	if (Options::renderer == "SDL")
+	{
+		return new SDLRenderer(*this, _window);
+	}
+#ifndef __NO_OPENGL
+	//else if (Options::renderer == "OpenGL")
+	//{
+	//	return new OpenGLRenderer(*_surface, _window);
+	//}
+#endif
+    Log(LOG_WARNING) << "No renderer specified, creating SDL renderer";
+	return new SDLRenderer(*this, _window);
+}
+
 /**
  * Sets up all the internal display flags depending on
  * the current video settings.
@@ -185,7 +202,7 @@ void Screen::handle(Action *action)
  */
 void Screen::flip()
 {
-	_renderer->flip(_surface.get());
+	_renderer->flip();
 }
 
 /**
@@ -299,8 +316,7 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
 	}
 	else
 	{
-		if ( (Options::useOpenGL && _renderer->getRendererType() == RENDERER_SDL2)
-			|| (!Options::useOpenGL && _renderer->getRendererType() == RENDERER_OPENGL) )
+		if ( Options::renderer != _renderer->getRendererName() )
 		{
 			switchRenderer = true;
 		}
@@ -310,7 +326,7 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
 #endif
 	makeVideoFlags();
 	// A kludge to make video resolution changing work
-	resetVideo = ( (_prevWidth != _baseWidth) || (_prevHeight != _baseHeight) ) || resetVideo;
+	//resetVideo = ( (_prevWidth != _baseWidth) || (_prevHeight != _baseHeight) ) || resetVideo;
 
 	Log(LOG_INFO) << "Current _baseWidth x _baseHeight: " << _baseWidth << "x" << _baseHeight;
 
@@ -322,37 +338,13 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
 	}
 	SDL_SetColorKey(_surface.get(), 0, 0); // turn off color key!
 
-	if (resetVideo /*|| _screen->format->BitsPerPixel != _bpp */)
+	if (resetVideo)
 	{
 		/* FIXME: leak? */
 		Log(LOG_INFO) << "Attempting to set display to " << width << "x" << height << "x" << _bpp << "...";
 		/* Attempt to set scaling */
-		if (Options::useNearestScaler)
-		{
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		}
-		else if (Options::useLinearScaler)
-		{
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		}
-		else if (Options::useAnisotropicScaler)
-		{
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
-		}
 		// Hack: you have to destroy and recreate a window to make it resizable.
-		if (_window)
-		{
-			if ((SDL_GetWindowFlags(_window) & SDL_WINDOW_RESIZABLE) != (_flags & SDL_WINDOW_RESIZABLE))
-			{
-				if (_renderer)
-				{
-					delete _renderer;
-					_renderer = NULL;
-				}
-				SDL_DestroyWindow(_window);
-				_window = NULL;
-			}
-		}
+		SDL_SetWindowResizable(_window, (_flags & SDL_WINDOW_RESIZABLE) ? SDL_TRUE : SDL_FALSE);
 		/* Now, we only need to create a window AND a renderer when we have none*/
 		if (_window == NULL)
 		{
@@ -393,7 +385,10 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
 		else
 		{
 #ifndef __ANDROID__
-			SDL_SetWindowSize(_window, width, height);
+            if (width != getWidth() || height != getHeight())
+			{
+				SDL_SetWindowSize(_window, width, height);
+			}
 #endif
 			SDL_SetWindowBordered(_window, Options::borderless? SDL_FALSE : SDL_TRUE);
 			SDL_SetWindowFullscreen(_window, Options::fullscreen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
@@ -408,14 +403,12 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
 
 		if (!_renderer)
 		{
-			_renderer = new SDLRenderer(_window, -1, SDL_RENDERER_ACCELERATED);
-			_renderer->setPixelFormat(_surface->format->format);
+			_renderer = createRenderer();
 		}
 		SDL_Rect baseRect;
 		baseRect.x = baseRect.y = 0;
 		baseRect.w = _baseWidth;
 		baseRect.h = _baseHeight;
-		_renderer->setInternalRect(&baseRect);
 		Log(LOG_INFO) << "Display set to " << getWidth() << "x" << getHeight() << "x32";
 
 		/* Save new baseWidth and baseHeight */
@@ -620,25 +613,12 @@ bool Screen::use32bitScaler()
 	int h = Options::displayHeight;
 	int baseW = Options::baseXResolution;
 	int baseH = Options::baseYResolution;
-	int maxScale = 0;
 
-	if (Options::useHQXFilter)
-	{
-		maxScale = 4;
-	}
-	else if (Options::useXBRZFilter)
-	{
-		maxScale = 6;
-	}
-
-	for (int i = 2; i <= maxScale; i++)
-	{
-		if (w == baseW * i && h == baseH * i)
-		{
-			return true;
-		}
-	}
-	return false;
+	return true;/*((Options::useHQXFilter || Options::useXBRZFilter) && (
+			(w == baseW * 2 && h == baseH * 2) ||
+			(w == baseW * 3 && h == baseH * 3) ||
+			(w == baseW * 4 && h == baseH * 4) ||
+			(w == baseW * 5 && h == baseH * 5 && Options::useXBRZFilter)));*/
 }
 
 /**
@@ -650,7 +630,8 @@ bool Screen::useOpenGL()
 #ifdef __NO_OPENGL
 	return false;
 #else
-	return Options::useOpenGL;
+	//return Options::useOpenGL;
+	return true;
 #endif
 }
 
