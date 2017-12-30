@@ -128,6 +128,16 @@ Screen::Screen() : _window(NULL), _renderer(NULL),
 	_numColors(0), _firstColor(0), _pushPalette(false),
 	_prevWidth(0), _prevHeight(0)
 {
+
+    _renderer = new SDLRenderer(*this);
+	auto upscalers = _renderer->getUpscalers();
+    for(const auto& scaler : upscalers)
+    {
+        registerUpscaler(_renderer->getRendererName(), scaler);
+    }
+    delete _renderer;
+    _renderer = nullptr;
+
 	resetDisplay();
 	memset(deferredPalette, 0, 256*sizeof(SDL_Color));
 }
@@ -325,8 +335,6 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
 	Uint32 oldFlags = _flags;
 #endif
 	makeVideoFlags();
-	// A kludge to make video resolution changing work
-	//resetVideo = ( (_prevWidth != _baseWidth) || (_prevHeight != _baseHeight) ) || resetVideo;
 
 	Log(LOG_INFO) << "Current _baseWidth x _baseHeight: " << _baseWidth << "x" << _baseHeight;
 
@@ -405,6 +413,7 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
 		{
 			_renderer = createRenderer();
 		}
+		_renderer->setUpscalerByName(Options::scalerName);
 		SDL_Rect baseRect;
 		baseRect.x = baseRect.y = 0;
 		baseRect.w = _baseWidth;
