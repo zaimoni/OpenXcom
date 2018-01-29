@@ -21,6 +21,7 @@
 #include "CrossPlatform.h"
 #include "Exception.h"
 #include "FileMap.h"
+#include <memory.h>
 
 namespace OpenXcom
 {
