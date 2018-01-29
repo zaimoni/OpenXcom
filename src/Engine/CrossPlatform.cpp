@@ -94,6 +94,10 @@
 #include "../Menu/StartState.h"
 #endif
 
+#ifdef IPHONE
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 namespace OpenXcom
 {
 namespace CrossPlatform
@@ -105,7 +109,7 @@ namespace CrossPlatform
  */
 void getErrorDialog()
 {
-#ifndef _WIN32
+#if !defined( _WIN32 ) && !defined(__MOBILE__)
 	if (system(NULL))
 	{
 		if (getenv("KDE_SESSION_UID") && system("which kdialog 2>&1 > /dev/null") == 0)
@@ -194,6 +198,8 @@ void showError(const std::string &error)
 	std::string msg = error + "\n\nSee openxcom.log for more details.\n";
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OpenXcom Extended Error", msg.c_str(), NULL);
 	__android_log_print(ANDROID_LOG_ERROR, "OpenXcom", "%s", error.c_str());
+#elif defined (__MOBILE__)
+    // TODO: Use SDL2's built-in error dialog
 #else
 	if (errorDlg.empty())
 	{
@@ -218,6 +224,15 @@ void showError(const std::string &error)
  */
 static char const *getHome()
 {
+#ifdef IPHONE
+    static char homePath[MAXPATHLEN];
+    CFURLRef homeUrl = CFCopyHomeDirectoryURL();
+    CFStringRef homePathRef = CFURLCopyFileSystemPath(homeUrl, kCFURLPOSIXPathStyle);
+    CFStringGetCString(homePathRef, homePath, MAXPATHLEN, kCFStringEncodingUTF8);
+    CFRelease(homePathRef);
+    CFRelease(homeUrl);
+    return homePath;
+#else
 	char const *home = getenv("HOME");
 	if (!home)
 	{
@@ -225,6 +240,7 @@ static char const *getHome()
 		home = pwd->pw_dir;
 	}
 	return home;
+#endif
 }
 #endif
 
@@ -281,6 +297,16 @@ std::vector<std::string> findDataFolders()
 	}
 #else
 	char const *home = getHome();
+#ifdef IPHONE
+    // For iOS devices, there are basically two possible locations:
+    //  - "bin" folder inside the app bundle
+    //  - "Documents" folder inside the sandbox
+    std::string documentsPath = home;
+    documentsPath += "/Documents/";
+    list.push_back("bin/");
+    list.push_back(documentsPath);
+    return list;
+#endif
 #ifdef __HAIKU__
 	char data_path[B_PATH_NAME_LENGTH];
 	find_directory(B_SYSTEM_SETTINGS_DIRECTORY, 0, true, data_path, sizeof(data_path)-strlen("/OpenXcom/"));
@@ -394,6 +420,14 @@ std::vector<std::string> findUserFolders()
 	list.push_back(user_path);
 #endif
 	char const *home = getHome();
+#ifdef IPHONE
+    // The only possible path for a "user" directory would be inside Documents folder
+    // in the bundle sandbox
+    std::string documentsPath = home;
+    documentsPath += "/Documents/";
+    list.push_back(documentsPath);
+    return list;
+#endif
 	char path[MAXPATHLEN];
 
 	// Get user folders
@@ -445,6 +479,14 @@ std::string findConfigFolder()
 	return settings_path;
 #else
 	char const *home = getHome();
+#ifdef IPHONE
+    // The only possible path for a "user" directory would be inside Documents folder
+    // in the bundle sandbox
+    std::string documentsPath = home;
+    documentsPath += "/Documents/";
+    list.push_back(documentsPath);
+    return list;
+#endif
 	char path[MAXPATHLEN];
 	// Get config folders
 	if (char const *const xdg_config_home = getenv("XDG_CONFIG_HOME"))
@@ -865,7 +907,7 @@ bool isQuitShortcut(const SDL_Event &ev)
 	return (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_F4 && ev.key.keysym.mod & KMOD_ALT);
 #elif __APPLE__
 	// Command + Q
-	return (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_q && ev.key.keysym.mod & KMOD_LMETA);
+	return (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_q && ev.key.keysym.mod & KMOD_LGUI);
 #else
 	//TODO add other OSs shortcuts.
     (void)ev;
