@@ -95,6 +95,7 @@
 #endif
 
 #ifdef IPHONE
+#include <os/log.h>
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
@@ -198,6 +199,8 @@ void showError(const std::string &error)
 	std::string msg = error + "\n\nSee openxcom.log for more details.\n";
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OpenXcom Extended Error", msg.c_str(), NULL);
 	__android_log_print(ANDROID_LOG_ERROR, "OpenXcom", "%s", error.c_str());
+#elif defined (IPHONE)
+	os_log(OS_LOG_DEFAULT, "%s", error.c_str());
 #elif defined (__MOBILE__)
     // TODO: Use SDL2's built-in error dialog
 #else
