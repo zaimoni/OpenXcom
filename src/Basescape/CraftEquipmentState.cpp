@@ -22,6 +22,7 @@
 #include <climits>
 #include <sstream>
 #include <algorithm>
+#include <locale>
 #include "../Engine/Screen.h"
 #include "../Engine/Action.h"
 #include "../Engine/Game.h"
@@ -283,8 +284,9 @@ void CraftEquipmentState::btnQuickSearchApply(Action *)
  */
 void CraftEquipmentState::initList()
 {
+	std::locale myLocale = std::locale("");
 	std::wstring searchString = _btnQuickSearch->getText();
-	for (auto & c : searchString) c = towupper(c);
+	for (auto & c : searchString) c = toupper(c, myLocale);
 
 	size_t selIdx = _cbxFilterBy->getSelected();
 	if (selIdx == (size_t)-1)
@@ -344,7 +346,7 @@ void CraftEquipmentState::initList()
 		if (searchString != L"")
 		{
 			std::wstring projectName = tr((*i));
-			for (auto & c : projectName) c = towupper(c);
+			for (auto & c : projectName) c = toupper(c, myLocale);
 			if (projectName.find(searchString) == std::string::npos)
 			{
 				continue;

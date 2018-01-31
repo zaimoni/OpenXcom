@@ -73,11 +73,11 @@ void InteractiveSurface::setButtonPressed(Uint8 button, bool pressed)
 {
 	if (pressed)
 	{
-		_buttonsPressed = _buttonsPressed | SDL_BUTTON(button);
+		_buttonsPressed |= SDL_BUTTON(button);
 	}
 	else
 	{
-		_buttonsPressed = _buttonsPressed & (!SDL_BUTTON(button));
+		_buttonsPressed &= (~SDL_BUTTON(button));
 	}
 }
 

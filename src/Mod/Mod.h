@@ -155,6 +155,7 @@ private:
 	int _costEngineer, _costScientist, _timePersonnel, _initialFunding;
 	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayMelee, _aiUseDelayPsionic;
 	int _aiFireChoiceIntelCoeff, _aiFireChoiceAggroCoeff;
+	bool _aiExtendedFireModeChoice, _aiRespectMaxRange;
 	int _maxLookVariant, _tooMuchSmokeThreshold, _customTrainingFactor, _minReactionAccuracy;
 	int _chanceToStopRetaliation;
 	int _kneelBonusGlobal, _oneHandedPenaltyGlobal;
@@ -181,6 +182,7 @@ private:
 	std::vector<std::string> _hiddenMovementBackgrounds;
 	StatAdjustment _statAdjustment[5];
 
+	std::map<std::string, int> _ufopaediaSections;
 	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
 	std::vector<std::string> _soldiersIndex, _aliensIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex, _MCDPatchesIndex;
 	std::vector<std::string> _alienMissionsIndex, _terrainIndex, _extraSpritesIndex, _customPalettesIndex, _extraSoundsIndex, _extraStringsIndex, _missionScriptIndex;
@@ -228,6 +230,8 @@ private:
 	void modResources();
 	/// Sorts all our lists according to their weight.
 	void sortLists();
+
+	void exportResources();
 public:
 	static int DOOR_OPEN;
 	static int SLIDING_DOOR_OPEN;
@@ -274,6 +278,9 @@ public:
 	Mod();
 	/// Cleans up the mod.
 	~Mod();
+
+	/// For internal use only
+	const std::map<std::string, int> &getUfopaediaSections() const { return _ufopaediaSections; }
 
 	/// Gets a particular font.
 	Font *getFont(const std::string &name, bool error = true) const;
@@ -424,6 +431,10 @@ public:
 	int getAIFireChoiceIntelCoeff() const {return _aiFireChoiceIntelCoeff;}
 	/// Gets how much AI aggression should be used to determine firing mode for sniping.
 	int getAIFireChoiceAggroCoeff() const {return _aiFireChoiceAggroCoeff;}
+	/// Gets whether or not to use extended firing mode scoring for determining which attack the AI should use
+	bool getAIExtendedFireModeChoice() const {return _aiExtendedFireModeChoice;}
+	/// Gets whether or not the AI should try to shoot beyond a weapon's max range, true = don't shoot if you can't
+	bool getAIRespectMaxRange() const {return _aiRespectMaxRange;}
 	/// Gets maximum supported lookVariant (0-15)
 	int getMaxLookVariant() const  {return abs(_maxLookVariant) % 16;}
 	/// Gets the threshold for too much smoke (vanilla default = 10).

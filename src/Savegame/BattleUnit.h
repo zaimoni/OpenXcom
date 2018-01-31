@@ -87,7 +87,7 @@ private:
 	int _verticalDirection;
 	Position _destination;
 	UnitStatus _status;
-	bool _wantsToSurrender;
+	bool _wantsToSurrender, _isSurrendering;
 	int _walkPhase, _fallPhase;
 	std::vector<BattleUnit *> _visibleUnits, _unitsSpottedThisTurn;
 	std::vector<Tile *> _visibleTiles;
@@ -102,11 +102,12 @@ private:
 	AIModule *_currentAIState;
 	bool _visible;
 	int _expBravery, _expReactions, _expFiring, _expThrowing, _expPsiSkill, _expPsiStrength, _expMelee;
+	int _expBraveryTmp, _expReactionsTmp, _expFiringTmp, _expThrowingTmp, _expPsiSkillTmp, _expPsiStrengthTmp, _expMeleeTmp;
 	int improveStat(int exp) const;
 	int _motionPoints;
 	int _kills;
 	int _faceDirection; // used only during strafeing moves
-	bool _hitByFire;
+	bool _hitByFire, _hitByAnything;
 	int _fireMaxHit;
 	int _smokeMaxHit;
 	int _moraleRestored;
@@ -174,8 +175,8 @@ public:
 	BattleUnit(Soldier *soldier, int depth, int maxViewDistance);
 	/// Creates a BattleUnit from unit.
 	BattleUnit(Unit *unit, UnitFaction faction, int id, Armor *armor, StatAdjustment *adjustment, int depth, int maxViewDistance);
-	/// Updates a BattleUnit from a Soldier (after a change of armor).
-	void updateArmorFromSoldier(Soldier *soldier, int depth, int maxViewDistance);
+	/// Updates BattleUnit's armor and related attributes (after a change/transformation of armor).
+	void updateArmorFromSoldier(Soldier *soldier, Armor *ruleArmor, int depth, int maxViewDistance);
 	/// Cleans up the BattleUnit.
 	~BattleUnit();
 	/// Loads the unit from YAML.
@@ -210,6 +211,10 @@ public:
 	UnitStatus getStatus() const;
 	/// Does the unit want to surrender?
 	bool wantsToSurrender() const;
+	/// Is the unit surrendering this turn?
+	bool isSurrendering() const;
+	/// Mark the unit as surrendering this turn.
+	void setSurrendering(bool isSurrendering);
 	/// Start the walkingPhase
 	void startWalking(int direction, Position destination, Tile *tileBelowMe, bool cache);
 	/// Increase the walkingPhase
@@ -591,6 +596,14 @@ public:
 	int getSpotterDuration() const;
 	/// Is this unit capable of shooting beyond max. visual range?
 	bool isSniper() const;
+	/// Remembers the unit's XP (used for shotguns).
+	void rememberXP();
+	/// Artificially alter a unit's XP (used for shotguns).
+	void nerfXP();
+	/// Was this unit just hit?
+	bool getHitState();
+	/// reset the unit hit state.
+	void resetHitState();
 
 };
 

@@ -232,7 +232,7 @@ OptionsVideoState::OptionsVideoState(OptionsOrigin origin) : OptionsBaseState(or
 #endif
 	
 	size_t selFilter = 0;
-	if (Screen::isOpenGLEnabled())
+	if (Screen::useOpenGL())
 	{
 #ifndef __NO_OPENGL
 		std::string path = Options::useOpenGLShader;
@@ -241,6 +241,7 @@ OptionsVideoState::OptionsVideoState(OptionsOrigin origin) : OptionsBaseState(or
 			if (_filters[i] == path)
 			{
 				selFilter = i;
+				break;
 			}
 		}
 #endif

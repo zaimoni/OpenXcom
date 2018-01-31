@@ -42,16 +42,17 @@
 #include <windows.h>
 #include <shlobj.h>
 #include <shlwapi.h>
+#ifdef _MSC_VER
 #include <dbghelp.h>
-#ifndef SHGFP_TYPE_CURRENT
-#define SHGFP_TYPE_CURRENT 0
 #endif
 #define EXCEPTION_CODE_CXX 0xe06d7363
 #ifndef __GNUC__
 #pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
+#ifdef _MSC_VER
 #pragma comment(lib, "dbghelp.lib")
+#endif
 #endif
 #else
 #include <iostream>
@@ -179,7 +180,7 @@ std::vector<std::string> findDataFolders()
 	char path[MAX_PATH];
 
 	// Get Documents folder
-	if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, path)))
+	if (SHGetSpecialFolderPathA(NULL, path, CSIDL_PERSONAL, FALSE))
 	{
 		PathAppendA(path, "OpenXcom\\");
 		list.push_back(path);
@@ -276,7 +277,7 @@ std::vector<std::string> findUserFolders()
 	char path[MAX_PATH];
 
 	// Get Documents folder
-	if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, path)))
+	if (SHGetSpecialFolderPathA(NULL, path, CSIDL_PERSONAL, FALSE))
 	{
 		PathAppendA(path, "OpenXcom\\");
 		list.push_back(path);
@@ -829,13 +830,20 @@ std::pair<std::wstring, std::wstring> timeToString(time_t time)
 bool naturalCompare(const std::wstring &a, const std::wstring &b)
 {
 #if defined(_WIN32) && (!defined(__MINGW32__) || defined(__MINGW64_VERSION_MAJOR))
-	return (StrCmpLogicalW(a.c_str(), b.c_str()) < 0);
-#else
-	// sorry unix users you get ASCII sort
-	std::wstring::const_iterator i, j;
-	for (i = a.begin(), j = b.begin(); i != a.end() && j != b.end() && tolower(*i) == tolower(*j); i++, j++);
-	return (i != a.end() && j != b.end() && tolower(*i) < tolower(*j));
+	typedef int (WINAPI *WinStrCmp)(PCWSTR, PCWSTR);
+	WinStrCmp pWinStrCmp = (WinStrCmp)GetProcAddress(GetModuleHandleA("shlwapi.dll"), "StrCmpLogicalW");
+	if (pWinStrCmp)
+	{
+		return (pWinStrCmp(a.c_str(), b.c_str()) < 0);
+	}
+	else
 #endif
+	{
+		// sorry unix users you get ASCII sort
+		std::wstring::const_iterator i, j;
+		for (i = a.begin(), j = b.begin(); i != a.end() && j != b.end() && tolower(*i) == tolower(*j); i++, j++);
+		return (i != a.end() && j != b.end() && tolower(*i) < tolower(*j));
+	}
 }
 
 /**
@@ -1108,7 +1116,7 @@ int getPointerState(int *x, int *y)
  */
 void stackTrace(void *ctx)
 {
-#if defined(_WIN32)
+#ifdef _MSC_VER
 	const int MAX_SYMBOL_LENGTH = 1024;
 	CONTEXT context;
 	if (ctx != 0)
@@ -1117,14 +1125,9 @@ void stackTrace(void *ctx)
 	}
 	else
 	{
-#ifdef _MSC_VER
 		memset(&context, 0, sizeof(CONTEXT));
 		context.ContextFlags = CONTEXT_FULL;
 		RtlCaptureContext(&context);
-#else
-		// TODO: Doesn't work on MinGW
-		return;
-#endif
 	}
 	HANDLE thread = GetCurrentThread();
 	HANDLE process = GetCurrentProcess();
@@ -1203,6 +1206,11 @@ void stackTrace(void *ctx)
 #warning Stack trace not supported on Android yet!
 	Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
 #else
+#ifdef _WIN32
+	// TODO: Figure out stack trace on MinGW, use dbg
+	Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
+	return;
+#else
 	const int MAX_STACK_FRAMES = 16;
 	void *array[MAX_STACK_FRAMES];
 	size_t size = backtrace(array, MAX_STACK_FRAMES);
@@ -1214,6 +1222,7 @@ void stackTrace(void *ctx)
 	}
 
 	free(strings);
+#endif
 #endif
 }
 

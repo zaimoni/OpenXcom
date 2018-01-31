@@ -115,7 +115,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) 
 	_txtAccuracy->setPalette(_game->getScreen()->getPalette());
 	_txtAccuracy->setHighContrast(true);
 	_txtAccuracy->initText(_game->getMod()->getFont("FONT_BIG"), _game->getMod()->getFont("FONT_SMALL"), _game->getLanguage());
-	_activeWeaponUfopediaArticleUnlocked = -1;
+	_cacheActiveWeaponUfopediaArticleUnlocked = -1;
+	_cacheIsCtrlPressed = false;
+	_cacheCursorPosition = Position(-1, -1, -1);
+	_cacheHasLOS = -1;
 
 	_nightVisionOn = false;
 	_fadeShade = 16;
@@ -980,17 +983,20 @@ void Map::drawTerrain(Surface *surface)
 							int part = 0;
 							part += ttile->getPosition().x - tunit->getPosition().x;
 							part += (ttile->getPosition().y - tunit->getPosition().y)*2;
-							Position offset;
-							calculateWalkingOffset(tunit, &offset);
-							offset += screenPosition;
-							offset += Position(0, 24, 0);
+							if (part != 1 && part != 2)
+							{
+								Position offset;
+								calculateWalkingOffset(tunit, &offset);
+								offset += screenPosition;
+								offset += Position(0, 24, 0);
 
-							unitSprite.draw(
-								tunit, part,
-								offset.x,
-								offset.y,
-								reShade(ttile)
-							);
+								unitSprite.draw(
+									tunit, part,
+									offset.x,
+									offset.y,
+									reShade(ttile)
+								);
+							}
 						}
 					}
 
@@ -1140,6 +1146,42 @@ void Map::drawTerrain(Surface *surface)
 										_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::green - 1) - 1);
 									}
 
+									// Include LOS penalty for tiles in the unit's current view range
+									// Don't recalculate LOS for outside of the current FOV
+									int noLOSAccuracyPenalty = action->weapon->getRules()->getNoLOSAccuracyPenalty(_game->getMod());
+									if (noLOSAccuracyPenalty != -1)
+									{
+										bool isCtrlPressed = (SDL_GetModState() & KMOD_CTRL) != 0;
+										bool hasLOS = false;
+										if (Position(itX, itY, itZ) == _cacheCursorPosition && isCtrlPressed == _cacheIsCtrlPressed && _cacheHasLOS != -1)
+										{
+											// use cached result
+											hasLOS = (_cacheHasLOS == 1);
+										}
+										else
+										{
+											// recalculate
+											if (unit && (unit->getVisible() || _save->getDebugMode()))
+											{
+												hasLOS = _save->getTileEngine()->visible(action->actor, tile);
+											}
+											else
+											{
+												hasLOS = _save->getTileEngine()->isTileInLOS(action, tile);
+											}
+											// remember
+											_cacheIsCtrlPressed = isCtrlPressed;
+											_cacheCursorPosition = Position(itX, itY, itZ);
+											_cacheHasLOS = hasLOS ? 1 : 0;
+										}
+
+										if (!hasLOS)
+										{
+											accuracy = accuracy * noLOSAccuracyPenalty / 100;
+											_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::yellow - 1) - 1);
+										}
+									}
+
 									bool outOfRange = distance > weapon->getMaxRange();
 									// special handling for short ranges and diagonals
 									if (outOfRange && action->actor->directionTo(action->target) % 2 == 1)
@@ -1194,34 +1236,34 @@ void Map::drawTerrain(Surface *surface)
 									}
 
 									// step 2: check if unlocked
-									if (_activeWeaponUfopediaArticleUnlocked == -1)
+									if (_cacheActiveWeaponUfopediaArticleUnlocked == -1)
 									{
-										_activeWeaponUfopediaArticleUnlocked = 0;
+										_cacheActiveWeaponUfopediaArticleUnlocked = 0;
 										if (_game->getSavedGame()->getMonthsPassed() == -1)
 										{
-											_activeWeaponUfopediaArticleUnlocked = 1; // new battle mode
+											_cacheActiveWeaponUfopediaArticleUnlocked = 1; // new battle mode
 										}
 										else if (rule)
 										{
-											_activeWeaponUfopediaArticleUnlocked = 1; // assume unlocked
+											_cacheActiveWeaponUfopediaArticleUnlocked = 1; // assume unlocked
 											ArticleDefinition *article = _game->getMod()->getUfopaediaArticle(rule->getType(), false);
 											if (article && !Ufopaedia::isArticleAvailable(_game->getSavedGame(), article))
 											{
-												_activeWeaponUfopediaArticleUnlocked = 0; // ammo/weapon locked
+												_cacheActiveWeaponUfopediaArticleUnlocked = 0; // ammo/weapon locked
 											}
 											if (rule->getType() != weapon->getType())
 											{
 												article = _game->getMod()->getUfopaediaArticle(weapon->getType(), false);
 												if (article && !Ufopaedia::isArticleAvailable(_game->getSavedGame(), article))
 												{
-													_activeWeaponUfopediaArticleUnlocked = 0; // weapon locked
+													_cacheActiveWeaponUfopediaArticleUnlocked = 0; // weapon locked
 												}
 											}
 										}
 									}
 
 									// step 3: calculate and draw
-									if (rule && _activeWeaponUfopediaArticleUnlocked == 1)
+									if (rule && _cacheActiveWeaponUfopediaArticleUnlocked == 1)
 									{
 										if (rule->getBattleType() == BT_PSIAMP)
 										{
@@ -1818,7 +1860,12 @@ int Map::getTerrainLevel(const Position& pos, int size) const
  */
 void Map::setCursorType(CursorType type, int size)
 {
-	_activeWeaponUfopediaArticleUnlocked = -1; // reset cache
+	// reset cursor indicator cache
+	_cacheActiveWeaponUfopediaArticleUnlocked = -1;
+	_cacheIsCtrlPressed = false;
+	_cacheCursorPosition = Position(-1, -1, -1);
+	_cacheHasLOS = -1;
+
 	_cursorType = type;
 	if (_cursorType == CT_NORMAL)
 		_cursorSize = size;

@@ -62,7 +62,7 @@ void Screen::makeVideoFlags()
 	{
 		_flags |= SDL_ASYNCBLIT;
 	}
-	if (isOpenGLEnabled())
+	if (useOpenGL())
 	{
 		_flags = SDL_OPENGL;
 		SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
@@ -96,7 +96,7 @@ void Screen::makeVideoFlags()
 	CrossPlatform::setSystemUI();
 #endif
 
-	//_bpp = (isHQXEnabled() || isOpenGLEnabled()) ? 32 : 8;
+	//_bpp = (use32bitScaler() || useOpenGL()) ? 32 : 8;
 	_bpp = 32;
 	_baseWidth = Options::baseXResolution;
 	_baseHeight = Options::baseYResolution;
@@ -319,7 +319,7 @@ void Screen::resetDisplay(bool resetVideo)
 		_surface->getSurface()->h != _baseHeight)) // don't reallocate _surface if not necessary, it's a waste of CPU cycles
 	{
 		if (_surface) delete _surface;
-		//_surface = new Surface(_baseWidth, _baseHeight, 0, 0, Screen::isHQXEnabled() ? 32 : 8); // only HQX needs 32bpp for this surface; the OpenGL class has its own 32bpp buffer
+		//_surface = new Surface(_baseWidth, _baseHeight, 0, 0, Screen::use32bitScaler() ? 32 : 8); // only HQX/XBRZ needs 32bpp for this surface; the OpenGL class has its own 32bpp buffer
 		/* So why exactly does the new surface have fixed size? */
 		_surface = new Surface(_baseWidth, _baseHeight, 0, 0, 32);
 		if (_surface->getSurface()->format->BitsPerPixel == 8) _surface->setPalette(deferredPalette);
@@ -606,7 +606,7 @@ void Screen::screenshot(const std::string &filename) const
 	SDL_Surface *screenshot = SDL_CreateRGBSurface(0, getWidth(), getHeight(), 24, 0xff, 0xff00, 0xff0000, 0);
 	SDL_Surface *screenshot = SDL_AllocSurface(0, getWidth() - getWidth()%4, getHeight(), 24, 0xff, 0xff00, 0xff0000, 0);
 	
-	if (isOpenGLEnabled())
+	if (useOpenGL())
 	{
 #ifndef __NO_OPENGL
 		GLenum format = GL_RGB;
@@ -638,25 +638,38 @@ void Screen::screenshot(const std::string &filename) const
  * Check whether a 32bpp scaler has been selected.
  * @return if it is enabled with a compatible resolution.
  */
-bool Screen::is32bitEnabled()
+bool Screen::use32bitScaler()
 {
 	int w = Options::displayWidth;
 	int h = Options::displayHeight;
 	int baseW = Options::baseXResolution;
 	int baseH = Options::baseYResolution;
+	int maxScale = 0;
 
-	return ((Options::useHQXFilter || Options::useXBRZFilter) && (
-			(w == baseW * 2 && h == baseH * 2) ||
-			(w == baseW * 3 && h == baseH * 3) ||
-			(w == baseW * 4 && h == baseH * 4) ||
-			(w == baseW * 5 && h == baseH * 5 && Options::useXBRZFilter)));
+	if (Options::useHQXFilter)
+	{
+		maxScale = 4;
+	}
+	else if (Options::useXBRZFilter)
+	{
+		maxScale = 6;
+	}
+
+	for (int i = 2; i <= maxScale; i++)
+	{
+		if (w == baseW * i && h == baseH * i)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 /**
  * Check if OpenGL is enabled.
  * @return if it is enabled.
  */
-bool Screen::isOpenGLEnabled()
+bool Screen::useOpenGL()
 {
 #ifdef __NO_OPENGL
 	return false;

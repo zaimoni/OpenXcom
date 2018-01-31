@@ -58,10 +58,10 @@ namespace OpenXcom
 BattleUnit::BattleUnit(Soldier *soldier, int depth, int maxViewDistance) :
 	_faction(FACTION_PLAYER), _originalFaction(FACTION_PLAYER), _killedBy(FACTION_PLAYER), _id(0), _tile(0),
 	_lastPos(Position()), _direction(0), _toDirection(0), _directionTurret(0), _toDirectionTurret(0),
-	_verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _walkPhase(0), _fallPhase(0), _kneeled(false), _floating(false),
+	_verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0), _fallPhase(0), _kneeled(false), _floating(false),
 	_dontReselect(false), _fire(0), _currentAIState(0), _visible(false),
 	_expBravery(0), _expReactions(0), _expFiring(0), _expThrowing(0), _expPsiSkill(0), _expPsiStrength(0), _expMelee(0),
-	_motionPoints(0), _kills(0), _hitByFire(false), _fireMaxHit(0), _smokeMaxHit(0), _moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
+	_motionPoints(0), _kills(0), _hitByFire(false), _hitByAnything(false), _fireMaxHit(0), _smokeMaxHit(0), _moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
 	_statistics(), _murdererId(0), _mindControllerID(0), _fatalShotSide(SIDE_FRONT), _fatalShotBodyPart(BODYPART_HEAD), _armor(0),
 	_geoscapeSoldier(soldier), _unitRules(0), _rankInt(0), _turretType(-1), _hidingForTurn(false), _floorAbove(false), _respawn(false), _alreadyRespawned(false), _isLeeroyJenkins(false)
 {
@@ -175,14 +175,16 @@ BattleUnit::BattleUnit(Soldier *soldier, int depth, int maxViewDistance) :
 }
 
 /**
- * Updates a BattleUnit from a Soldier (after a change of armor)
- * @param soldier Pointer to the Soldier.
- * @param depth the depth of the battlefield (used to determine movement type in case of MT_FLOAT).
+ * Updates BattleUnit's armor and related attributes (after a change/transformation of armor).
+ * @param soldier Pointer to the Geoscape Soldier.
+ * @param ruleArmor Pointer to the new Armor ruleset.
+ * @param depth The depth of the battlefield.
+ * @param maxViewDistance Maximum default view distance during the day.
  */
-void BattleUnit::updateArmorFromSoldier(Soldier *soldier, int depth, int maxViewDistance)
+void BattleUnit::updateArmorFromSoldier(Soldier *soldier, Armor *ruleArmor, int depth, int maxViewDistance)
 {
 	_stats = *soldier->getCurrentStats();
-	_armor = soldier->getArmor();
+	_armor = ruleArmor;
 
 	_movementType = _armor->getMovementType();
 	if (_movementType == MT_FLOAT) {
@@ -209,6 +211,9 @@ void BattleUnit::updateArmorFromSoldier(Soldier *soldier, int depth, int maxView
 	_currentArmor[SIDE_RIGHT] = _maxArmor[SIDE_RIGHT];
 	_currentArmor[SIDE_REAR] = _maxArmor[SIDE_REAR];
 	_currentArmor[SIDE_UNDER] = _maxArmor[SIDE_UNDER];
+
+	int look = soldier->getGender() + 2 * soldier->getLook() + 8 * soldier->getLookVariant();
+	setRecolor(look, look, _rankInt);
 }
 
 /**
@@ -223,10 +228,10 @@ void BattleUnit::updateArmorFromSoldier(Soldier *soldier, int depth, int maxView
 BattleUnit::BattleUnit(Unit *unit, UnitFaction faction, int id, Armor *armor, StatAdjustment *adjustment, int depth, int maxViewDistance) :
 	_faction(faction), _originalFaction(faction), _killedBy(faction), _id(id),
 	_tile(0), _lastPos(Position()), _direction(0), _toDirection(0), _directionTurret(0),
-	_toDirectionTurret(0), _verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _walkPhase(0),
+	_toDirectionTurret(0), _verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0),
 	_fallPhase(0), _kneeled(false), _floating(false), _dontReselect(false), _fire(0), _currentAIState(0),
 	_visible(false), _expBravery(0), _expReactions(0), _expFiring(0),
-	_expThrowing(0), _expPsiSkill(0), _expPsiStrength(0), _expMelee(0), _motionPoints(0), _kills(0), _hitByFire(false), _fireMaxHit(0), _smokeMaxHit(0),
+	_expThrowing(0), _expPsiSkill(0), _expPsiStrength(0), _expMelee(0), _motionPoints(0), _kills(0), _hitByFire(false), _hitByAnything(false), _fireMaxHit(0), _smokeMaxHit(0),
 	_moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
 	_statistics(), _murdererId(0), _mindControllerID(0), _fatalShotSide(SIDE_FRONT),
 	_fatalShotBodyPart(BODYPART_HEAD), _armor(armor), _geoscapeSoldier(0),  _unitRules(unit),
@@ -375,6 +380,7 @@ void BattleUnit::load(const YAML::Node &node, const ScriptGlobal *shared)
 	_faction = (UnitFaction)node["faction"].as<int>(_faction);
 	_status = (UnitStatus)node["status"].as<int>(_status);
 	_wantsToSurrender = node["wantsToSurrender"].as<bool>(_wantsToSurrender);
+	_isSurrendering = node["isSurrendering"].as<bool>(_isSurrendering);
 	_pos = node["position"].as<Position>(_pos);
 	_direction = _toDirection = node["direction"].as<int>(_direction);
 	_directionTurret = _toDirectionTurret = node["directionTurret"].as<int>(_directionTurret);
@@ -448,6 +454,7 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	node["faction"] = (int)_faction;
 	node["status"] = (int)_status;
 	node["wantsToSurrender"] = _wantsToSurrender;
+	node["isSurrendering"] = _isSurrendering;
 	node["position"] = _pos;
 	node["direction"] = _direction;
 	node["directionTurret"] = _directionTurret;
@@ -519,6 +526,7 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
  */
 void BattleUnit::setRecolor(int basicLook, int utileLook, int rankLook)
 {
+	_recolor.clear(); // reset in case of OXCE+ on-the-fly armor changes/transformations
 	const int colorsMax = 4;
 	std::pair<int, int> colors[colorsMax] =
 	{
@@ -680,6 +688,24 @@ UnitStatus BattleUnit::getStatus() const
 bool BattleUnit::wantsToSurrender() const
 {
 	return _wantsToSurrender;
+}
+
+/**
+ * Is the unit surrendering this turn?
+ * @return True if the unit is surrendering (on this turn)
+ */
+bool BattleUnit::isSurrendering() const
+{
+	return _isSurrendering;
+}
+
+/**
+ * Mark the unit as surrendering this turn.
+ * @param isSurrendering
+ */
+void BattleUnit::setSurrendering(bool isSurrendering)
+{
+	_isSurrendering = isSurrendering;
 }
 
 /**
@@ -1143,6 +1169,7 @@ int BattleUnit::damage(Position relative, int power, const RuleDamageType *type,
 	UnitSide side = SIDE_FRONT;
 	UnitBodyPart bodypart = BODYPART_TORSO;
 
+	_hitByAnything = true;
 	if (power <= 0 || _health <= 0)
 	{
 		return 0;
@@ -1317,7 +1344,7 @@ int BattleUnit::damage(Position relative, int power, const RuleDamageType *type,
 			moraleChange(-std::get<toWound>(args.data));
 		}
 
-		setValueMax(_currentArmor[side], - std::get<toArmor>(args.data), 0, _armor->getArmor(side));
+		setValueMax(_currentArmor[side], - std::get<toArmor>(args.data), 0, _maxArmor[side]);
 
 		setFatalShotInfo(side, bodypart);
 		return std::get<toHealth>(args.data);
@@ -1973,6 +2000,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
 		return;
 	}
 
+	_isSurrendering = false;
 	_unitsSpottedThisTurn.clear();
 
 	_hitByFire = false;
@@ -1984,6 +2012,11 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
 	if (_faction != _originalFaction)
 	{
 		_faction = _originalFaction;
+		if (_faction == FACTION_PLAYER && _currentAIState)
+		{
+			delete _currentAIState;
+			_currentAIState = 0;
+		}
 		return;
 	}
 
@@ -2932,10 +2965,10 @@ int BattleUnit::getFatalWound(int part) const
  */
 void BattleUnit::heal(int part, int woundAmount, int healthAmount)
 {
-	if (part < 0 || part > 5)
+	if (part < 0 || part > 5 || !_fatalWounds[part])
+	{
 		return;
-	if (!_fatalWounds[part])
-		return;
+	}
 
 	setValueMax(_fatalWounds[part], -woundAmount, 0, 100);
 	setValueMax(_health, healthAmount, 1, getBaseStats()->health); //Hippocratic Oath: First do no harm
@@ -4000,6 +4033,50 @@ bool BattleUnit::isSniper() const
 		return true;
 	}
 	return false;
+}
+
+/**
+ * Remembers the unit's XP (used for shotguns).
+ */
+void BattleUnit::rememberXP()
+{
+	_expBraveryTmp = _expBravery;
+	_expReactionsTmp = _expReactions;
+	_expFiringTmp = _expFiring;
+	_expThrowingTmp = _expThrowing;
+	_expPsiSkillTmp = _expPsiSkill;
+	_expPsiStrengthTmp = _expPsiStrength;
+	_expMeleeTmp = _expMelee;
+}
+
+/**
+ * Artificially alter a unit's XP (used for shotguns).
+ */
+void BattleUnit::nerfXP()
+{
+	if (_expBravery > _expBraveryTmp + 1) _expBravery = _expBraveryTmp + 1;
+	if (_expReactions > _expReactionsTmp + 1) _expReactions = _expReactionsTmp + 1;
+	if (_expFiring > _expFiringTmp + 1) _expFiring = _expFiringTmp + 1;
+	if (_expThrowing > _expThrowingTmp + 1) _expThrowing = _expThrowingTmp + 1;
+	if (_expPsiSkill > _expPsiSkillTmp + 1) _expPsiSkill = _expPsiSkillTmp + 1;
+	if (_expPsiStrength > _expPsiStrengthTmp + 1) _expPsiStrength = _expPsiStrengthTmp + 1;
+	if (_expMelee > _expMeleeTmp + 1) _expMelee = _expMeleeTmp + 1;
+}
+
+/**
+ * Was this unit just hit?
+ */
+bool BattleUnit::getHitState()
+{
+	return _hitByAnything;
+}
+
+/**
+ * reset the unit hit state.
+ */
+void BattleUnit::resetHitState()
+{
+	_hitByAnything = false;
 }
 
 

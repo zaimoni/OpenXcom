@@ -286,6 +286,7 @@ void create()
 	_info.push_back(OptionInfo("autoSell", &autoSell, false, "STR_AUTO_SELL", "STR_OXCE"));
 	_info.push_back(OptionInfo("techTreeViewerSpoilerProtection", &techTreeViewerSpoilerProtection, false, "STR_TECH_SPOILER_PROTECTION", "STR_OXCE"));
 	_info.push_back(OptionInfo("playBriefingMusicDuringEquipment", &playBriefingMusicDuringEquipment, false, "STR_PLAY_BRIEFING_MUSIC_DURING_EQUIPMENT", "STR_OXCE"));
+	_info.push_back(OptionInfo("ufoLandingAlert", &ufoLandingAlert, false, "STR_UFO_LANDING_ALERT", "STR_OXCE"));
 
 	// controls
 	_info.push_back(KeyOptionInfo("keyOk", &keyOk, SDLK_RETURN, "STR_OK", "STR_GENERAL"));
@@ -895,8 +896,15 @@ void updateReservedSpace()
 		{
 			if (i->second.isMaster())
 			{
-				i->second.setReservedSpace(maxSize);
-				Log(LOG_INFO) << "reservedSpace for: " << i->first << " updated to: " << i->second.getReservedSpace();
+				if (i->second.getReservedSpace() < maxSize)
+				{
+					i->second.setReservedSpace(maxSize);
+					Log(LOG_INFO) << "reservedSpace for: " << i->first << " updated to: " << i->second.getReservedSpace();
+				}
+				else
+				{
+					Log(LOG_INFO) << "reservedSpace for: " << i->first << " is: " << i->second.getReservedSpace();
+				}
 			}
 		}
 	}
