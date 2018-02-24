@@ -71,6 +71,7 @@ OPT bool autoSell;
 OPT bool techTreeViewerSpoilerProtection;
 OPT bool playBriefingMusicDuringEquipment;
 OPT bool ufoLandingAlert;
+OPT bool friendlyCraftEscort;
 
 // System-specific options
 OPT bool swipeToTurn, holdToTurn;

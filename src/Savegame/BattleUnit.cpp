@@ -186,6 +186,8 @@ void BattleUnit::updateArmorFromSoldier(Soldier *soldier, Armor *ruleArmor, int 
 	_stats = *soldier->getCurrentStats();
 	_armor = ruleArmor;
 
+	_moveSound = _armor->getMoveSound() != -1 ? _armor->getMoveSound() : -1; // there's no unit move sound, thus hardcoded -1
+
 	_movementType = _armor->getMovementType();
 	if (_movementType == MT_FLOAT) {
 		if (depth > 0) { _movementType = MT_FLY; } else { _movementType = MT_WALK; }
@@ -2823,7 +2825,10 @@ bool BattleUnit::postMissionProcedures(SavedGame *geoscape, UnitStats &statsDiff
 	{
 		healthLoss = 0;
 	}
-	s->setWoundRecovery(RNG::generate((healthLoss*0.5),(healthLoss*1.5)));
+	if (!_armor->getInstantWoundRecovery())
+	{
+		s->setWoundRecovery(RNG::generate((healthLoss*0.5),(healthLoss*1.5)));
+	}
 
 	if (_expBravery && stats->bravery < caps.bravery)
 	{

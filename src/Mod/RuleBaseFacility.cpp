@@ -20,6 +20,7 @@
 #include "RuleBaseFacility.h"
 #include "Mod.h"
 #include "MapScript.h"
+#include "../Battlescape/Position.h"
 
 namespace OpenXcom
 {
@@ -120,11 +121,7 @@ void RuleBaseFacility::load(const YAML::Node &node, Mod *mod, int listOrder)
 			cost.first = i->second["build"].as<int>(cost.first);
 			cost.second = i->second["refund"].as<int>(cost.second);
 
-			if (cost.first < cost.second)
-			{
-				cost.second = cost.first;
-			}
-			if (cost.first <= 0)
+			if (cost.first <= 0 && cost.second <= 0)
 			{
 				_buildCostItems.erase(id);
 			}
@@ -151,6 +148,8 @@ void RuleBaseFacility::load(const YAML::Node &node, Mod *mod, int listOrder)
 	_canBeBuiltOver = node["canBeBuiltOver"].as<bool>(_canBeBuiltOver);
 	_buildOverFacilities = node["buildOverFacilities"].as< std::vector<std::string> >(_buildOverFacilities);
 	std::sort(_buildOverFacilities.begin(), _buildOverFacilities.end());
+
+	_storageTiles = node["storageTiles"].as<std::vector<Position> >(_storageTiles);
 }
 
 /**
@@ -564,6 +563,16 @@ bool RuleBaseFacility::getCanBeBuiltOver() const
 const std::vector<std::string> &RuleBaseFacility::getBuildOverFacilities() const
 {
 	return _buildOverFacilities;
+}
+
+/**
+ * Gets the list of tile positions where to place items in this facility's storage
+ * If empty, vanilla checkerboard pattern will be used
+ * @return the list of positions
+ */
+const std::vector<Position> &RuleBaseFacility::getStorageTiles() const
+{
+	return _storageTiles;
 }
 
 }

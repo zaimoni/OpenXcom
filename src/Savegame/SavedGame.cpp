@@ -580,6 +580,55 @@ void SavedGame::load(const std::string &filename, Mod *mod)
 		_bases.push_back(b);
 	}
 
+	// Finish loading crafts after bases (more specifically after all crafts) are loaded, because of references between crafts (i.e. friendly escorts)
+	if (Options::friendlyCraftEscort)
+	{
+		for (YAML::const_iterator i = doc["bases"].begin(); i != doc["bases"].end(); ++i)
+		{
+			// Bases don't have IDs and names are not unique, so need to consider lon/lat too
+			double lon = (*i)["lon"].as<double>(0.0);
+			double lat = (*i)["lat"].as<double>(0.0);
+			std::wstring baseName = L"";
+			if (const YAML::Node &name = (*i)["name"])
+			{
+				baseName = Language::utf8ToWstr(name.as<std::string>());
+			}
+
+			Base *base = 0;
+			for (std::vector<Base*>::iterator b = _bases.begin(); b != _bases.end(); ++b)
+			{
+				if (AreSame(lon, (*b)->getLongitude()) && AreSame(lat, (*b)->getLatitude()) && (*b)->getName() == baseName)
+				{
+					base = (*b);
+					break;
+				}
+			}
+			if (base)
+			{
+				base->finishLoading(*i, this);
+			}
+		}
+	}
+
+	// Finish loading UFOs after all craft and all other UFOs are loaded
+	for (YAML::const_iterator i = doc["ufos"].begin(); i != doc["ufos"].end(); ++i)
+	{
+		int ufoId = (*i)["id"].as<int>();
+		Ufo *ufo = 0;
+		for (std::vector<Ufo*>::iterator u = _ufos.begin(); u != _ufos.end(); ++u)
+		{
+			if ((*u)->getId() == ufoId)
+			{
+				ufo = (*u);
+				break;
+			}
+		}
+		if (ufo)
+		{
+			ufo->finishLoading(*i, *this);
+		}
+	}
+
 	const YAML::Node &research = doc["poppedResearch"];
 	for (YAML::const_iterator it = research.begin(); it != research.end(); ++it)
 	{
@@ -1231,6 +1280,15 @@ int SavedGame::getBaseMaintenance() const
  * @return Pointer to UFO list.
  */
 std::vector<Ufo*> *SavedGame::getUfos()
+{
+	return &_ufos;
+}
+
+/**
+ * Returns the list of alien UFOs.
+ * @return Pointer to UFO list.
+ */
+const std::vector<Ufo*> *SavedGame::getUfos() const
 {
 	return &_ufos;
 }
@@ -2572,6 +2630,31 @@ bool SavedGame::getAutosell(const RuleItem *itype) const
 		return false;
 	}
 	return _autosales.find(itype) != _autosales.end();
+}
+
+/**
+ * Stop hunting the given xcom craft.
+ */
+void SavedGame::stopHuntingXcomCraft(Craft *target)
+{
+	for (std::vector<Ufo*>::iterator u = _ufos.begin(); u != _ufos.end(); ++u)
+	{
+		(*u)->resetOriginalDestination(target);
+	}
+}
+
+/**
+ * Stop hunting all xcom craft from a given xcom base.
+ */
+void SavedGame::stopHuntingXcomCrafts(Base *base)
+{
+	for (std::vector<Craft*>::iterator c = base->getCrafts()->begin(); c != base->getCrafts()->end(); ++c)
+	{
+		for (std::vector<Ufo*>::iterator u = _ufos.begin(); u != _ufos.end(); ++u)
+		{
+			(*u)->resetOriginalDestination((*c));
+		}
+	}
 }
 
 }

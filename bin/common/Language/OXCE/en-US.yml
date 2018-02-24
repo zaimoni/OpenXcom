@@ -73,7 +73,7 @@ en-US:
 #SoldierArmorState.cpp
   STR_NOT_ENOUGH_CRAFT_SPACE: "Not enough space onboard!"
 #SoldierAvatarState.cpp
-  STR_SELECT_AVATAR_FOR: "SELECT AVATAR FOR\n{0}"
+  STR_SELECT_AVATAR_FOR: "SELECT AVATAR FOR{NEWLINE}{0}"
 #SoldiersState.h
   STR_TRAINING: "Training"
 #StoresState.cpp
@@ -119,7 +119,6 @@ en-US:
 #BattlescapeState.cpp
   STR_CENTER_ON_WOUNDED_FRIEND: "Center on Wounded Friend"
   STR_CENTER_ON_SHOCKED_FRIEND: "Center on Shocked Friend"
-  STR_MAP_GEN_ERROR: "Map error detected. Please send log to devs/modders."
   STR_BUG_HUNT_ACTIVATED: "Bug Hunt mode activated: enemies are visible on the minimap!"
   STR_TARGET_ENEMY: "; Target = ENEMY"
   STR_TARGET_NEUTRAL: "; Target = NEUTRAL"
@@ -203,6 +202,8 @@ en-US:
   STR_PLAY_BRIEFING_MUSIC_DURING_EQUIPMENT_DESC: "Briefing music will continue playing during equipment phase until the Battlescape is displayed."
   STR_UFO_LANDING_ALERT: "UFO landing alert"
   STR_UFO_LANDING_ALERT_DESC: "If enabled, a message will pop up each time a detected UFO lands."
+  STR_FRIENDLY_CRAFT_ESCORT: "Friendly craft escort"
+  STR_FRIENDLY_CRAFT_ESCORT_DESC: "Allows your craft to follow and provide air defense for other craft in the Geoscape."
   STR_GRAPHS_ZOOM_IN: "Zoom In (Graphs)"
   STR_GRAPHS_ZOOM_OUT: "Zoom Out (Graphs)"
   STR_MARK_ALL_AS_SEEN: "Mark All As Seen"
@@ -245,11 +246,13 @@ en-US:
 #GeoscapeCraftState.cpp
   STR_AUTO_PATROL: "AUTO-PATROL"
 #GeoscapeState.cpp
+  STR_UFO_STARTED_HUNTING: "{0} is on an intercept course with {1}"
   STR_CRAFT_IS_READY: "{0} at {1} is ready."
   STR_ECONOMY_WARNING: "The funds {0} and income {1} are low and the maintenance {2} too high! Sell something to avoid taking a credit... funds missing: {3}"
 #InterceptState.cpp
   STR_RETURNING: "RETURNING"
   STR_INTERCEPTING: "INTERCEPTING"
+  STR_ESCORTING: "ESCORTING"
   STR_EN_ROUTE: "EN ROUTE"
   STR_PILOT_MISSING: "PILOT MISSING"
   STR_DAY_SHORT: "{0}d"

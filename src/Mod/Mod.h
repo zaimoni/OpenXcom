@@ -165,6 +165,9 @@ private:
 	int _bughuntMinTurn, _bughuntMaxEnemies, _bughuntRank, _bughuntLowMorale, _bughuntTimeUnitsLeft;
 	int _ufoGlancingHitThreshold, _ufoBeamWidthParameter;
 	int _ufoTractorBeamSizeModifiers[5];
+	int _escortRange;
+	bool _escortsJoinFightAgainstHK;
+	int _crewEmergencyEvacuationSurvivalChance, _pilotsEmergencyEvacuationSurvivalChance;
 	int _soldiersPerSergeant, _soldiersPerCaptain, _soldiersPerColonel, _soldiersPerCommander;
 	int _pilotAccuracyZeroPoint, _pilotAccuracyRange, _pilotReactionsZeroPoint, _pilotReactionsRange;
 	int _pilotBraveryThresholds[3];
@@ -176,6 +179,7 @@ private:
 	std::string _fontName, _finalResearch, _psiUnlockResearch;
 	YAML::Node _startingBase;
 	GameTime _startingTime;
+	int _startingDifficulty;
 	int _baseDefenseMapFromLocation;
 	std::map<int, std::string> _missionRatings, _monthlyRatings;
 	std::map<std::string, std::string> _fixedUserOptions;
@@ -477,6 +481,14 @@ public:
 	int getUfoBeamWidthParameter() const { return _ufoBeamWidthParameter; }
 	/// Gets the modifier to a tractor beam's power based on a ufo's size
 	int getUfoTractorBeamSizeModifier(int ufoSize) const { return _ufoTractorBeamSizeModifiers[ufoSize]; }
+	/// Gets the escort range
+	double getEscortRange() const;
+	/// Should escorts join the fight against HK (automatically)? Or is only fighting one-on-one allowed?
+	int getEscortsJoinFightAgainstHK() const { return _escortsJoinFightAgainstHK; }
+	/// Gets the crew emergency evacuation survival chance
+	int getCrewEmergencyEvacuationSurvivalChance() const { return _crewEmergencyEvacuationSurvivalChance; }
+	/// Gets the pilots emergency evacuation survival chance
+	int getPilotsEmergencyEvacuationSurvivalChance() const { return _pilotsEmergencyEvacuationSurvivalChance; }
 	/// Gets how many soldiers are needed for one sergeant promotion
 	int getSoldiersPerSergeant() const { return _soldiersPerSergeant; }
 	/// Gets how many soldiers are needed for one captain promotion
@@ -535,6 +547,8 @@ public:
 	const YAML::Node &getStartingBase() const;
 	/// Gets the game starting time.
 	const GameTime &getStartingTime() const;
+	/// Gets the game starting difficulty.
+	int getStartingDifficulty() const { return _startingDifficulty; }
 	/// Gets an MCDPatch.
 	MCDPatch *getMCDPatch(const std::string &name) const;
 	/// Gets the list of external Sprites.
