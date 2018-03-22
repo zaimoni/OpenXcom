@@ -117,6 +117,8 @@ namespace Options
 	const std::map<std::string, ModInfo> &getModInfos();
 	/// Refreshes the mods and filemaps.
 	void updateMods();
+	/// Gets the list of currently active mods.
+	std::vector<const ModInfo*> getActiveMods();
 	/// Sets the user folder (should be called from Java)
 	void setUserFolder(const std::string &userFolder);
 	/// Sets the config folder (should be called from Java)

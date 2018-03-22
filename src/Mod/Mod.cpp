@@ -290,7 +290,7 @@ Mod::Mod() :
 	_escortRange(20), _escortsJoinFightAgainstHK(true), _crewEmergencyEvacuationSurvivalChance(100), _pilotsEmergencyEvacuationSurvivalChance(100),
 	_soldiersPerSergeant(5), _soldiersPerCaptain(11), _soldiersPerColonel(23), _soldiersPerCommander(30),
 	_pilotAccuracyZeroPoint(55), _pilotAccuracyRange(40), _pilotReactionsZeroPoint(55), _pilotReactionsRange(60),
-	_performanceBonusFactor(0), _useCustomCategories(false), _showDogfightDistanceInKm(false),
+	_performanceBonusFactor(0), _useCustomCategories(false), _showDogfightDistanceInKm(false), _showFullNameInAlienInventory(false),
 	_theMostUselessOptionEver(0), _theBiggestRipOffEver(0),
 	_defeatScore(0), _defeatFunds(0), _startingTime(6, 1, 1, 1999, 12, 0, 0), _startingDifficulty(0),
 	_baseDefenseMapFromLocation(0),
@@ -308,14 +308,6 @@ Mod::Mod() :
 
 	dmg = new RuleDamageType();
 	dmg->ResistType = DT_NONE;
-	dmg->RandomType = DRT_NONE;
-	dmg->IgnoreOverKill = true;
-	dmg->ToHealth = 0.0f;
-	dmg->ToArmor = 0.0f;
-	dmg->ToWound = 0.0f;
-	dmg->ToItem = 0.0f;
-	dmg->ToTile = 0.0f;
-	dmg->ToStun = 0.0f;
 	_damageTypes[dmg->ResistType] = dmg;
 
 	dmg = new RuleDamageType();
@@ -929,6 +921,7 @@ int Mod::getSoundOffset(int sound, const std::string& set) const
  */
 void Mod::loadAll(const std::vector< std::pair< std::string, std::vector<std::string> > > &mods)
 {
+	Log(LOG_INFO) << "Loading rulesets...";
 	ModScript parser{ _scriptGlobal, this };
 
 	std::vector<size_t> modOffsets(mods.size());
@@ -1452,6 +1445,7 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 	_performanceBonusFactor = doc["performanceBonusFactor"].as<int>(_performanceBonusFactor);
 	_useCustomCategories = doc["useCustomCategories"].as<bool>(_useCustomCategories);
 	_showDogfightDistanceInKm = doc["showDogfightDistanceInKm"].as<bool>(_showDogfightDistanceInKm);
+	_showFullNameInAlienInventory = doc["showFullNameInAlienInventory"].as<bool>(_showFullNameInAlienInventory);
 	_theMostUselessOptionEver = doc["theMostUselessOptionEver"].as<int>(_theMostUselessOptionEver);
 	_theBiggestRipOffEver = doc["theBiggestRipOffEver"].as<int>(_theBiggestRipOffEver);
 	_baseDefenseMapFromLocation = doc["baseDefenseMapFromLocation"].as<int>(_baseDefenseMapFromLocation);
@@ -2610,7 +2604,7 @@ MCDPatch *Mod::getMCDPatch(const std::string &id) const
  * Gets the list of external sprites.
  * @return The list of external sprites.
  */
-std::vector<std::pair<std::string, ExtraSprites *> > Mod::getExtraSprites() const
+const std::vector<std::pair<std::string, ExtraSprites *> > &Mod::getExtraSprites() const
 {
 	return _extraSprites;
 }
@@ -2628,7 +2622,7 @@ const std::vector<std::string> &Mod::getCustomPalettes() const
  * Gets the list of external sounds.
  * @return The list of external sounds.
  */
-std::vector<std::pair<std::string, ExtraSounds *> > Mod::getExtraSounds() const
+const std::vector<std::pair<std::string, ExtraSounds *> > &Mod::getExtraSounds() const
 {
 	return _extraSounds;
 }
@@ -2637,7 +2631,7 @@ std::vector<std::pair<std::string, ExtraSounds *> > Mod::getExtraSounds() const
  * Gets the list of external strings.
  * @return The list of external strings.
  */
-std::map<std::string, ExtraStrings *> Mod::getExtraStrings() const
+const std::map<std::string, ExtraStrings *> &Mod::getExtraStrings() const
 {
 	return _extraStrings;
 }
@@ -2646,7 +2640,7 @@ std::map<std::string, ExtraStrings *> Mod::getExtraStrings() const
  * Gets the list of StatStrings.
  * @return The list of StatStrings.
  */
-std::vector<StatString *> Mod::getStatStrings() const
+const std::vector<StatString *> &Mod::getStatStrings() const
 {
 	return _statStrings;
 }
@@ -2788,7 +2782,7 @@ void Mod::sortLists()
 /**
  * Gets the research-requirements for Psi-Lab (it's a cache for psiStrengthEval)
  */
-std::vector<std::string> Mod::getPsiRequirements() const
+const std::vector<std::string> &Mod::getPsiRequirements() const
 {
 	return _psiRequirements;
 }

@@ -172,7 +172,7 @@ private:
 	int _pilotAccuracyZeroPoint, _pilotAccuracyRange, _pilotReactionsZeroPoint, _pilotReactionsRange;
 	int _pilotBraveryThresholds[3];
 	int _performanceBonusFactor;
-	bool _useCustomCategories, _showDogfightDistanceInKm;
+	bool _useCustomCategories, _showDogfightDistanceInKm, _showFullNameInAlienInventory;
 	int _theMostUselessOptionEver, _theBiggestRipOffEver;
 	int _defeatScore, _defeatFunds;
 	std::pair<std::string, int> _alienFuel;
@@ -234,8 +234,6 @@ private:
 	void modResources();
 	/// Sorts all our lists according to their weight.
 	void sortLists();
-
-	void exportResources();
 public:
 	static int DOOR_OPEN;
 	static int SLIDING_DOOR_OPEN;
@@ -517,6 +515,8 @@ public:
 	bool getUseCustomCategories() const { return _useCustomCategories; }
 	/// Should distance in dogfight GUI be shown in kilometers?
 	bool getShowDogfightDistanceInKm() const { return _showDogfightDistanceInKm; }
+	/// Should alien inventory show full name (e.g. Sectoid Leader) or just the race (e.g. Sectoid)?
+	bool getShowFullNameInAlienInventory() const { return _showFullNameInAlienInventory; }
 	/// Self-explanatory
 	int getTheMostUselessOptionEver() const { return _theMostUselessOptionEver; }
 	/// Shame on you!
@@ -550,19 +550,19 @@ public:
 	/// Gets the game starting difficulty.
 	int getStartingDifficulty() const { return _startingDifficulty; }
 	/// Gets an MCDPatch.
-	MCDPatch *getMCDPatch(const std::string &name) const;
+	MCDPatch *getMCDPatch(const std::string &id) const;
 	/// Gets the list of external Sprites.
-	std::vector<std::pair<std::string, ExtraSprites *> > getExtraSprites() const;
+	const std::vector<std::pair<std::string, ExtraSprites *> > &getExtraSprites() const;
 	/// Gets the list of custom palettes.
 	const std::vector<std::string> &getCustomPalettes() const;
 	/// Gets the list of external Sounds.
-	std::vector<std::pair<std::string, ExtraSounds *> > getExtraSounds() const;
+	const std::vector<std::pair<std::string, ExtraSounds *> > &getExtraSounds() const;
 	/// Gets the list of external Strings.
-	std::map<std::string, ExtraStrings *> getExtraStrings() const;
+	const std::map<std::string, ExtraStrings *> &getExtraStrings() const;
 	/// Gets the list of StatStrings.
-	std::vector<StatString *> getStatStrings() const;
+	const std::vector<StatString *> &getStatStrings() const;
 	/// Gets the research-requirements for Psi-Lab (it's a cache for psiStrengthEval)
-	std::vector<std::string> getPsiRequirements() const;
+	const std::vector<std::string> &getPsiRequirements() const;
 	/// Returns the sorted list of inventories.
 	const std::vector<std::string> &getInvsList() const;
 	/// Generates a new soldier.

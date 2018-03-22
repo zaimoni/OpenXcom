@@ -1054,6 +1054,12 @@
     <ClCompile Include="Geoscape\SelectMusicTrackState.cpp">
       <Filter>Geoscape</Filter>
     </ClCompile>
+    <ClCompile Include="Ufopaedia\StatsForNerdsState.cpp">
+      <Filter>Ufopaedia</Filter>
+    </ClCompile>
+    <ClCompile Include="Basescape\GlobalResearchState.cpp">
+      <Filter>Basescape</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -2151,6 +2157,12 @@
     </ClInclude>
     <ClInclude Include="Geoscape\SelectMusicTrackState.h">
       <Filter>Geoscape</Filter>
+    </ClInclude>
+    <ClInclude Include="Ufopaedia\StatsForNerdsState.h">
+      <Filter>Ufopaedia</Filter>
+    </ClInclude>
+    <ClInclude Include="Basescape\GlobalResearchState.h">
+      <Filter>Basescape</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

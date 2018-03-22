@@ -47,7 +47,7 @@ keyBattleCenterEnemy1, keyBattleCenterEnemy2, keyBattleCenterEnemy3, keyBattleCe
 keyBattleCenterEnemy9, keyBattleCenterEnemy10, keyBattleVoxelView, keyBattleZeroTUs, keyInvCreateTemplate, keyInvApplyTemplate, keyInvClear, keyInvAutoEquip;
 
 // Extra hotkeys (Meridian's build)
-OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer,
+OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch,
 	keyGraphsZoomIn, keyGraphsZoomOut,
 	keyToggleQuickSearch,
 	keyCraftLoadoutSave, keyCraftLoadoutLoad,
@@ -72,6 +72,9 @@ OPT bool techTreeViewerSpoilerProtection;
 OPT bool playBriefingMusicDuringEquipment;
 OPT bool ufoLandingAlert;
 OPT bool friendlyCraftEscort;
+
+// Extra hidden flags (Meridian's build)
+OPT bool simpleUppercase;
 
 // System-specific options
 OPT bool swipeToTurn, holdToTurn;

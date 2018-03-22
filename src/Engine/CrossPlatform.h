@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <locale>
 #ifdef __ANDROID__
 #include <jni.h>
 #endif
@@ -78,6 +79,10 @@ namespace CrossPlatform
 	std::string noExt(const std::string &file);
 	/// Gets the system locale.
 	std::string getLocale();
+	/// Tests locale availability and remembers the result in user settings.
+	std::locale testLocale();
+	/// Converts a wide string into upper case.
+	void upperCase(std::wstring &input, std::locale &myLocale);
 	/// Checks if an event is a quit shortcut.
 	bool isQuitShortcut(const SDL_Event &ev);
 	/// Gets the modified date of a file.
