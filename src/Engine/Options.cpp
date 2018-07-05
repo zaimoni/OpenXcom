@@ -289,6 +289,7 @@ void create()
 	_info.push_back(OptionInfo("playBriefingMusicDuringEquipment", &playBriefingMusicDuringEquipment, false, "STR_PLAY_BRIEFING_MUSIC_DURING_EQUIPMENT", "STR_OXCE"));
 	_info.push_back(OptionInfo("ufoLandingAlert", &ufoLandingAlert, false, "STR_UFO_LANDING_ALERT", "STR_OXCE"));
 	_info.push_back(OptionInfo("friendlyCraftEscort", &friendlyCraftEscort, false, "STR_FRIENDLY_CRAFT_ESCORT", "STR_OXCE"));
+	_info.push_back(OptionInfo("drawEnemyRadarCircles", &drawEnemyRadarCircles, true, "STR_DRAW_ENEMY_RADAR_CIRCLES", "STR_OXCE"));
 
 	_info.push_back(OptionInfo("simpleUppercase", &simpleUppercase, false));
 
@@ -391,6 +392,7 @@ void create()
 	_info.push_back(KeyOptionInfo("keyInventorySave", &keyInventorySave, SDLK_F5, "STR_SAVE_EQUIPMENT_TEMPLATE", "STR_OXCE"));
 	_info.push_back(KeyOptionInfo("keyInventoryLoad", &keyInventoryLoad, SDLK_F9, "STR_LOAD_EQUIPMENT_TEMPLATE", "STR_OXCE"));
 
+	_info.push_back(KeyOptionInfo("keyBattleUseSpecial", &keyBattleUseSpecial, SDLK_w, "STR_USE_SPECIAL_ITEM", "STR_OXCE"));
 	_info.push_back(KeyOptionInfo("keyBattleActionItem1", &keyBattleActionItem1, SDLK_1, "STR_ACTION_ITEM_1", "STR_OXCE"));
 	_info.push_back(KeyOptionInfo("keyBattleActionItem2", &keyBattleActionItem2, SDLK_2, "STR_ACTION_ITEM_2", "STR_OXCE"));
 	_info.push_back(KeyOptionInfo("keyBattleActionItem3", &keyBattleActionItem3, SDLK_3, "STR_ACTION_ITEM_3", "STR_OXCE"));
@@ -1021,8 +1023,8 @@ void userSplitMasters()
 			{
 				std::string srcFile = _userFolder + (*j);
 				YAML::Node doc = YAML::LoadFile(srcFile);
-				std::vector<std::string> mods = doc["mods"].as<std::vector< std::string> >(std::vector<std::string>());
-				if (std::find(mods.begin(), mods.end(), (*i)) != mods.end())
+				std::vector<std::string> srcMods = doc["mods"].as<std::vector< std::string> >(std::vector<std::string>());
+				if (std::find(srcMods.begin(), srcMods.end(), (*i)) != srcMods.end())
 				{
 					std::string dstFile = masterFolder + CrossPlatform::PATH_SEPARATOR + (*j);
 					CrossPlatform::moveFile(srcFile, dstFile);

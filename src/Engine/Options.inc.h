@@ -53,6 +53,7 @@ OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch,
 	keyCraftLoadoutSave, keyCraftLoadoutLoad,
 	keyMarkAllAsSeen, keySelectAll, keyDeselectAll, keyResetAll,
 	keyInventoryArmor, keyInventoryAvatar, keyInventorySave, keyInventoryLoad,
+	keyBattleUseSpecial,
 	keyBattleActionItem1, keyBattleActionItem2, keyBattleActionItem3, keyBattleActionItem4, keyBattleActionItem5,
 	keyNightVisionToggle, keyNightVisionHold, keySelectMusicTrack;
 
@@ -72,6 +73,7 @@ OPT bool techTreeViewerSpoilerProtection;
 OPT bool playBriefingMusicDuringEquipment;
 OPT bool ufoLandingAlert;
 OPT bool friendlyCraftEscort;
+OPT bool drawEnemyRadarCircles;
 
 // Extra hidden flags (Meridian's build)
 OPT bool simpleUppercase;
