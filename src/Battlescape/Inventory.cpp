@@ -304,13 +304,13 @@ void Inventory::drawItems()
 	{
 		tempSurface->blitNShade(_items, x, y, Pulsate[_animFrame % 8], false, a ? 0 : 32);
 	};
+	auto indicators = [&](Surface *surf, int x, int y)
+	{
+		surf->blitNShade(_items, x, y, Pulsate[_animFrame % 8]);
+	};
 
 	ScriptWorkerBlit work;
 	_items->clear();
-	_stunnedIndicators.clear();
-	_shockedIndicators.clear();
-	_woundedIndicators.clear();
-	_burningIndicators.clear();
 	Uint8 color = _game->getMod()->getInterface("inventory")->getElement("numStack")->color;
 	Uint8 color2 = _game->getMod()->getInterface("inventory")->getElement("numStack")->color2;
 	if (_selUnit != 0)
@@ -397,19 +397,19 @@ void Inventory::drawItems()
 					fatalWounds = (*i)->getUnit()->getFatalWounds();
 					if (_burnIndicator && (*i)->getUnit()->getFire() > 0)
 					{
-						_burningIndicators.push_back(std::make_pair(x, y));
+						indicators(_burnIndicator, x, y);
 					}
 					else if (_woundIndicator && fatalWounds > 0)
 					{
-						_woundedIndicators.push_back(std::make_pair(x, y));
+						indicators(_woundIndicator, x, y);
 					}
 					else if (_shockIndicator && (*i)->getUnit()->hasNegativeHealthRegen())
 					{
-						_shockedIndicators.push_back(std::make_pair(x, y));
+						indicators(_shockIndicator, x, y);
 					}
 					else if (_stunIndicator)
 					{
-						_stunnedIndicators.push_back(std::make_pair(x, y));
+						indicators(_stunIndicator, x, y);
 					}
 				}
 			}
@@ -946,7 +946,7 @@ void Inventory::mouseClick(Action *action, State *state)
 									moveItem(oldAmmo, (item == weaponRightHand ? _inventorySlotLeftHand : _inventorySlotRightHand), 0, 0);
 								}
 								setSelectedItem(0);
-								_game->getMod()->getSoundByDepth(_depth, Mod::ITEM_RELOAD)->play();
+								_game->getMod()->getSoundByDepth(_depth, item->getRules()->getReloadSound())->play();
 								if (item->getSlot()->getType() == INV_GROUND)
 								{
 									arrangeGround();
@@ -1080,6 +1080,8 @@ void Inventory::mouseClick(Action *action, State *state)
 /**
  * Unloads the selected weapon, placing the gun
  * on the right hand and the ammo on the left hand.
+ * Or if only one hand is free, the gun is placed
+ * in the hand and the ammo is placed on the ground.
  * @return The success of the weapon being unloaded.
  */
 bool Inventory::unload()
@@ -1170,14 +1172,42 @@ bool Inventory::unload()
 		return false;
 	}
 
-	// Hands must be free
+	// Check which hands are free.
+	RuleInventory *FirstFreeHand = _inventorySlotRightHand;
+	RuleInventory *SecondFreeHand = _inventorySlotLeftHand;
+
 	for (std::vector<BattleItem*>::iterator i = _selUnit->getInventory()->begin(); i != _selUnit->getInventory()->end(); ++i)
 	{
 		if ((*i)->getSlot()->getType() == INV_HAND && (*i) != _selItem)
 		{
-			_warning->showMessage(_game->getLanguage()->getString("STR_BOTH_HANDS_MUST_BE_EMPTY"));
-			return false;
+			if (!Options::oneHandedUnloading)
+			{
+				_warning->showMessage(_game->getLanguage()->getString("STR_BOTH_HANDS_MUST_BE_EMPTY"));
+				return false;
+			}
+			else
+			{
+				if ((*i)->getSlot() == SecondFreeHand)
+				{
+					SecondFreeHand = nullptr;
+				}
+				if ((*i)->getSlot() == FirstFreeHand)
+				{
+					FirstFreeHand = nullptr;
+				}
+			}
 		}
+	}
+
+	if (FirstFreeHand == nullptr)
+	{
+		FirstFreeHand = SecondFreeHand;
+		SecondFreeHand = nullptr;
+	}
+	if (FirstFreeHand == nullptr)
+	{
+		_warning->showMessage(_game->getLanguage()->getString("STR_ONE_HAND_MUST_BE_EMPTY"));
+		return false;
 	}
 
 	BattleActionCost cost { BA_NONE, _selUnit, _selItem };
@@ -1193,13 +1223,13 @@ bool Inventory::unload()
 
 	if (cost.haveTU() && _selItem->getSlot()->getType() != INV_HAND)
 	{
-		cost.Time += _selItem->getSlot()->getCost(_inventorySlotRightHand);
+		cost.Time += _selItem->getSlot()->getCost(FirstFreeHand);
 	}
 
 	std::string err;
 	if (!_tu || cost.spendTU(&err))
 	{
-		moveItem(_selItem, _inventorySlotRightHand, 0, 0);
+		moveItem(_selItem, FirstFreeHand, 0, 0);
 		if (grenade)
 		{
 			_selItem->setFuseTimer(-1);
@@ -1208,7 +1238,15 @@ bool Inventory::unload()
 		else
 		{
 			auto oldAmmo = _selItem->setAmmoForSlot(slotForAmmoUnload, nullptr);
-			moveItem(oldAmmo, _inventorySlotLeftHand, 0, 0);
+			if (SecondFreeHand != nullptr)
+			{
+				moveItem(oldAmmo, SecondFreeHand, 0, 0);
+			}
+			else
+			{
+				moveItem(oldAmmo, _inventorySlotGround, 0, 0);
+				arrangeGround();
+			}
 		}
 		setSelectedItem(0);
 		return true;
@@ -1586,38 +1624,6 @@ void Inventory::showWarning(const std::wstring &msg)
 }
 
 /**
- * Shows extra indicators on units.
- */
-void Inventory::drawPrimers()
-{
-	const int Pulsate[8] = { 0, 1, 2, 3, 4, 3, 2, 1 };
-
-	// burning units
-	for (std::vector<std::pair<int, int> >::const_iterator i = _burningIndicators.begin(); i != _burningIndicators.end(); ++i)
-	{
-		_burnIndicator->blitNShade(_items, (*i).first, (*i).second, Pulsate[_animFrame % 8]);
-	}
-
-	// wounded units
-	for (std::vector<std::pair<int, int> >::const_iterator i = _woundedIndicators.begin(); i != _woundedIndicators.end(); ++i)
-	{
-		_woundIndicator->blitNShade(_items, (*i).first, (*i).second, Pulsate[_animFrame % 8]);
-	}
-
-	// units in shock
-	for (std::vector<std::pair<int, int> >::const_iterator i = _shockedIndicators.begin(); i != _shockedIndicators.end(); ++i)
-	{
-		_shockIndicator->blitNShade(_items, (*i).first, (*i).second, Pulsate[_animFrame % 8]);
-	}
-
-	// stunned units
-	for (std::vector<std::pair<int, int> >::const_iterator i = _stunnedIndicators.begin(); i != _stunnedIndicators.end(); ++i)
-	{
-		_stunIndicator->blitNShade(_items, (*i).first, (*i).second, Pulsate[_animFrame % 8]);
-	}
-}
-
-/**
  * Animate surface.
  */
 void Inventory::animate()
@@ -1634,7 +1640,6 @@ void Inventory::animate()
 	}
 
 	drawItems();
-	drawPrimers();
 	drawSelectedItem();
 }
 #ifdef __MOBILE__

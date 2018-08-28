@@ -380,15 +380,34 @@ std::string Soldier::getRankString() const
 
 /**
  * Returns a graphic representation of
- * the soldier's military rank.
- * @note THE MEANING OF LIFE
+ * the soldier's military rank from BASEBITS.PCK.
+ * @note THE MEANING OF LIFE (is now obscured as a default)
  * @return Sprite ID for rank.
  */
 int Soldier::getRankSprite() const
 {
-	return 42 + _rank;
+	return _rules->getRankSprite() + _rank;
 }
 
+/**
+ * Returns a graphic representation of
+ * the soldier's military rank from SMOKE.PCK
+ * @return Sprite ID for rank.
+ */
+int Soldier::getRankSpriteBattlescape() const
+{
+	return _rules->getRankSpriteBattlescape() + _rank;
+}
+
+/**
+ * Returns a graphic representation of
+ * the soldier's military rank from TinyRanks
+ * @return Sprite ID for rank.
+ */
+int Soldier::getRankSpriteTiny() const
+{
+	return _rules->getRankSpriteTiny() + _rank;
+}
 
 /**
  * Returns the soldier's military rank.
@@ -1016,7 +1035,7 @@ bool Soldier::isEligibleForTransformation(RuleSoldierTransformation *transformat
 		_currentStats.melee < minStats.melee ||
 		_currentStats.strength < minStats.strength ||
 		_currentStats.psiStrength < minStats.psiStrength ||
-		_currentStats.psiSkill < minStats.psiSkill)
+		(_currentStats.psiSkill < minStats.psiSkill && minStats.psiSkill != 0)) // The != 0 is required for the "psi training at any time" option, as it sets skill to negative in training
 		return false;
 
 	return true;
@@ -1034,7 +1053,7 @@ void Soldier::transform(const Mod *mod, RuleSoldierTransformation *transformatio
 		_death = 0;
 	}
 
-	if (transformationRule->getRecoveryTime() >= 0)
+	if (transformationRule->getRecoveryTime() > 0)
 	{
 		_recovery = transformationRule->getRecoveryTime();
 	}
@@ -1057,9 +1076,39 @@ void Soldier::transform(const Mod *mod, RuleSoldierTransformation *transformatio
 	else
 	{
 		// change soldier type if needed
-		if (_rules->getType() != transformationRule->getProducedSoldierType())
+		if (!transformationRule->getProducedSoldierType().empty() && _rules->getType() != transformationRule->getProducedSoldierType())
 		{
 			_rules = mod->getSoldier(transformationRule->getProducedSoldierType());
+
+			// demote soldier if needed (i.e. when new soldier type doesn't support the current rank)
+			if (!_rules->getAllowPromotion())
+			{
+				_rank = RANK_ROOKIE;
+			}
+			else if (!_rules->getRankStrings().empty() && (int)_rank > _rules->getRankStrings().size() - 1)
+			{
+				switch (_rules->getRankStrings().size() - 1)
+				{
+				case 1:
+					_rank = RANK_SQUADDIE;
+					break;
+				case 2:
+					_rank = RANK_SERGEANT;
+					break;
+				case 3:
+					_rank = RANK_CAPTAIN;
+					break;
+				case 4:
+					_rank = RANK_COLONEL;
+					break;
+				case 5:
+					_rank = RANK_COMMANDER; // I hereby demote you to commander! :P
+					break;
+				default:
+					_rank = RANK_ROOKIE;
+					break;
+				}
+			}
 		}
 
 		// change stats
@@ -1153,9 +1202,15 @@ UnitStats Soldier::calculateStatChanges(const Mod *mod, RuleSoldierTransformatio
 	int sign = statChange.bravery < 0 ? -1 : 1;
 	statChange.bravery = ((statChange.bravery + (sign * 5)) / 10) * 10;
 
+	RuleSoldier *transformationSoldierType = _rules;
+	if (!transformationRule->getProducedSoldierType().empty())
+	{
+		transformationSoldierType = mod->getSoldier(transformationRule->getProducedSoldierType());
+	}
+
 	if (transformationRule->hasLowerBoundAtMinStats())
 	{
-		UnitStats lowerBound = mod->getSoldier(transformationRule->getProducedSoldierType())->getMinStats();
+		UnitStats lowerBound = transformationSoldierType->getMinStats();
 		UnitStats cappedChange = lowerBound - currentStats;
 		statChange.tu = std::max(statChange.tu, cappedChange.tu);
 		statChange.stamina = std::max(statChange.stamina, cappedChange.stamina);
@@ -1173,8 +1228,8 @@ UnitStats Soldier::calculateStatChanges(const Mod *mod, RuleSoldierTransformatio
 	if (transformationRule->hasUpperBoundAtMaxStats() || transformationRule->hasUpperBoundAtStatCaps())
 	{
 		UnitStats upperBound = transformationRule->hasUpperBoundAtMaxStats()
-			? mod->getSoldier(transformationRule->getProducedSoldierType())->getMaxStats()
-			: mod->getSoldier(transformationRule->getProducedSoldierType())->getStatCaps();
+			? transformationSoldierType->getMaxStats()
+			: transformationSoldierType->getStatCaps();
 		UnitStats cappedChange = upperBound - currentStats;
 		statChange.tu = std::min(statChange.tu, cappedChange.tu);
 		statChange.stamina = std::min(statChange.stamina, cappedChange.stamina);

@@ -65,7 +65,7 @@ private:
 	Text *_txtName;
 	NumberText *_numTimeUnits, *_numEnergy, *_numHealth, *_numMorale, *_numLayers;
 	std::vector<NumberText*> _numAmmoLeft, _numAmmoRight;
-	NumberText *_numMedikitLeft1, *_numMedikitLeft2, *_numMedikitLeft3, *_numMedikitRight1, *_numMedikitRight2, *_numMedikitRight3;
+	std::vector<NumberText*> _numMedikitLeft, _numMedikitRight;
 	NumberText *_numTwoHandedIndicatorLeft, *_numTwoHandedIndicatorRight;
 	Uint8 _twoHandedRed, _twoHandedGreen;
 	Bar *_barTimeUnits, *_barEnergy, *_barHealth, *_barMorale;
@@ -76,7 +76,7 @@ private:
 	Uint8 _medikitRed, _medikitGreen, _medikitBlue, _medikitOrange;
 	std::vector<State*> _popups;
 	BattlescapeGame *_battleGame;
-	bool _firstInit, _paletteResetNeeded;
+	bool _firstInit, _paletteResetNeeded, _paletteResetRequested;
 	bool _isMouseScrolling, _isMouseScrolled;
 	int _xBeforeMouseScrolling, _yBeforeMouseScrolling;
 	Position _mapOffsetBeforeMouseScrolling;
@@ -89,7 +89,6 @@ private:
 	Position _cursorPosition;
 	Uint8 _barHealthColor;
 	bool _autosave;
-	int _animFrame; // for grenade timers
 	int _numberOfDirectlyVisibleUnits, _numberOfEnemiesTotal, _numberOfEnemiesTotalPlusWounded;
 	Uint8 _indicatorTextColor, _indicatorGreen, _indicatorBlue, _indicatorPurple;
 	bool _hasScrolled;
@@ -100,13 +99,11 @@ private:
 	/// Shifts the red colors of the visible unit buttons backgrounds.
 	void blinkVisibleUnitButtons();
 	/// Draw hand item with ammo number.
-	void drawItem(BattleItem *item, Surface *hand, std::vector<NumberText*> &ammoText);
+	void drawItem(BattleItem *item, Surface *hand, std::vector<NumberText*> &ammoText, std::vector<NumberText*> &medikitText, NumberText *twoHandedText);
 	/// Draw both hands sprites.
 	void drawHandsItems();
 	/// Shifts the colors of the health bar when unit has fatal wounds.
 	void blinkHealthBar();
-	/// Show priming warnings on grenades.
-	void drawPrimers();
 	/// Shows the unit kneel state.
 	void toggleKneelButton(BattleUnit* unit);
 #ifdef __MOBILE__
@@ -118,7 +115,7 @@ private:
 #endif
 public:
 	/// Selects the next soldier.
-	void selectNextPlayerUnit(bool checkReselect = false, bool setReselect = false, bool checkInventory = false);
+	void selectNextPlayerUnit(bool checkReselect = false, bool setReselect = false, bool checkInventory = false, bool checkFOV = true);
 	/// Selects the previous soldier.
 	void selectPreviousPlayerUnit(bool checkReselect = false, bool setReselect = false, bool checkInventory = false);
 	static const int DEFAULT_ANIM_SPEED = 100;
@@ -207,7 +204,7 @@ public:
 	/// Determines whether a playable unit is selected.
 	bool playableUnitSelected();
 	/// Updates soldier name/rank/tu/energy/health/morale.
-	void updateSoldierInfo();
+	void updateSoldierInfo(bool checkFOV = true);
 	/// Animates map objects on the map, also smoke,fire, ...
 	void animate();
 	/// Handles the battle game state.

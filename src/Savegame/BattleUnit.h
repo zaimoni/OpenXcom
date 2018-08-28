@@ -108,7 +108,7 @@ private:
 	int _scannedTurn;
 	int _kills;
 	int _faceDirection; // used only during strafeing moves
-	bool _hitByFire, _hitByAnything;
+	bool _hitByFire, _hitByAnything, _alreadyExploded;
 	int _fireMaxHit;
 	int _smokeMaxHit;
 	int _moraleRestored;
@@ -131,6 +131,7 @@ private:
 	std::wstring _name;
 	UnitStats _stats;
 	int _standHeight, _kneelHeight, _floatHeight;
+	int _lastReloadSound;
 	std::vector<int> _deathSound;
 	int _value, _aggroSound, _moveSound;
 	int _intelligence, _aggression;
@@ -147,8 +148,10 @@ private:
 	bool _breathing;
 	bool _hidingForTurn, _floorAbove, _respawn, _alreadyRespawned;
 	bool _isLeeroyJenkins;	// always charges enemy, never retreats.
+	bool _summonedPlayerUnit;
 	MovementType _movementType;
 	std::vector<std::pair<Uint8, Uint8> > _recolor;
+	bool _capturable;
 	ScriptValues<BattleUnit> _scriptValues;
 
 	/// Helper function initing recolor vector.
@@ -444,6 +447,8 @@ public:
 	int getLoftemps(int entry = 0) const;
 	/// Get the unit's value.
 	int getValue() const;
+	/// Get the reload sound (of the last reloaded weapon).
+	int getReloadSound() const { return _lastReloadSound; }
 	/// Get the unit's death sounds.
 	const std::vector<int> &getDeathSounds() const;
 	/// Get the unit's move sound.
@@ -615,7 +620,16 @@ public:
 	bool getHitState();
 	/// reset the unit hit state.
 	void resetHitState();
-
+	/// Did this unit explode already?
+	bool hasAlreadyExploded() const { return _alreadyExploded; }
+	/// Set the already exploded flag.
+	void setAlreadyExploded(bool alreadyExploded) { _alreadyExploded = alreadyExploded; }
+	/// Gets whether this unit can be captured alive (applies to aliens).
+	bool getCapturable() const;
+	/// Marks this unit as summoned by an item and therefore won't count for recovery or total player units left.
+	void setSummonedPlayerUnit(bool summonedPlayerUnit);
+	/// Was this unit summoned by an item?
+	bool isSummonedPlayerUnit() const;
 };
 
 } //namespace OpenXcom

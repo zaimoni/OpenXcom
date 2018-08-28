@@ -828,7 +828,10 @@ void DebriefingState::btnOkClick(Action *)
 			{
 				if (i->second == 2)
 				{
-					if (_base->getAvailableContainment(i->first) - (_base->getUsedContainment(i->first) * _limitsEnforced) >= 0)
+					int availableContainment = _base->getAvailableContainment(i->first);
+					int usedContainment = _base->getUsedContainment(i->first);
+					int freeContainment = availableContainment - (usedContainment * _limitsEnforced);
+					if (availableContainment > 0 && freeContainment >= 0)
 					{
 						_containmentStateInfo[i->first] = 0; // 0 = OK
 					}
@@ -1132,30 +1135,6 @@ void DebriefingState::prepareDebriefing()
 		}
 	}
 
-	// UFO crash/landing site disappears
-	for (std::vector<Ufo*>::iterator i = save->getUfos()->begin(); i != save->getUfos()->end(); ++i)
-	{
-		if ((*i)->isInBattlescape())
-		{
-			_missionStatistics->ufo = (*i)->getRules()->getType();
-			if (save->getMonthsPassed() != -1)
-			{
-				_missionStatistics->alienRace = (*i)->getAlienRace();
-			}
-			_txtRecovery->setText(tr("STR_UFO_RECOVERY"));
-			(*i)->setInBattlescape(false);
-			if ((*i)->getStatus() == Ufo::LANDED && aborted)
-			{
-				 (*i)->setSecondsRemaining(5);
-			}
-			else if ((*i)->getStatus() == Ufo::CRASHED || !aborted)
-			{
-				delete *i;
-				save->getUfos()->erase(i);
-				break;
-			}
-		}
-	}
 
 	// mission site disappears (even when you abort)
 	for (std::vector<MissionSite*>::iterator i = save->getMissionSites()->begin(); i != save->getMissionSites()->end(); ++i)
@@ -1205,6 +1184,39 @@ void DebriefingState::prepareDebriefing()
 			{
 				(*j)->instaKill();
 			}
+		}
+	}
+	
+	// if it's a UFO, let's see what happens to it
+	for (std::vector<Ufo*>::iterator i = save->getUfos()->begin(); i != save->getUfos()->end(); ++i)
+	{
+		if ((*i)->isInBattlescape())
+		{
+			_missionStatistics->ufo = (*i)->getRules()->getType();
+			if (save->getMonthsPassed() != -1)
+			{
+				_missionStatistics->alienRace = (*i)->getAlienRace();
+			}
+			_txtRecovery->setText(tr("STR_UFO_RECOVERY"));
+			(*i)->setInBattlescape(false);
+			// if XCom failed to secure the landing zone, the UFO
+			// takes off immediately and proceeds according to its mission directive
+			if ((*i)->getStatus() == Ufo::LANDED && (aborted || playersSurvived == 0))
+			{
+				 (*i)->setSecondsRemaining(5);
+			}
+			// if XCom succeeds, or it's a crash site, the UFO disappears
+			else
+			{
+				// Note: just before removing a landed UFO, check for mission interruption (by setting the UFO damage to max)
+				if ((*i)->getStatus() == Ufo::LANDED)
+				{
+					(*i)->setDamage((*i)->getCraftStats().damageMax, _game->getMod());
+				}
+				delete *i;
+				save->getUfos()->erase(i);
+			}
+			break;
 		}
 	}
 
@@ -1271,6 +1283,18 @@ void DebriefingState::prepareDebriefing()
 				std::for_each(save->getAlienMissions().begin(), save->getAlienMissions().end(),
 							ClearAlienBase(*i));
 
+				// If there was a pact with this base, cancel it?
+				if (_game->getMod()->getAllowCountriesToCancelAlienPact() && !(*i)->getPactCountry().empty())
+				{
+					for (std::vector<Country*>::iterator cntr = _game->getSavedGame()->getCountries()->begin(); cntr != _game->getSavedGame()->getCountries()->end(); ++cntr)
+					{
+						if ((*cntr)->getRules()->getType() == (*i)->getPactCountry())
+						{
+							(*cntr)->setCancelPact();
+							break;
+						}
+					}
+				}
 				delete *i;
 				save->getAlienBases()->erase(i);
 				break;
@@ -1495,6 +1519,7 @@ void DebriefingState::prepareDebriefing()
 			}
 		}
 	}
+	bool lostCraft = false;
 	if (craft != 0 && ((playersInExitArea == 0 && aborted) || (playersSurvived == 0)))
 	{
 		if (craft->getRules()->keepCraftAfterFailedMission())
@@ -1512,8 +1537,10 @@ void DebriefingState::prepareDebriefing()
 			// without worrying it's vehicles' destructor calling double (on base defense missions
 			// all vehicle object in the craft is also referenced by base->getVehicles() !!)
 			_game->getSavedGame()->stopHuntingXcomCraft(craft); // lost during ground mission
+			_game->getSavedGame()->removeAllSoldiersFromXcomCraft(craft); // needed in case some soldiers couldn't spawn
 			delete craft;
 			craft = 0; // To avoid a crash down there!!
+			lostCraft = true;
 			base->getCrafts()->erase(craftIterator);
 			_txtTitle->setText(tr("STR_CRAFT_IS_LOST"));
 		}
@@ -1609,7 +1636,11 @@ void DebriefingState::prepareDebriefing()
 	}
 	else
 	{
-		if (target == "STR_BASE")
+		if (lostCraft)
+		{
+			_txtTitle->setText(tr("STR_CRAFT_IS_LOST"));
+		}
+		else if (target == "STR_BASE")
 		{
 			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
 			_destroyBase = true;
@@ -1741,6 +1772,7 @@ void DebriefingState::prepareDebriefing()
 			{
 				if ((*i)->getMission() == am)
 				{
+					// Note: no need to check for mission interruption here, the mission is over and will be deleted in the next step
 					delete *i;
 					i = _game->getSavedGame()->getUfos()->erase(i);
 				}
@@ -2133,14 +2165,18 @@ void DebriefingState::recoverCivilian(BattleUnit *from, Base *base)
 					}
 					if (killPrisonersAutomatically)
 					{
-						_containmentStateInfo[ruleLiveAlienItem->getPrisonType()] = 1; // 1 = not available
+						_containmentStateInfo[ruleLiveAlienItem->getPrisonType()] = 1; // 1 = not available in any base
 					}
 					else
 					{
 						base->getStorageItems()->addItem(type, 1);
-						if (base->getAvailableContainment(ruleLiveAlienItem->getPrisonType()) - (base->getUsedContainment(ruleLiveAlienItem->getPrisonType()) * _limitsEnforced) < 0)
+						int availableContainment = base->getAvailableContainment(ruleLiveAlienItem->getPrisonType());
+						int usedContainment = base->getUsedContainment(ruleLiveAlienItem->getPrisonType());
+						int freeContainment = availableContainment - (usedContainment * _limitsEnforced);
+						// no capacity, or not enough capacity
+						if (availableContainment == 0 || freeContainment < 0)
 						{
-							_containmentStateInfo[ruleLiveAlienItem->getPrisonType()] = 2; // 2 = full
+							_containmentStateInfo[ruleLiveAlienItem->getPrisonType()] = 2; // 2 = overfull
 						}
 					}
 				}
@@ -2185,7 +2221,7 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base)
 	}
 	if (killPrisonersAutomatically)
 	{
-		_containmentStateInfo[ruleLiveAlienItem->getPrisonType()] = 1; // 1 = not available
+		_containmentStateInfo[ruleLiveAlienItem->getPrisonType()] = 1; // 1 = not available in any base
 
 		if (!from->getArmor()->getCorpseBattlescape().empty())
 		{
@@ -2218,9 +2254,13 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base)
 		}
 
 		base->getStorageItems()->addItem(type, 1);
-		if (base->getAvailableContainment(ruleLiveAlienItem->getPrisonType()) - (base->getUsedContainment(ruleLiveAlienItem->getPrisonType()) * _limitsEnforced) < 0)
+		int availableContainment = base->getAvailableContainment(ruleLiveAlienItem->getPrisonType());
+		int usedContainment = base->getUsedContainment(ruleLiveAlienItem->getPrisonType());
+		int freeContainment = availableContainment - (usedContainment * _limitsEnforced);
+		// no capacity, or not enough capacity
+		if (availableContainment == 0 || freeContainment < 0)
 		{
-			_containmentStateInfo[ruleLiveAlienItem->getPrisonType()] = 2; // 2 = full
+			_containmentStateInfo[ruleLiveAlienItem->getPrisonType()] = 2; // 2 = overfull
 		}
 	}
 }

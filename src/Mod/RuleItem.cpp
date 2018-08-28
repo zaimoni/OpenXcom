@@ -41,8 +41,8 @@ const float TilesToVexels = 16.0f;
  * @param type String defining the type.
  */
 RuleItem::RuleItem(const std::string &type) :
-	_type(type), _name(type), _size(0.0), _costBuy(0), _costSell(0), _transferTime(24), _weight(3),
-	_bigSprite(-1), _floorSprite(-1), _handSprite(120), _bulletSprite(-1), _specialIconSprite(-1),
+	_type(type), _name(type), _size(0.0), _costBuy(0), _costSell(0), _transferTime(24), _weight(3), _haveMercy(false),
+	_bigSprite(-999), _floorSprite(-1), _handSprite(120), _bulletSprite(-1), _specialIconSprite(-1),
 	_hitAnimation(0), _hitMissAnimation(-1),
 	_meleeAnimation(0), _meleeMissAnimation(-1),
 	_psiAnimation(-1), _psiMissAnimation(-1),
@@ -58,10 +58,12 @@ RuleItem::RuleItem(const std::string &type) :
 	_aiUseDelay(-1), _aiMeleeHitCount(25),
 	_recover(true), _recoverCorpse(true), _ignoreInBaseDefense(false), _liveAlien(false), _liveAlienPrisonType(0), _attraction(0), _flatUse(0, 1), _flatThrow(0, 1), _flatPrime(0, 1), _flatUnprime(0, 1), _arcingShot(false), _experienceTrainingMode(ETM_DEFAULT), _listOrder(0),
 	_maxRange(200), _minRange(0), _dropoff(2), _bulletSpeed(0), _explosionSpeed(0), _shotgunPellets(0), _shotgunBehaviorType(0), _shotgunSpread(100), _shotgunChoke(100),
+	_spawnUnitFaction(-1),
 	_LOSRequired(false), _underwaterOnly(false), _landOnly(false), _psiReqiured(false),
 	_meleePower(0), _specialType(-1), _vaporColor(-1), _vaporDensity(0), _vaporProbability(15),
 	_kneelBonus(-1), _oneHandedPenalty(-1),
-	_monthlySalary(0), _monthlyMaintenance(0)
+	_monthlySalary(0), _monthlyMaintenance(0),
+	_sprayWaypoints(0)
 {
 	_accuracyMulti.setFiring();
 	_meleeMulti.setMelee();
@@ -322,6 +324,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_costSell = node["costSell"].as<int>(_costSell);
 	_transferTime = node["transferTime"].as<int>(_transferTime);
 	_weight = node["weight"].as<int>(_weight);
+	_haveMercy = node["haveMercy"].as<bool>(_haveMercy);
 	if (node["bigSprite"])
 	{
 		_bigSprite = mod->getSpriteOffset(node["bigSprite"].as<int>(_bigSprite), "BIGOBS.PCK");
@@ -345,6 +348,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	{
 		_specialIconSprite = mod->getSpriteOffset(node["specialIconSprite"].as<int>(_specialIconSprite), "SPICONS.DAT");
 	}
+	loadSoundVector(node["reloadSound"], mod, _reloadSound);
 	loadSoundVector(node["fireSound"], mod, _fireSound);
 	loadSoundVector(node["hitSound"], mod, _hitSound);
 	loadSoundVector(node["hitMissSound"], mod, _hitMissSound);
@@ -461,7 +465,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	if (node["strengthApplied"].as<bool>(false))
 	{
 		_damageBonus.setStrength();
-		_meleeMulti.setModded(true); // vanilla default = false
+		_damageBonus.setModded(true); // vanilla default = false
 	}
 
 	_power = node["power"].as<int>(_power);
@@ -602,6 +606,8 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_shotgunSpread = node["shotgunSpread"].as<int>(_shotgunSpread);
 	_shotgunChoke = node["shotgunChoke"].as<int>(_shotgunChoke);
 	_zombieUnit = node["zombieUnit"].as<std::string>(_zombieUnit);
+	_spawnUnit = node["spawnUnit"].as<std::string>(_spawnUnit);
+	_spawnUnitFaction = node["spawnUnitFaction"].as<int>(_spawnUnitFaction);
 	_LOSRequired = node["LOSRequired"].as<bool>(_LOSRequired);
 	_meleePower = node["meleePower"].as<int>(_meleePower);
 	_underwaterOnly = node["underwaterOnly"].as<bool>(_underwaterOnly);
@@ -612,21 +618,24 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_vaporProbability = node["vaporProbability"].as<int>(_vaporProbability);
 	if (const YAML::Node &cipi = node["customItemPreviewIndex"])
 	{
+		_customItemPreviewIndex.clear();
 		if (cipi.IsScalar())
 		{
-			int cipiSingle = cipi.as<int>();
-			_customItemPreviewIndex.clear();
-			_customItemPreviewIndex.push_back(cipiSingle);
+			_customItemPreviewIndex.push_back(mod->getSpriteOffset(cipi.as<int>(), "CustomItemPreviews"));
 		}
 		else
 		{
-			_customItemPreviewIndex = cipi.as< std::vector<int> >(_customItemPreviewIndex);
+			for (YAML::const_iterator i = cipi.begin(); i != cipi.end(); ++i)
+			{
+				_customItemPreviewIndex.push_back(mod->getSpriteOffset(i->as<int>(), "CustomItemPreviews"));
+			}
 		}
 	}
 	_kneelBonus = node["kneelBonus"].as<int>(_kneelBonus);
 	_oneHandedPenalty = node["oneHandedPenalty"].as<int>(_oneHandedPenalty);
 	_monthlySalary = node["monthlySalary"].as<int>(_monthlySalary);
 	_monthlyMaintenance = node["monthlyMaintenance"].as<int>(_monthlyMaintenance);
+	_sprayWaypoints = node["sprayWaypoints"].as<int>(_sprayWaypoints);
 
 	_damageBonus.load(node["damageBonus"]);
 	_meleeBonus.load(node["meleeBonus"]);
@@ -907,6 +916,19 @@ int RuleItem::getRandomSound(const std::vector<int> &vector, int defaultValue) c
 		return vector[RNG::generate(0, vector.size() - 1)];
 	}
 	return defaultValue;
+}
+
+/**
+ * Gets the item's reload sound.
+ * @return The reload sound id.
+ */
+int RuleItem::getReloadSound() const
+{
+	if (_reloadSound.empty())
+	{
+		return Mod::ITEM_RELOAD;
+	}
+	return getRandomSound(_reloadSound);
 }
 
 /**
@@ -2068,6 +2090,24 @@ const std::string &RuleItem::getZombieUnit() const
 }
 
 /**
+ * Gets the unit that is spawned when this item hits something.
+ * @return The weapon's spawn unit.
+ */
+const std::string &RuleItem::getSpawnUnit() const
+{
+	return _spawnUnit;
+}
+
+/**
+ * Gets which faction the spawned unit should be.
+ * @return The spawned unit's faction.
+ */
+int RuleItem::getSpawnUnitFaction() const
+{
+	return _spawnUnitFaction;
+}
+
+/**
  * How much damage does this weapon do when you punch someone in the face with it?
  * @return The weapon's melee power.
  */
@@ -2331,6 +2371,15 @@ int RuleItem::getMonthlySalary() const
 int RuleItem::getMonthlyMaintenance() const
 {
 	return _monthlyMaintenance;
+}
+
+/**
+ * Gets how many waypoints are used for a "spray" attack
+ * @return Number of waypoints.
+ */
+int RuleItem::getSprayWaypoints() const
+{
+	return _sprayWaypoints;
 }
 
 }

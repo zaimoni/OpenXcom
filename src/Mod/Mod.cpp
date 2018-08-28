@@ -282,19 +282,20 @@ Mod::Mod() :
 	_aiUseDelayBlaster(3), _aiUseDelayFirearm(0), _aiUseDelayGrenade(3), _aiUseDelayMelee(0), _aiUseDelayPsionic(0),
 	_aiFireChoiceIntelCoeff(5), _aiFireChoiceAggroCoeff(5), _aiExtendedFireModeChoice(false), _aiRespectMaxRange(false),
 	_maxLookVariant(0), _tooMuchSmokeThreshold(10), _customTrainingFactor(100), _minReactionAccuracy(0), _chanceToStopRetaliation(0),
-	_kneelBonusGlobal(115), _oneHandedPenaltyGlobal(80),
+	_allowCountriesToCancelAlienPact(false), _kneelBonusGlobal(115), _oneHandedPenaltyGlobal(80),
 	_enableCloseQuartersCombat(0), _closeQuartersAccuracyGlobal(100), _closeQuartersTuCostGlobal(12), _closeQuartersEnergyCostGlobal(8),
 	_noLOSAccuracyPenaltyGlobal(-1),
 	_surrenderMode(0),
-	_bughuntMinTurn(20), _bughuntMaxEnemies(2), _bughuntRank(0), _bughuntLowMorale(40), _bughuntTimeUnitsLeft(60),
+	_bughuntMinTurn(999), _bughuntMaxEnemies(2), _bughuntRank(0), _bughuntLowMorale(40), _bughuntTimeUnitsLeft(60),
 	_ufoGlancingHitThreshold(0), _ufoBeamWidthParameter(1000),
 	_escortRange(20), _escortsJoinFightAgainstHK(true), _crewEmergencyEvacuationSurvivalChance(100), _pilotsEmergencyEvacuationSurvivalChance(100),
 	_soldiersPerSergeant(5), _soldiersPerCaptain(11), _soldiersPerColonel(23), _soldiersPerCommander(30),
 	_pilotAccuracyZeroPoint(55), _pilotAccuracyRange(40), _pilotReactionsZeroPoint(55), _pilotReactionsRange(60),
-	_performanceBonusFactor(0), _useCustomCategories(false), _showDogfightDistanceInKm(false), _showFullNameInAlienInventory(false), _extraNerdyPediaInfo(false),
+	_performanceBonusFactor(0), _useCustomCategories(false), _showDogfightDistanceInKm(false), _showFullNameInAlienInventory(false),
+	_hidePediaInfoButton(false), _extraNerdyPediaInfo(false), _showAllCommendations(true),
 	_theMostUselessOptionEver(0), _theBiggestRipOffEver(0), _shortRadarRange(0),
 	_defeatScore(0), _defeatFunds(0), _startingTime(6, 1, 1, 1999, 12, 0, 0), _startingDifficulty(0),
-	_baseDefenseMapFromLocation(0),
+	_baseDefenseMapFromLocation(0), _pediaReplaceCraftFuelWithRangeType(-1),
 	_facilityListOrder(0), _craftListOrder(0), _itemCategoryListOrder(0), _itemListOrder(0),
 	_researchListOrder(0),  _manufactureListOrder(0), _transformationListOrder(0), _ufopaediaListOrder(0), _invListOrder(0), _soldierListOrder(0), _modOffset(0)
 {
@@ -1015,6 +1016,28 @@ void Mod::loadAll(const std::vector< std::pair< std::string, std::vector<std::st
 	sortLists();
 	loadExtraResources();
 	modResources();
+
+	// FIXME: remove after modders start caring about visual side of their mods
+	for (auto &item : _items)
+	{
+		if (item.second->haveMercy())
+		{
+			Surface *surf = getSurfaceSet("BIGOBS.PCK")->getFrame(item.second->getBigSprite());
+			if (surf)
+			{
+				for (int x = 1; x < item.second->getInventoryWidth() * 16; ++x)
+				{
+					for (int y = 1; y < item.second->getInventoryHeight() * 16; ++y)
+					{
+						if (surf->getPixel(x, y) == 0)
+						{
+							surf->setPixel(x, y, 32);
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 /**
@@ -1416,6 +1439,7 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 	_customTrainingFactor = doc["customTrainingFactor"].as<int>(_customTrainingFactor);
 	_minReactionAccuracy = doc["minReactionAccuracy"].as<int>(_minReactionAccuracy);
 	_chanceToStopRetaliation = doc["chanceToStopRetaliation"].as<int>(_chanceToStopRetaliation);
+	_allowCountriesToCancelAlienPact = doc["allowCountriesToCancelAlienPact"].as<bool>(_allowCountriesToCancelAlienPact);
 	_kneelBonusGlobal = doc["kneelBonusGlobal"].as<int>(_kneelBonusGlobal);
 	_oneHandedPenaltyGlobal = doc["oneHandedPenaltyGlobal"].as<int>(_oneHandedPenaltyGlobal);
 	_enableCloseQuartersCombat = doc["enableCloseQuartersCombat"].as<int>(_enableCloseQuartersCombat);
@@ -1465,11 +1489,14 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 	_useCustomCategories = doc["useCustomCategories"].as<bool>(_useCustomCategories);
 	_showDogfightDistanceInKm = doc["showDogfightDistanceInKm"].as<bool>(_showDogfightDistanceInKm);
 	_showFullNameInAlienInventory = doc["showFullNameInAlienInventory"].as<bool>(_showFullNameInAlienInventory);
+	_hidePediaInfoButton = doc["hidePediaInfoButton"].as<bool>(_hidePediaInfoButton);
 	_extraNerdyPediaInfo = doc["extraNerdyPediaInfo"].as<bool>(_extraNerdyPediaInfo);
+	_showAllCommendations = doc["showAllCommendations"].as<bool>(_showAllCommendations);
 	_theMostUselessOptionEver = doc["theMostUselessOptionEver"].as<int>(_theMostUselessOptionEver);
 	_theBiggestRipOffEver = doc["theBiggestRipOffEver"].as<int>(_theBiggestRipOffEver);
 	_shortRadarRange = doc["shortRadarRange"].as<int>(_shortRadarRange);
 	_baseDefenseMapFromLocation = doc["baseDefenseMapFromLocation"].as<int>(_baseDefenseMapFromLocation);
+	_pediaReplaceCraftFuelWithRangeType = doc["pediaReplaceCraftFuelWithRangeType"].as<int>(_pediaReplaceCraftFuelWithRangeType);
 	_missionRatings = doc["missionRatings"].as<std::map<int, std::string> >(_missionRatings);
 	_monthlyRatings = doc["monthlyRatings"].as<std::map<int, std::string> >(_monthlyRatings);
 	_fixedUserOptions = doc["fixedUserOptions"].as<std::map<std::string, std::string> >(_fixedUserOptions);
@@ -2943,6 +2970,16 @@ std::string Mod::getFontName() const
  }
 
 /**
+ * Returns what should be displayed in craft pedia articles for fuel capacity/range
+ * @return 0 = Max theoretical range, 1 = Min and max theoretical max range, 2 = average of the two
+ * Otherwise (default), just show the fuel capacity
+ */
+int Mod::getPediaReplaceCraftFuelWithRangeType() const
+{
+	return _pediaReplaceCraftFuelWithRangeType;
+}
+
+/**
  * Gets information on an interface.
  * @param id the interface we want info on.
  * @return the interface.
@@ -3366,6 +3403,11 @@ void Mod::loadVanillaResources()
 	Window::soundPopup[2] = getSound("GEO.CAT", Mod::WINDOW_POPUP[2]);
 
 	loadBattlescapeResources(); // TODO load this at battlescape start, unload at battlescape end?
+
+	// dummy resources, that need to be defined in order for mod loading to work correctly
+	_sets["CustomArmorPreviews"] = new SurfaceSet(12, 20);
+	_sets["CustomItemPreviews"] = new SurfaceSet(12, 20);
+	_sets["TinyRanks"] = new SurfaceSet(7, 7);
 }
 
 /**
@@ -3702,7 +3744,7 @@ void Mod::loadExtraResources()
 		}
 
 		// Try the preferred format first, otherwise use the default priority
-		MusicFormat priority[] = { Options::preferredMusic, MUSIC_FLAC, MUSIC_OGG, MUSIC_MP3, MUSIC_MOD, MUSIC_WAV, MUSIC_ADLIB, MUSIC_MIDI };
+		MusicFormat priority[] = { Options::preferredMusic, MUSIC_FLAC, MUSIC_OGG, MUSIC_MP3, MUSIC_MOD, MUSIC_WAV, MUSIC_ADLIB, MUSIC_GM, MUSIC_MIDI };
 		for (std::map<std::string, RuleMusic *>::const_iterator i = _musicDefs.begin(); i != _musicDefs.end(); ++i)
 		{
 			Music *music = 0;
@@ -4123,8 +4165,8 @@ bool Mod::isImageFile(std::string extension) const
  */
 Music *Mod::loadMusic(MusicFormat fmt, const std::string &file, int track, float volume, CatFile *adlibcat, CatFile *aintrocat, GMCatFile *gmcat) const
 {
-	/* MUSIC_AUTO, MUSIC_FLAC, MUSIC_OGG, MUSIC_MP3, MUSIC_MOD, MUSIC_WAV, MUSIC_ADLIB, MUSIC_MIDI */
-	static const std::string exts[] = { "", ".flac", ".ogg", ".mp3", ".mod", ".wav", "", ".mid" };
+	/* MUSIC_AUTO, MUSIC_FLAC, MUSIC_OGG, MUSIC_MP3, MUSIC_MOD, MUSIC_WAV, MUSIC_ADLIB, MUSIC_GM, MUSIC_MIDI */
+	static const std::string exts[] = { "", ".flac", ".ogg", ".mp3", ".mod", ".wav", "", "", ".mid" };
 	Music *music = 0;
 	std::set<std::string> soundContents = FileMap::getVFolderContents("SOUND");
 	try
@@ -4158,23 +4200,14 @@ Music *Mod::loadMusic(MusicFormat fmt, const std::string &file, int track, float
 				}
 			}
 		}
-		// Try MIDI music
-		else if (fmt == MUSIC_MIDI)
+		// Try MIDI music (from GM.CAT)
+		else if (fmt == MUSIC_GM)
 		{
 			// DOS MIDI
 			if (gmcat && track < gmcat->getAmount())
 			{
 				music = gmcat->loadMIDI(track);
-			}
-			// Windows MIDI
-			else
-			{
-				if (soundContents.find(fname) != soundContents.end())
-				{
-					music = new Music();
-					music->load(FileMap::getFilePath("SOUND/" + fname));
-				}
-			}
+			}			
 		}
 		// Try digital tracks
 		else

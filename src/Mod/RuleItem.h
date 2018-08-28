@@ -124,6 +124,7 @@ class RuleItem
 public:
 	/// Maximum number of ammo slots on weapon.
 	static const int AmmoSlotMax = 4;
+	static const int MedikitSlots = 3;
 
 private:
 	std::string _type, _name, _nameAsAmmo; // two types of objects can have the same name
@@ -132,11 +133,13 @@ private:
 	std::vector<std::string> _categories;
 	double _size;
 	int _costBuy, _costSell, _transferTime, _weight;
+	bool _haveMercy;
 	int _bigSprite;
 	int _floorSprite;
 	int _handSprite, _bulletSprite;
 	int _specialIconSprite;
-	std::vector<int> _fireSound, _hitSound; 
+	std::vector<int> _reloadSound;
+	std::vector<int> _fireSound, _hitSound;
 	int _hitAnimation;
 	std::vector<int> _hitMissSound;
 	int _hitMissAnimation;
@@ -183,12 +186,14 @@ private:
 	ExperienceTrainingMode _experienceTrainingMode;
 	int _listOrder, _maxRange, _minRange, _dropoff, _bulletSpeed, _explosionSpeed, _shotgunPellets;
 	int _shotgunBehaviorType, _shotgunSpread, _shotgunChoke;
-	std::string _zombieUnit;
+	std::string _zombieUnit, _spawnUnit;
+	int _spawnUnitFaction;
 	bool _LOSRequired, _underwaterOnly, _landOnly, _psiReqiured;
 	int _meleePower, _specialType, _vaporColor, _vaporDensity, _vaporProbability;
 	std::vector<int> _customItemPreviewIndex;
 	int _kneelBonus, _oneHandedPenalty;
 	int _monthlySalary, _monthlyMaintenance;
+	int _sprayWaypoints;
 	RuleStatBonus _damageBonus, _meleeBonus, _accuracyMulti, _meleeMulti, _throwMulti, _closeQuartersMulti;
 	ModScript::BattleItemScripts::Container _battleItemScripts;
 	ScriptValues<RuleItem> _scriptValues;
@@ -253,6 +258,7 @@ public:
 	/// Gets the item's weight.
 	int getWeight() const;
 	/// Gets the item's reference in BIGOBS.PCK for use in inventory.
+	bool haveMercy() const { return _haveMercy; }
 	int getBigSprite() const;
 	/// Gets the item's reference in FLOOROB.PCK for use in battlescape.
 	int getFloorSprite() const;
@@ -278,6 +284,9 @@ public:
 	int getWaypoints() const;
 	/// Gets the item's bullet sprite reference.
 	int getBulletSprite() const;
+	/// Gets the item's reload sound.
+	int getReloadSound() const;
+	const std::vector<int> &getReloadSoundRaw() const { return _reloadSound; }
 	/// Gets the item's fire sound.
 	int getFireSound() const;
 	const std::vector<int> &getFireSoundRaw() const { return _fireSound; }
@@ -561,6 +570,10 @@ public:
 	int getShotgunChoke() const;
 	/// Gets the weapon's zombie unit.
 	const std::string &getZombieUnit() const;
+	/// Gets the weapon's spawn unit.
+	const std::string &getSpawnUnit() const;
+	/// Gets which faction the spawned unit should have.
+	int getSpawnUnitFaction() const;
 	/// Check if LOS is required to use this item (only applies to psionic type items)
 	bool isLOSRequired() const;
 	/// Is this item restricted to underwater use?
@@ -587,6 +600,8 @@ public:
 	int getMonthlySalary() const;
 	/// Gets the monthly maintenance.
 	int getMonthlyMaintenance() const;
+	/// Gets how many waypoints are used for a "spray" attack
+	int getSprayWaypoints() const;
 	/// Gets script.
 	template<typename Script>
 	const typename Script::Container &getScript() const { return _battleItemScripts.get<Script>(); }

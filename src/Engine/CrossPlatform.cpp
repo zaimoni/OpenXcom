@@ -660,12 +660,6 @@ std::string getLocale()
 	std::ostringstream locale;
 	locale << language << "-" << country;
 	return locale.str();
-	/*
-	wchar_t locale[LOCALE_NAME_MAX_LENGTH];
-	LCIDToLocaleName(GetUserDefaultUILanguage(), locale, LOCALE_NAME_MAX_LENGTH, 0);
-
-	return Language::wstrToUtf8(locale);
-	*/
 #else
 	std::locale l;
 	try
@@ -1020,6 +1014,7 @@ void setWindowIcon(int winResource, const std::string &unixPath, SDL_Window *win
 		SDL_SetWindowIcon(winPtr, icon);
 		SDL_FreeSurface(icon);
 	}
+	winResource = 0;
 #endif
 }
 
@@ -1252,6 +1247,7 @@ void stackTrace(void *ctx)
 #warning Stack trace not supported on Android yet!
 	Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
 #else
+	ctx = 0;
 #ifdef _WIN32
 	// TODO: Figure out stack trace on MinGW, use dbg
 	Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
@@ -1366,7 +1362,7 @@ void crashDump(void *ex, const std::string &err)
 #endif
 	std::ostringstream msg;
 	msg << "OpenXcom has crashed: " << error.str() << std::endl;
-	msg << "Extra information has been saved to openxcom.log." << std::endl;
+	msg << "For more details see: " << Logger::logFile() << std::endl;
 	msg << "If this error was unexpected, please report it to the developers.";
 	showError(msg.str());
 }

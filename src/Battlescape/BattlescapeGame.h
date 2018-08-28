@@ -82,9 +82,10 @@ struct BattleAction : BattleActionCost
 	int finalFacing;
 	bool finalAction;
 	int number; // first action of turn, second, etc.?
+	bool sprayTargeting; // Used to separate waypoint checks between confirm firing mode and the "spray" autoshot
 
 	/// Default constructor
-	BattleAction() : target(-1, -1, -1), targeting(false), value(0), strafe(false), run(false), diff(0), autoShotCounter(0), cameraPosition(0, 0, -1), desperate(false), finalFacing(-1), finalAction(false), number(0) { }
+	BattleAction() : target(-1, -1, -1), targeting(false), value(0), strafe(false), run(false), diff(0), autoShotCounter(0), cameraPosition(0, 0, -1), desperate(false), finalFacing(-1), finalAction(false), number(0), sprayTargeting(false) { }
 };
 
 struct BattleActionAttack
@@ -172,6 +173,13 @@ public:
 	void dropItem(Position position, BattleItem *item, bool removeItem = false, bool updateLight = true);
 	/// Converts a unit into a unit of another type.
 	BattleUnit *convertUnit(BattleUnit *unit);
+	/// Spawns a new unit in the middle of battle.
+	void spawnNewUnit(BattleItem *item);
+	void spawnNewUnit(BattleActionAttack attack, Position position);
+	/// Spawns units from items that explode before battle
+	void spawnFromPrimedItems();
+	/// Removes spawned units that belong to the player to avoid dealing with recovery
+	void removeSummonedPlayerUnits();
 	/// Handles kneeling action.
 	bool kneel(BattleUnit *bu);
 	/// Cancels the current action.

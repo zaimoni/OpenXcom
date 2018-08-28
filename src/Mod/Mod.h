@@ -160,6 +160,7 @@ private:
 	bool _aiExtendedFireModeChoice, _aiRespectMaxRange;
 	int _maxLookVariant, _tooMuchSmokeThreshold, _customTrainingFactor, _minReactionAccuracy;
 	int _chanceToStopRetaliation;
+	bool _allowCountriesToCancelAlienPact;
 	int _kneelBonusGlobal, _oneHandedPenaltyGlobal;
 	int _enableCloseQuartersCombat, _closeQuartersAccuracyGlobal, _closeQuartersTuCostGlobal, _closeQuartersEnergyCostGlobal;
 	int _noLOSAccuracyPenaltyGlobal;
@@ -174,7 +175,8 @@ private:
 	int _pilotAccuracyZeroPoint, _pilotAccuracyRange, _pilotReactionsZeroPoint, _pilotReactionsRange;
 	int _pilotBraveryThresholds[3];
 	int _performanceBonusFactor;
-	bool _useCustomCategories, _showDogfightDistanceInKm, _showFullNameInAlienInventory, _extraNerdyPediaInfo;
+	bool _useCustomCategories, _showDogfightDistanceInKm, _showFullNameInAlienInventory;
+	bool _hidePediaInfoButton, _extraNerdyPediaInfo, _showAllCommendations;
 	int _theMostUselessOptionEver, _theBiggestRipOffEver;
 	int _shortRadarRange;
 	int _defeatScore, _defeatFunds;
@@ -188,6 +190,7 @@ private:
 	std::map<std::string, std::string> _fixedUserOptions;
 	std::vector<std::string> _hiddenMovementBackgrounds;
 	std::vector<int> _flagByKills;
+	int _pediaReplaceCraftFuelWithRangeType;
 	StatAdjustment _statAdjustment[5];
 
 	std::map<std::string, int> _ufopaediaSections;
@@ -455,6 +458,8 @@ public:
 	int getMinReactionAccuracy() const { return _minReactionAccuracy; }
 	/// Gets the chance to stop retaliation after unsuccessful xcom base attack (default = 0).
 	int getChanceToStopRetaliation() const { return _chanceToStopRetaliation; }
+	/// Will countries join the good side again after the infiltrator base is destroyed?
+	bool getAllowCountriesToCancelAlienPact() const { return _allowCountriesToCancelAlienPact; }
 	/// Gets the global kneel bonus (default = 115).
 	int getKneelBonusGlobal() const { return _kneelBonusGlobal; }
 	/// Gets the global one-handed penalty (default = 80).
@@ -525,8 +530,12 @@ public:
 	bool getShowDogfightDistanceInKm() const { return _showDogfightDistanceInKm; }
 	/// Should alien inventory show full name (e.g. Sectoid Leader) or just the race (e.g. Sectoid)?
 	bool getShowFullNameInAlienInventory() const { return _showFullNameInAlienInventory; }
+	/// Show the INFO button (where applicable) or not?
+	bool getShowPediaInfoButton() const { return !_hidePediaInfoButton; }
 	/// Display extra item info (accuracy modifier and power bonus) in the main pedia article?
 	bool getExtraNerdyPediaInfo() const { return _extraNerdyPediaInfo; }
+	/// Show all commendations pedia articles (or only those for already awarded commendations)?
+	bool getShowAllCommendations() const { return _showAllCommendations; }
 	/// Self-explanatory
 	int getTheMostUselessOptionEver() const { return _theMostUselessOptionEver; }
 	/// Shame on you!
@@ -589,6 +598,8 @@ public:
 	std::string getFontName() const;
 	/// Gets the maximum radar range still considered as short.
 	int getShortRadarRange() const;
+	/// Gets what type of information should be shown in craft articles for the fuel capacity/range
+	int getPediaReplaceCraftFuelWithRangeType() const;
 	/// Gets information on an interface element.
 	RuleInterface *getInterface(const std::string &id, bool error = true) const;
 	/// Gets the ruleset for the globe.

@@ -26,6 +26,7 @@ namespace OpenXcom
 {
 
 const int STANDOFF_DIST = 560;
+const int AGGRESSIVE_DIST = 64;
 enum ColorNames { CRAFT_MIN, CRAFT_MAX, RADAR_MIN, RADAR_MAX, DAMAGE_MIN, DAMAGE_MAX, BLOB_MIN, RANGE_METER, DISABLED_WEAPON, DISABLED_AMMO, DISABLED_RANGE, SHIELD_MIN, SHIELD_MAX };
 
 class ImageButton;
@@ -67,7 +68,7 @@ private:
 	int _x, _y, _minimizedIconX, _minimizedIconY;
 	int _weaponNum;
 	int _pilotAccuracyBonus, _pilotDodgeBonus, _pilotApproachSpeedModifier, _craftAccelerationBonus;
-	bool _firedAtLeastOnce;
+	bool _firedAtLeastOnce, _experienceAwarded;
 	// craft min/max, radar min/max, damage min/max, shield min/max
 	int _colors[13];
 	// Ends the dogfight.
@@ -95,6 +96,8 @@ public:
 	void minimumDistance();
 	// Sets the craft to maximum distance.
 	void maximumDistance();
+	// Sets the craft to maximum distance or 8 km, whichever is smaller.
+	void aggressiveDistance();
 	/// Changes the status text.
 	void setStatus(const std::string &status);
 	/// Handler for clicking the Minimize button.
@@ -157,6 +160,8 @@ public:
 	void setWaitForAltitude(bool wait);
 	/// Waits until the UFO reaches the right altutude.
 	bool getWaitForAltitude() const;
+	/// Award experience to the pilots.
+	void awardExperienceToPilots();
 };
 
 }

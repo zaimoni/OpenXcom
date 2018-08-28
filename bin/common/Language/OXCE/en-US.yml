@@ -158,6 +158,7 @@ en-US:
   STR_BOUNTY: "BOUNTY"
 #Inventory.cpp
   STR_CANNOT_PLACE_ITEM_INTO_THIS_SECTION: "It's not allowed to place that item there.{NEWLINE}Don't ask why!"
+  STR_ONE_HAND_MUST_BE_EMPTY: "At least one hand must be empty!"
 #InventoryLoadState.cpp
   STR_LOAD_EQUIPMENT_TEMPLATE: "Load Equipment Template"
 #InventorySaveState.cpp
@@ -175,7 +176,7 @@ en-US:
 #TileEngine.cpp
   STR_HIT_LOG_NO_DAMAGE: "0 "
   STR_HIT_LOG_SMALL_DAMAGE: "hit "
-  STR_HIT_LOG_BIG_DAMAGE: "hit! "
+  STR_HIT_LOG_BIG_DAMAGE: "HIT "
   STR_HIT_LOG_REACTION_FIRE: "Reaction fire..."
 #=================== Engine ===================
 #Options.cpp
@@ -201,8 +202,6 @@ en-US:
   STR_SHOW_ITEM_WEIGHT_IN_INVENTORY_DESC: "Displays item weight after item's name when an item is picked up."
   STR_SHOW_GUN_MELEE_ON_TOP: "Show secondary Melee attack on top"
   STR_SHOW_GUN_MELEE_ON_TOP_DESC: "When this option is enabled, any secondary melee attack mode a weapon has will be displayed as the topmost button. Otherwise it will be displayed at the bottom."
-  STR_SHOW_ALL_COMMENDATIONS: "Show All Commendations"
-  STR_SHOW_ALL_COMMENDATIONS_DESC: "If enabled, all Commendations are displayed in the UFOPaedia. If disabled, only already awarded will be displayed."
   STR_REMOVE_WOUNDED_FROM_TRAINING: "Remove wounded soldiers from training"
   STR_REMOVE_WOUNDED_FROM_TRAINING_DESC: "Wounded soldiers can't benefit from physical training. This option will automatically remove them from the training facility, freeing up space for others."
   STR_FULL_NIGHT_VISION: "Maximized Night Display"
@@ -223,6 +222,8 @@ en-US:
   STR_FRIENDLY_CRAFT_ESCORT_DESC: "Allows your craft to follow and provide air defense for other craft in the Geoscape."
   STR_DRAW_ENEMY_RADAR_CIRCLES: "Draw enemy radar circles"
   STR_DRAW_ENEMY_RADAR_CIRCLES_DESC: "If enabled, radar range of enemy interceptors (HKs) and defense perimeter of enemy bases will be visible."
+  STR_ALLOW_ONE_HANDED_UNLOADING: "Single-handed weapon unloading"
+  STR_ALLOW_ONE_HANDED_UNLOADING_DESC: "If enabled, weapons can be unloaded even when the off-hand is not free. In such a case, the ammo is dropped on the ground."
   STR_GRAPHS_ZOOM_IN: "Zoom In (Graphs)"
   STR_GRAPHS_ZOOM_OUT: "Zoom Out (Graphs)"
   STR_MARK_ALL_AS_SEEN: "Mark All As Seen"
@@ -278,6 +279,8 @@ en-US:
   STR_HOUR_SHORT: "{0}h"
 #MonthlyReportState.cpp
   STR_PERFORMANCE_BONUS: "Performance Bonus"
+  STR_COUNTRY_HAS_CANCELLED_A_SECRET_PACT: "{0} has renounced the pact with alien forces and was allowed to return to the project."
+  STR_COUNTRIES_HAVE_CANCELLED_A_SECRET_PACT: "{0} have renounced the pact with alien forces and were allowed to return to the project."
 #NewPossibleCraftState.cpp
   STR_WE_CAN_NOW_RENT: "We can now rent"
 #NewPossibleFacilityState.cpp
@@ -323,6 +326,9 @@ en-US:
   STR_INFO_UFOPEDIA: "INFO"
 #ArticleStateCraft.cpp
   STR_COCKPIT_CAPACITY: "PILOTS>{ALT}{0}{ALT}"
+  STR_MAXIMUM_RANGE: "MAX RANGE>{ALT}{0}{ALT}"
+  STR_MINIMUM_RANGE: "MIN RANGE>{ALT}{0}{ALT}"
+  STR_INFINITE_RANGE: "N/A"
 #ArticleStateItem.cpp
   STR_WEIGHT_PEDIA1: "Wt: {0}"
   STR_WEIGHT_PEDIA2: "Wt: {0}/{1}"
@@ -362,6 +368,8 @@ en-US:
   STR_COST_MORALE: "morale"
   STR_COST_HEALTH: "health"
   STR_COST_STUN: "stun"
+  STR_COST_BUILD: "build"
+  STR_COST_REFUND: "refund"
 #
   STR_DAMAGE_10: "10"
   STR_DAMAGE_11: "11"
@@ -373,3 +381,11 @@ en-US:
   STR_DAMAGE_17: "17"
   STR_DAMAGE_18: "18"
   STR_DAMAGE_19: "19"
+#
+  STR_NAUTICAL_MILES: "{0} nautical miles"
+  STR_KILOMETERS_PER_HOUR: "{0} km/h"
+  STR_SECONDS_LONG: "{0} seconds"
+  STR_RACE_BONUS: "Race bonus"
+  STR_FOR_DIFFICULTY: "for difficulty: {0}"
+#UfopaediaSelectState.cpp
+  STR_NOT_AWARDED_YET: "Not awarded yet"
