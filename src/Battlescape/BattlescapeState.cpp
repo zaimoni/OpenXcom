@@ -1988,6 +1988,8 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 	if (_battleGame->getCurrentAction()->targeting)
 	{
 		BattleItem *currentItem = _battleGame->getCurrentAction()->weapon;
+		BattleItem *leftHandItem = battleUnit->getItem("STR_LEFT_HAND");
+		BattleItem *rightHandItem = battleUnit->getItem("STR_RIGHT_HAND");
 		if (currentItem == leftHandItem)
 		{
 			_leftWpnActive->setVisible(true);
