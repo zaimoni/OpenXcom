@@ -1284,12 +1284,12 @@ void stackTrace(void *ctx)
 		Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
 	}
 	SymCleanup(process);
-#elif defined(__ANDROID__)
-#warning Stack trace not supported on Android yet!
-	Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
 #else
 	Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
 #endif
+#elif defined(__ANDROID__)
+#warning Stack trace not supported on Android yet!
+	Log(LOG_FATAL) << "Unfortunately, no stack trace information is available";
 #else
 	const int MAX_STACK_FRAMES = 16;
 	void *array[MAX_STACK_FRAMES];
