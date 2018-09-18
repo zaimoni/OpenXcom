@@ -16,11 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <algorithm>
 #include "RuleSoldier.h"
 #include "Mod.h"
+#include "ModScript.h"
 #include "SoldierNamePool.h"
 #include "StatString.h"
 #include "../Engine/FileMap.h"
+#include "../Engine/ScriptBind.h"
 
 namespace OpenXcom
 {
@@ -32,7 +35,8 @@ namespace OpenXcom
  */
 RuleSoldier::RuleSoldier(const std::string &type) : _type(type), _listOrder(0), _costBuy(0), _costSalary(0),
 	_costSalarySquaddie(0), _costSalarySergeant(0), _costSalaryCaptain(0), _costSalaryColonel(0), _costSalaryCommander(0),
-	_standHeight(0), _kneelHeight(0), _floatHeight(0), _femaleFrequency(50), _avatarOffsetX(67), _avatarOffsetY(48), _flagOffset(0),
+	_standHeight(0), _kneelHeight(0), _floatHeight(0), _femaleFrequency(50), _value(20),
+	_avatarOffsetX(67), _avatarOffsetY(48), _flagOffset(0),
 	_allowPromotion(true), _allowPiloting(true),
 	_rankSprite(42), _rankSpriteBattlescape(20), _rankSpriteTiny(0)
 {
@@ -58,17 +62,24 @@ RuleSoldier::~RuleSoldier()
  * @param node YAML node.
  * @param mod Mod for the unit.
  */
-void RuleSoldier::load(const YAML::Node &node, Mod *mod, int listOrder)
+void RuleSoldier::load(const YAML::Node &node, Mod *mod, int listOrder, const ModScript &parsers)
 {
 	if (const YAML::Node &parent = node["refNode"])
 	{
-		load(parent, mod, listOrder);
+		load(parent, mod, listOrder, parsers);
 	}
 	_type = node["type"].as<std::string>(_type);
 	// Just in case
 	if (_type == "XCOM")
 		_type = "STR_SOLDIER";
+
+	//requires
 	_requires = node["requires"].as< std::vector<std::string> >(_requires);
+	_requiresBuyBaseFunc = node["requiresBuyBaseFunc"].as< std::vector<std::string> >(_requiresBuyBaseFunc);
+
+	std::sort(_requiresBuyBaseFunc.begin(), _requiresBuyBaseFunc.end());
+
+
 	_minStats.merge(node["minStats"].as<UnitStats>(_minStats));
 	_maxStats.merge(node["maxStats"].as<UnitStats>(_maxStats));
 	_statCaps.merge(node["statCaps"].as<UnitStats>(_statCaps));
@@ -99,6 +110,7 @@ void RuleSoldier::load(const YAML::Node &node, Mod *mod, int listOrder)
 	_kneelHeight = node["kneelHeight"].as<int>(_kneelHeight);
 	_floatHeight = node["floatHeight"].as<int>(_floatHeight);
 	_femaleFrequency = node["femaleFrequency"].as<int>(_femaleFrequency);
+	_value = node["value"].as<int>(_value);
 
 	if (node["deathMale"])
 	{
@@ -144,7 +156,7 @@ void RuleSoldier::load(const YAML::Node &node, Mod *mod, int listOrder)
 		}
 		else
 		{
-			if (fileName.substr(fileName.length() - 1, 1) == "/")
+			if (fileName[fileName.length() - 1] == '/')
 			{
 				// load all *.nam files in given directory
 				std::set<std::string> names = FileMap::filterFiles(FileMap::getVFolderContents(fileName), "nam");
@@ -187,6 +199,8 @@ void RuleSoldier::load(const YAML::Node &node, Mod *mod, int listOrder)
 	{
 		_listOrder = listOrder;
 	}
+
+	_scriptValues.load(node, parsers.getShared());
 }
 
 void RuleSoldier::addSoldierNamePool(const std::string &namFile)
@@ -223,6 +237,15 @@ int RuleSoldier::getListOrder() const
 const std::vector<std::string> &RuleSoldier::getRequirements() const
 {
 	return _requires;
+}
+
+/**
+ * Gets the base functions required to buy solder.
+ * @retreturn The sorted list of base functions ID
+ */
+const std::vector<std::string> &RuleSoldier::getRequiresBuyBaseFunc() const
+{
+	return _requiresBuyBaseFunc;
 }
 
 /**
@@ -426,12 +449,21 @@ const std::vector<int> &RuleSoldier::getFemaleDeathSounds() const
 }
 
 /**
-* Returns the list of soldier name pools.
-* @return Pointer to soldier name pool list.
-*/
+ * Returns the list of soldier name pools.
+ * @return Pointer to soldier name pool list.
+ */
 const std::vector<SoldierNamePool*> &RuleSoldier::getNames() const
 {
 	return _names;
+}
+
+/*
+ * Gets the soldier's base value, without experience modifiers.
+ * @return The soldier's value.
+ */
+int RuleSoldier::getValue() const
+{
+	return _value;
 }
 
 /**
@@ -477,6 +509,44 @@ int RuleSoldier::getRankSpriteBattlescape() const
 int RuleSoldier::getRankSpriteTiny() const
 {
 	return _rankSpriteTiny;
+}
+
+namespace
+{
+
+std::string debugDisplayScript(const RuleSoldier* rs)
+{
+	if (rs)
+	{
+		std::string s;
+		s += RuleSoldier::ScriptName;
+		s += "(name: \"";
+		s += rs->getType();
+		s += "\")";
+		return s;
+	}
+	else
+	{
+		return "null";
+	}
+}
+
+}
+
+/**
+ * Register Armor in script parser.
+ * @param parser Script parser.
+ */
+void RuleSoldier::ScriptRegister(ScriptParserBase* parser)
+{
+	Bind<RuleSoldier> ra = { parser };
+
+	UnitStats::addGetStatsScript<RuleSoldier, &RuleSoldier::_statCaps>(ra, "StatsCap.");
+	UnitStats::addGetStatsScript<RuleSoldier, &RuleSoldier::_minStats>(ra, "StatsMin.");
+	UnitStats::addGetStatsScript<RuleSoldier, &RuleSoldier::_maxStats>(ra, "StatsMax.");
+
+	ra.addScriptValue<&RuleSoldier::_scriptValues>(false);
+	ra.addDebugDisplay<&debugDisplayScript>();
 }
 
 }

@@ -51,8 +51,8 @@ namespace OpenXcom
  * @param base Pointer to base of origin.
  * @param id ID to assign to the craft (0 to not assign).
  */
-Craft::Craft(RuleCraft *rules, Base *base, int id) : MovingTarget(),
-	_rules(rules), _base(base), _id(0), _fuel(0), _damage(0), _shield(0),
+Craft::Craft(const RuleCraft *rules, Base *base, int id) : MovingTarget(),
+	_rules(rules), _base(base), _fuel(0), _damage(0), _shield(0),
 	_interceptionOrder(0), _takeoff(0), _weapons(),
 	_status("STR_READY"), _lowFuel(false), _mission(false),
 	_inBattlescape(false), _inDogfight(false), _stats(),
@@ -108,7 +108,6 @@ Craft::~Craft()
 void Craft::load(const YAML::Node &node, const Mod *mod, SavedGame *save)
 {
 	MovingTarget::load(node);
-	_id = node["id"].as<int>(_id);
 	_fuel = node["fuel"].as<int>(_fuel);
 	_damage = node["damage"].as<int>(_damage);
 	_shield = node["shield"].as<int>(_shield);
@@ -156,15 +155,25 @@ void Craft::load(const YAML::Node &node, const Mod *mod, SavedGame *save)
 	for (YAML::const_iterator i = node["vehicles"].begin(); i != node["vehicles"].end(); ++i)
 	{
 		std::string type = (*i)["type"].as<std::string>();
-		if (mod->getItem(type))
+		auto ruleItem = mod->getItem(type);
+		if (ruleItem)
 		{
-			Vehicle *v = new Vehicle(mod->getItem(type), 0, 4);
-			v->load(*i);
-			_vehicles.push_back(v);
+			auto ruleUnit = ruleItem->getVehicleUnit();
+			if (ruleUnit)
+			{
+				int size = ruleUnit->getArmor()->getTotalSize();
+				Vehicle *v = new Vehicle(ruleItem, 0, size);
+				v->load(*i);
+				_vehicles.push_back(v);
+			}
+			else
+			{
+				Log(LOG_ERROR) << "Failed to load vehicle " << type;
+			}
 		}
 		else
 		{
-			Log(LOG_ERROR) << "Failed to load item " << type;			
+			Log(LOG_ERROR) << "Failed to load vehicles item " << type;
 		}
 	}
 	_status = node["status"].as<std::string>(_status);
@@ -272,7 +281,6 @@ YAML::Node Craft::save() const
 {
 	YAML::Node node = MovingTarget::save();
 	node["type"] = _rules->getType();
-	node["id"] = _id;
 	node["fuel"] = _fuel;
 	node["damage"] = _damage;
 	node["shield"] = _shield;
@@ -327,23 +335,20 @@ CraftId Craft::loadId(const YAML::Node &node)
 }
 
 /**
- * Saves the craft's unique identifiers to a YAML file.
- * @return YAML node.
+ * Returns the craft's unique type used for
+ * savegame purposes.
+ * @return ID.
  */
-YAML::Node Craft::saveId() const
+std::string Craft::getType() const
 {
-	YAML::Node node = MovingTarget::saveId();
-	CraftId uniqueId = getUniqueId();
-	node["type"] = uniqueId.first;
-	node["id"] = uniqueId.second;
-	return node;
+	return _rules->getType();
 }
 
 /**
  * Returns the ruleset for the craft's type.
  * @return Pointer to ruleset.
  */
-RuleCraft *Craft::getRules() const
+const RuleCraft *Craft::getRules() const
 {
 	return _rules;
 }
@@ -365,23 +370,13 @@ void Craft::changeRules(RuleCraft *rules)
 }
 
 /**
- * Returns the craft's unique ID. Each craft
- * can be identified by its type and ID.
- * @return Unique ID.
- */
-int Craft::getId() const
-{
-	return _id;
-}
-
-/**
  * Returns the craft's unique default name.
  * @param lang Language to get strings from.
  * @return Full name.
  */
 std::wstring Craft::getDefaultName(Language *lang) const
 {
-	return lang->getString("STR_CRAFTNAME").arg(lang->getString(_rules->getType())).arg(_id);
+	return lang->getString("STR_CRAFTNAME").arg(lang->getString(getType())).arg(_id);
 }
 
 /**
@@ -1190,7 +1185,7 @@ int Craft::getSpaceUsed() const
 	int vehicleSpaceUsed = 0;
 	for (Vehicle* v : _vehicles)
 	{
-		vehicleSpaceUsed += v->getSize();
+		vehicleSpaceUsed += v->getTotalSize();
 	}
 	for (Soldier *s : *_base->getSoldiers())
 	{
@@ -1476,7 +1471,7 @@ void Craft::unload(const Mod *mod)
 			_base->getStorageItems()->addItem((*w)->getRules()->getLauncherItem());
 			_base->getStorageItems()->addItem((*w)->getRules()->getClipItem(), (*w)->getClipsLoaded(mod));
 			delete (*w);
-			(*w) = 0;
+			(*w) = nullptr;
 		}
 	}
 
@@ -1495,7 +1490,7 @@ void Craft::unload(const Mod *mod)
 			_base->getStorageItems()->addItem((*v)->getRules()->getPrimaryCompatibleAmmo()->front(), (*v)->getAmmo());
 		}
 		delete (*v);
-		(*v) = 0;
+		(*v) = nullptr;
 	}
 	_vehicles.clear();
 

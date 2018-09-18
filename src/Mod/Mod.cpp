@@ -41,6 +41,7 @@
 #include "../Engine/Exception.h"
 #include "../Engine/Logger.h"
 #include "../Engine/ScriptBind.h"
+#include "../Engine/Collections.h"
 #include "SoundDefinition.h"
 #include "ExtraSprites.h"
 #include "CustomPalettes.h"
@@ -898,8 +899,8 @@ int Mod::getModOffset() const
 /**
  * Returns the appropriate mod-based offset for a sprite.
  * If the ID is bigger than the surfaceset contents, the mod offset is applied.
- * @param id Numeric ID of the sprite.
- * @param resource Name of the surfaceset to lookup.
+ * @param sprite Numeric ID of the sprite.
+ * @param set Name of the surfaceset to lookup.
  */
 int Mod::getSpriteOffset(int sprite, const std::string& set) const
 {
@@ -913,8 +914,8 @@ int Mod::getSpriteOffset(int sprite, const std::string& set) const
 /**
  * Returns the appropriate mod-based offset for a sound.
  * If the ID is bigger than the soundset contents, the mod offset is applied.
- * @param id Numeric ID of the sound.
- * @param resource Name of the soundset to lookup.
+ * @param sound Numeric ID of the sound.
+ * @param set Name of the soundset to lookup.
  */
 int Mod::getSoundOffset(int sound, const std::string& set) const
 {
@@ -926,14 +927,28 @@ int Mod::getSoundOffset(int sound, const std::string& set) const
 }
 
 /**
+ * Returns the appropriate mod-based offset for a generic ID.
+ * If the ID is bigger than the max, the mod offset is applied.
+ * @param id Numeric ID.
+ * @param max Maximum vanilla value.
+ */
+int Mod::getOffset(int id, int max) const
+{
+	if (id > max)
+		return id + _modOffset;
+	else
+		return id;
+}
+
+/**
  * Loads a list of mods specified in the options.
  * @param mods List of <modId, rulesetFiles> pairs.
  */
 void Mod::loadAll(const std::vector< std::pair< std::string, std::vector<std::string> > > &mods)
 {
-	Log(LOG_INFO) << "Loading rulesets...";
 	ModScript parser{ _scriptGlobal, this };
 
+	Log(LOG_INFO) << "Loading rulesets...";
 	std::vector<size_t> modOffsets(mods.size());
 	_scriptGlobal->beginLoad();
 	size_t offset = 0;
@@ -997,6 +1012,22 @@ void Mod::loadAll(const std::vector< std::pair< std::string, std::vector<std::st
 	for (auto j = _items.begin(); j != _items.end(); ++j)
 	{
 		j->second->updateCategories(&replacementRules);
+	}
+	for (auto& rule : _research)
+	{
+		rule.second->afterLoad(this);
+	}
+	for (auto& rule : _items)
+	{
+		rule.second->afterLoad(this);
+	}
+	for (auto& rule : _manufacture)
+	{
+		rule.second->afterLoad(this);
+	}
+	for (auto& rule : _units)
+	{
+		rule.second->afterLoad(this);
 	}
 
 	// fixed user options
@@ -1258,7 +1289,7 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 		if (rule != 0)
 		{
 			_soldierListOrder += 1;
-			rule->load(*i, this, _soldierListOrder);
+			rule->load(*i, this, _soldierListOrder, parsers);
 		}
 	}
 	for (YAML::const_iterator i = doc["units"].begin(); i != doc["units"].end(); ++i)
@@ -1708,11 +1739,7 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 		}
 		if (_mapScripts.find(type) != _mapScripts.end())
 		{
-			for (std::vector<MapScript*>::iterator j = _mapScripts[type].begin(); j != _mapScripts[type].end();)
-			{
-				delete *j;
-				j = _mapScripts[type].erase(j);
-			}
+			Collections::deleteAll(_mapScripts[type]);
 		}
 		for (YAML::const_iterator j = (*i)["commands"].begin(); j != (*i)["commands"].end(); ++j)
 		{
@@ -2506,9 +2533,39 @@ const std::vector<std::string> &Mod::getInvsList() const
  * @param id Research project type.
  * @return Rules for the research project.
  */
-RuleResearch *Mod::getResearch (const std::string &id, bool error) const
+RuleResearch *Mod::getResearch(const std::string &id, bool error) const
 {
 	return getRule(id, "Research", _research, error);
+}
+
+/**
+ * Gets the ruleset list for from reserch list.
+ */
+std::vector<const RuleResearch*> Mod::getResearch(const std::vector<std::string> &id) const
+{
+	std::vector<const RuleResearch*> dest;
+	dest.reserve(id.size());
+	for (auto& n : id)
+	{
+		auto r = getResearch(n, false);
+		if (r)
+		{
+			dest.push_back(r);
+		}
+		else
+		{
+			Log(LOG_ERROR) << "Unknow reserch " + n;
+		}
+	}
+	return dest;
+}
+
+/**
+ * Gets the ruleset for a specific research project.
+ */
+const std::map<std::string, RuleResearch *> &Mod::getResearchMap() const
+{
+	return _research;
 }
 
 /**
@@ -2730,7 +2787,7 @@ template <typename T>
 struct compareRule : public std::binary_function<const std::string&, const std::string&, bool>
 {
 	Mod *_mod;
-	typedef T*(Mod::*RuleLookup)(const std::string &id, bool error);
+	typedef T*(Mod::*RuleLookup)(const std::string &id, bool error) const;
 	RuleLookup _lookup;
 
 	compareRule(Mod *mod, RuleLookup lookup) : _mod(mod), _lookup(lookup)
@@ -3061,9 +3118,9 @@ ScriptGlobal *Mod::getScriptGlobal() const
 	return _scriptGlobal;
 }
 
-std::string Mod::getFinalResearch() const
+RuleResearch *Mod::getFinalResearch() const
 {
-	return _finalResearch;
+	return getResearch(_finalResearch, true);
 }
 
 const std::map<int, std::string> *Mod::getMissionRatings() const
@@ -3817,7 +3874,7 @@ void Mod::loadExtraResources()
 			{
 				int startFrame = j->first;
 				std::string fileName = j->second;
-				if (fileName.substr(fileName.length() - 1, 1) == "/")
+				if (fileName[fileName.length() - 1] == '/')
 				{
 					Log(LOG_VERBOSE) << "Loading surface set from folder: " << fileName << " starting at frame: " << startFrame;
 					int offset = startFrame;
@@ -3927,7 +3984,7 @@ void Mod::loadExtraResources()
 		{
 			int startSound = j->first;
 			std::string fileName = j->second;
-			if (fileName.substr(fileName.length() - 1, 1) == "/")
+			if (fileName[fileName.length() - 1] == '/')
 			{
 				Log(LOG_VERBOSE) << "Loading sound set from folder: " << fileName << " starting at index: " << startSound;
 				int offset = startSound;
@@ -4044,28 +4101,32 @@ void Mod::loadExtraResources()
  */
 void Mod::modResources()
 {
-	// bigger geoscape background
-	int newWidth = 320 - 64, newHeight = 200;
-	Surface *newGeo = new Surface(newWidth * 3, newHeight * 3);
-	Surface *oldGeo = _surfaces["GEOBORD.SCR"];
-	for (int x = 0; x < newWidth; ++x)
+	// embiggen the geoscape background by mirroring the contents
+	// modders can provide their own backgrounds via ALTGEOBORD.SCR
+	if (_surfaces.find("ALTGEOBORD.SCR") == _surfaces.end())
 	{
-		for (int y = 0; y < newHeight; ++y)
+		int newWidth = 320 - 64, newHeight = 200;
+		Surface *newGeo = new Surface(newWidth * 3, newHeight * 3);
+		Surface *oldGeo = _surfaces["GEOBORD.SCR"];
+		for (int x = 0; x < newWidth; ++x)
 		{
-			newGeo->setPixel(newWidth + x, newHeight + y, oldGeo->getPixel(x, y));
-			newGeo->setPixel(newWidth - x - 1, newHeight + y, oldGeo->getPixel(x, y));
-			newGeo->setPixel(newWidth * 3 - x - 1, newHeight + y, oldGeo->getPixel(x, y));
+			for (int y = 0; y < newHeight; ++y)
+			{
+				newGeo->setPixel(newWidth + x, newHeight + y, oldGeo->getPixel(x, y));
+				newGeo->setPixel(newWidth - x - 1, newHeight + y, oldGeo->getPixel(x, y));
+				newGeo->setPixel(newWidth * 3 - x - 1, newHeight + y, oldGeo->getPixel(x, y));
 
-			newGeo->setPixel(newWidth + x, newHeight - y - 1, oldGeo->getPixel(x, y));
-			newGeo->setPixel(newWidth - x - 1, newHeight - y - 1, oldGeo->getPixel(x, y));
-			newGeo->setPixel(newWidth * 3 - x - 1, newHeight - y - 1, oldGeo->getPixel(x, y));
+				newGeo->setPixel(newWidth + x, newHeight - y - 1, oldGeo->getPixel(x, y));
+				newGeo->setPixel(newWidth - x - 1, newHeight - y - 1, oldGeo->getPixel(x, y));
+				newGeo->setPixel(newWidth * 3 - x - 1, newHeight - y - 1, oldGeo->getPixel(x, y));
 
-			newGeo->setPixel(newWidth + x, newHeight * 3 - y - 1, oldGeo->getPixel(x, y));
-			newGeo->setPixel(newWidth - x - 1, newHeight * 3 - y - 1, oldGeo->getPixel(x, y));
-			newGeo->setPixel(newWidth * 3 - x - 1, newHeight * 3 - y - 1, oldGeo->getPixel(x, y));
+				newGeo->setPixel(newWidth + x, newHeight * 3 - y - 1, oldGeo->getPixel(x, y));
+				newGeo->setPixel(newWidth - x - 1, newHeight * 3 - y - 1, oldGeo->getPixel(x, y));
+				newGeo->setPixel(newWidth * 3 - x - 1, newHeight * 3 - y - 1, oldGeo->getPixel(x, y));
+			}
 		}
+		_surfaces["ALTGEOBORD.SCR"] = newGeo;
 	}
-	_surfaces["ALTGEOBORD.SCR"] = newGeo;
 
 	// here we create an "alternate" background surface for the base info screen.
 	_surfaces["ALTBACK07.SCR"] = new Surface(320, 200);
@@ -4081,7 +4142,6 @@ void Mod::modResources()
 			_surfaces["ALTBACK07.SCR"]->setPixel(x, y + 10, _surfaces["ALTBACK07.SCR"]->getPixel(x, y));
 
 	// we create extra rows on the soldier stat screens by shrinking them all down one pixel.
-	// this is done after loading them, but BEFORE loading the extraSprites, in case a modder wants to replace them.
 
 	// first, let's do the base info screen
 	// erase the old lines, copying from a +2 offset to account for the dithering

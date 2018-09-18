@@ -50,7 +50,7 @@ const char *Ufo::ALTITUDE_STRING[] = {
  * @param uniqueId unique ID to assign to the UFO (0 to not assign).
  */
 Ufo::Ufo(const RuleUfo *rules, int uniqueId, int hunterKillerPercentage, int huntMode, int huntBehavior) : MovingTarget(),
-	_rules(rules), _missionWaveNumber(-1), _id(0), _crashId(0), _landId(0), _damage(0), _direction("STR_NORTH"),
+	_rules(rules), _missionWaveNumber(-1), _crashId(0), _landId(0), _damage(0), _direction("STR_NORTH"),
 	_altitude("STR_HIGH_UC"), _status(FLYING), _secondsRemaining(0),
 	_inBattlescape(false), _mission(0), _trajectory(0),
 	_trajectoryPoint(0), _detected(false), _hyperDetected(false), _processedIntercept(false),
@@ -146,7 +146,6 @@ void Ufo::load(const YAML::Node &node, const Mod &mod, SavedGame &game)
 	MovingTarget::load(node);
 	_uniqueId = node["uniqueId"].as<int>(_uniqueId);
 	_missionWaveNumber = node["missionWaveNumber"].as<int>(_missionWaveNumber);
-	_id = node["id"].as<int>(_id);
 	_crashId = node["crashId"].as<int>(_crashId);
 	_landId = node["landId"].as<int>(_landId);
 	_damage = node["damage"].as<int>(_damage);
@@ -309,7 +308,6 @@ YAML::Node Ufo::save(bool newBattle) const
 	node["type"] = _rules->getType();
 	node["uniqueId"] = _uniqueId;
 	node["missionWaveNumber"] = _missionWaveNumber;
-	node["id"] = _id;
 	if (_crashId)
 	{
 		node["crashId"] = _crashId;
@@ -365,10 +363,21 @@ YAML::Node Ufo::save(bool newBattle) const
 YAML::Node Ufo::saveId() const
 {
 	YAML::Node node = MovingTarget::saveId();
-	node["type"] = "STR_UFO";
-	node["id"] = _id; // not unique!
+	// this is needed, because _id is NOT unique until the UFO is detected
+	// and UFOs can be referenced by other entities even before they are detected
+	// (e.g. when they escort other UFOs)
 	node["uniqueId"] = _uniqueId;
 	return node;
+}
+
+/**
+ * Returns the UFO's unique type used for
+ * savegame purposes.
+ * @return ID.
+ */
+std::string Ufo::getType() const
+{
+	return "STR_UFO";
 }
 
 /**
@@ -400,26 +409,7 @@ int Ufo::getUniqueId() const
 }
 
 /**
- * Returns the UFO's non-unique ID. If it's 0,
- * this UFO has never been detected.
- * @return Non-unique ID.
- */
-int Ufo::getId() const
-{
-	return _id;
-}
-
-/**
- * Changes the UFO's non-unique ID.
- * @param id Non-unique ID.
- */
-void Ufo::setId(int id)
-{
-	_id = id;
-}
-
-/**
- * Returns the UFO's non-unique default name.
+ * Returns the UFO's unique default name.
  * @param lang Language to get strings from.
  * @return Full name.
  */
@@ -427,15 +417,29 @@ std::wstring Ufo::getDefaultName(Language *lang) const
 {
 	switch (_status)
 	{
-	case FLYING:
-	case DESTROYED: // Destroyed also means leaving Earth.
-		return lang->getString("STR_UFO_").arg(_id);
 	case LANDED:
-		return lang->getString("STR_LANDING_SITE_").arg(_landId);
+		return lang->getString(getMarkerName()).arg(_landId);
 	case CRASHED:
-		return lang->getString("STR_CRASH_SITE_").arg(_crashId);
+		return lang->getString(getMarkerName()).arg(_crashId);
 	default:
-		return L"";
+		return lang->getString(getMarkerName()).arg(_id);
+	}
+}
+
+/**
+ * Returns the name on the globe for the UFO.
+ * @return String ID.
+ */
+std::string Ufo::getMarkerName() const
+{
+	switch (_status)
+	{
+	case LANDED:
+		return "STR_LANDING_SITE_";
+	case CRASHED:
+		return "STR_CRASH_SITE_";
+	default:
+		return "STR_UFO_";
 	}
 }
 
@@ -449,14 +453,12 @@ int Ufo::getMarker() const
 		return -1;
 	switch (_status)
 	{
-	case Ufo::FLYING:
-		return _rules->getMarker() == -1 ? 2 : _rules->getMarker();
-	case Ufo::LANDED:
-		return _rules->getLandedMarker() == -1 ? 3 : _rules->getLandedMarker();
-	case Ufo::CRASHED:
-		return 4;
+	case LANDED:
+		return _rules->getLandMarker() == -1 ? 3 : _rules->getLandMarker();
+	case CRASHED:
+		return _rules->getCrashMarker() == -1 ? 4 : _rules->getCrashMarker();
 	default:
-		return _rules->getMarker();
+		return _rules->getMarker() == -1 ? 2 : _rules->getMarker();
 	}
 }
 

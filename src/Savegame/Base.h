@@ -25,6 +25,7 @@
 namespace OpenXcom
 {
 
+class RuleCraft;
 class Soldier;
 class Craft;
 class ItemContainer;
@@ -58,12 +59,11 @@ private:
 	bool _inBattlescape;
 	bool _retaliationTarget;
 	std::vector<Vehicle*> _vehicles;
+	std::vector<Vehicle*> _vehiclesFromBase;
 	std::vector<BaseFacility*> _defenses;
 
 	/// Determines space taken up by ammo clips about to rearm craft.
 	double getIgnoredStores();
-	/// Gets the base's default name (unused).
-	std::wstring getDefaultName(Language *) const { return L""; }
 
 	using Target::load;
 public:
@@ -77,11 +77,11 @@ public:
 	void finishLoading(const YAML::Node& node, SavedGame *save);
 	/// Saves the base to YAML.
 	YAML::Node save() const;
-	/// Saves the base's ID to YAML.
-	YAML::Node saveId() const;
+	/// Gets the base's type.
+	std::string getType() const;
 	/// Gets the base's name.
 	std::wstring getName(Language *lang = 0) const;
-	/// Gets the base's marker.
+	/// Gets the base's marker sprite.
 	int getMarker() const;
 	/// Gets the base's facilities.
 	std::vector<BaseFacility*> *getFacilities();
@@ -158,7 +158,9 @@ public:
 	/// Gets the base's long range detection.
 	int getLongRangeDetection() const;
 	/// Gets the base's crafts of a certain type.
-	int getCraftCount(const std::string &craft) const;
+	int getCraftCount(const RuleCraft *craft) const;
+	/// Gets the base's crafts of a certain type.
+	int getCraftCountForProduction(const RuleCraft *craft) const;
 	/// Gets the base's craft maintenance.
 	int getCraftMaintenance() const;
 	/// Gets the total count and total salary of soldiers of a certain type stored in the base.

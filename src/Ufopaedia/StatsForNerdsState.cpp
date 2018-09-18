@@ -514,6 +514,36 @@ void StatsForNerdsState::addVectorOfStrings(std::wostringstream &ss, const std::
 }
 
 /**
+ * Adds a vector of RuleResearch names to the table.
+ */
+void StatsForNerdsState::addVectorOfResearch(std::wostringstream &ss, const std::vector<const RuleResearch *> &vec, const std::string &propertyName)
+{
+	if (vec.empty() && !_showDefaults)
+	{
+		return;
+	}
+	resetStream(ss);
+	int i = 0;
+	ss << L"{";
+	for (auto &item : vec)
+	{
+		if (i > 0)
+		{
+			ss << L", ";
+		}
+		addTranslation(ss, item->getName());
+		i++;
+	}
+	ss << L"}";
+	_lstRawData->addRow(2, trp(propertyName).c_str(), ss.str().c_str());
+	++_counter;
+	if (!vec.empty())
+	{
+		_lstRawData->setCellColor(_lstRawData->getTexts() - 1, 1, _pink);
+	}
+}
+
+/**
  * Adds a single boolean value to the table.
  */
 void StatsForNerdsState::addBoolean(std::wostringstream &ss, const bool &value, const std::string &propertyName, const bool &defaultvalue)
@@ -1555,6 +1585,7 @@ void StatsForNerdsState::initItemList()
 		addInteger(ss, itemRule->getConfigAimed()->shots, "shots", 1);
 		addSingleString(ss, itemRule->getConfigAimed()->name, "name", "STR_AIMED_SHOT");
 		addInteger(ss, itemRule->getConfigAimed()->ammoSlot, "ammoSlot");
+		addBoolean(ss, itemRule->getConfigAimed()->arcing, "arcing");
 		endHeading();
 	}
 
@@ -1563,6 +1594,7 @@ void StatsForNerdsState::initItemList()
 		addInteger(ss, itemRule->getConfigAuto()->shots, "shots", 3);
 		addSingleString(ss, itemRule->getConfigAuto()->name, "name", "STR_AUTO_SHOT");
 		addInteger(ss, itemRule->getConfigAuto()->ammoSlot, "ammoSlot");
+		addBoolean(ss, itemRule->getConfigAuto()->arcing, "arcing");
 		endHeading();
 	}
 
@@ -1571,6 +1603,7 @@ void StatsForNerdsState::initItemList()
 		addInteger(ss, itemRule->getConfigSnap()->shots, "shots", 1);
 		addSingleString(ss, itemRule->getConfigSnap()->name, "name", "STR_SNAP_SHOT");
 		addInteger(ss, itemRule->getConfigSnap()->ammoSlot, "ammoSlot");
+		addBoolean(ss, itemRule->getConfigSnap()->arcing, "arcing");
 		endHeading();
 	}
 
@@ -1589,6 +1622,7 @@ void StatsForNerdsState::initItemList()
 			}
 		}
 		addInteger(ss, ammoSlotCurrent, "ammoSlot", ammoSlotDefault);
+		addBoolean(ss, itemRule->getConfigMelee()->arcing, "arcing");
 		endHeading();
 	}
 
@@ -1645,8 +1679,9 @@ void StatsForNerdsState::initItemList()
 	addInteger(ss, itemRule->getMoraleRecovery(), "moraleRecovery");
 	addFloatAsPercentage(ss, itemRule->getPainKillerRecovery(), "painKillerRecovery", 1.0f);
 
-	addVectorOfStrings(ss, itemRule->getRequirements(), "requires");
-	addVectorOfStrings(ss, itemRule->getBuyRequirements(), "requiresBuy");
+	addVectorOfResearch(ss, itemRule->getRequirements(), "requires");
+	addVectorOfResearch(ss, itemRule->getBuyRequirements(), "requiresBuy");
+	addVectorOfStrings(ss, itemRule->getRequiresBuyBaseFunc(), "requiresBuyBaseFunc");
 	addVectorOfStrings(ss, itemRule->getCategories(), "categories");
 	addVectorOfStrings(ss, itemRule->getSupportedInventorySections(), "supportedInventorySections");
 
@@ -2265,7 +2300,6 @@ void StatsForNerdsState::addVectorOfPositions(std::wostringstream &ss, const std
 void StatsForNerdsState::addBuildCostItem(std::wostringstream &ss, const std::pair<const std::string, std::pair<int, int> > &costItem)
 {
 	resetStream(ss);
-	int i = 0;
 	addTranslation(ss, costItem.first);
 	ss << L": " << tr("STR_COST_BUILD") << ": ";
 	ss << costItem.second.first;
@@ -2448,6 +2482,7 @@ void StatsForNerdsState::initCraftList()
 	std::wostringstream ss;
 
 	addVectorOfStrings(ss, craftRule->getRequirements(), "requires");
+	addVectorOfStrings(ss, craftRule->getRequiresBuyBaseFunc(), "requiresBuyBaseFunc");
 
 	addInteger(ss, craftRule->getBuyCost(), "costBuy", 0, true);
 	addInteger(ss, craftRule->getRentCost(), "costRent", 0, true);
@@ -2797,7 +2832,8 @@ void StatsForNerdsState::initUfoList()
 		addInteger(ss, ufoRule->getSprite(), "sprite", -1); // INTERWIN.DAT
 		addSingleString(ss, ufoRule->getModSprite(), "modSprite", "", false);
 		addInteger(ss, ufoRule->getMarker(), "marker", -1);
-		addInteger(ss, ufoRule->getLandedMarker(), "landedMarker", -1);
+		addInteger(ss, ufoRule->getLandMarker(), "markerLand", -1);
+		addInteger(ss, ufoRule->getCrashMarker(), "markerCrash", -1);
 		addBoolean(ss, ufoRule->getBattlescapeTerrainData() != 0, "battlescapeTerrainData", false); // just say if there is any or not
 
 		addSection(L"{Sounds}", L"", _white);
