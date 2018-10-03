@@ -1534,7 +1534,6 @@ RuleItemUseCost BattleUnit::getActionTUs(BattleActionType actionType, const Rule
 				cost = item->getCostSnap();
 				break;
 			case BA_HIT:
-			case BA_EXECUTE:
 				flat = item->getFlatMelee();
 				cost = item->getCostMelee();
 				break;
@@ -2088,6 +2087,11 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
 	// transition between stages, don't do damage or panic
 	if (!fullProcess)
 	{
+		if (_kneeled)
+		{
+			// stand up if kneeling
+			_kneeled = false;
+		}
 		return;
 	}
 

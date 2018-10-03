@@ -52,6 +52,8 @@ std::map<std::string, std::string> _commandLine;
 std::vector<OptionInfo> _info;
 std::map<std::string, ModInfo> _modInfos;
 std::string _masterMod;
+bool _loadLastSave = false;
+bool _loadLastSaveExpended = false;
 
 /**
  * Sets up the options by creating their OptionInfo metadata.
@@ -166,6 +168,7 @@ void create()
 	_info.push_back(OptionInfo("touchEnabled", &touchEnabled, false));
 #endif
 	_info.push_back(OptionInfo("rootWindowedMode", &rootWindowedMode, false));
+	_info.push_back(OptionInfo("lazyLoadResources", &lazyLoadResources, true));
 	// SDL2 scaler options
 	_info.push_back(OptionInfo("useNearestScaler", &useNearestScaler, false));
 	_info.push_back(OptionInfo("useLinearScaler", &useLinearScaler, true));
@@ -269,7 +272,6 @@ void create()
 #endif
 
 	// OXCE+
-	_info.push_back(OptionInfo("executeUnconsciousEnemies", &executeUnconsciousEnemies, true, "STR_COUP_DE_GRACE", "STR_OXCE"));
 	_info.push_back(OptionInfo("twoHandedIndicator", &twoHandedIndicator, true, "STR_TWO_HANDED_INDICATOR", "STR_OXCE"));
 	_info.push_back(OptionInfo("twoHandedIndicatorInventory", &twoHandedIndicatorInventory, false, "STR_TWO_HANDED_INDICATOR_INV", "STR_OXCE"));
 	_info.push_back(OptionInfo("minimapBorderIndicator", &minimapBorderIndicator, true, "STR_MINIMAP_BORDER_INDICATOR", "STR_OXCE"));
@@ -420,10 +422,8 @@ static bool _gameIsInstalled(const std::string &gameName)
 	// look for game data in either the data or user directorie
 	std::string dataGameFolder = CrossPlatform::searchDataFolder(gameName);
 	std::string userGameFolder = _userFolder + gameName;
-	return (CrossPlatform::folderExists(dataGameFolder)
-		&& CrossPlatform::getFolderContents(dataGameFolder).size() > 8)
-	    || (CrossPlatform::folderExists(userGameFolder)
-		&& CrossPlatform::getFolderContents(userGameFolder).size() > 8);
+	return (CrossPlatform::folderExists(dataGameFolder)	&& CrossPlatform::getFolderContents(dataGameFolder).size() > 8)
+	    || (CrossPlatform::folderExists(userGameFolder)	&& CrossPlatform::getFolderContents(userGameFolder).size() > 8);
 }
 
 static bool _ufoIsInstalled()
@@ -488,6 +488,11 @@ void loadArgs(int argc, char *argv[])
 			else
 				argname = arg.substr(1, arg.length()-1);
 			std::transform(argname.begin(), argname.end(), argname.begin(), ::tolower);
+			if (argname == "cont" || argname == "continue")
+			{
+				_loadLastSave = true;
+				continue;
+			}
 			if (argc > i + 1)
 			{
 				++i; // we'll be consuming the next argument too
@@ -808,6 +813,16 @@ void updateMods()
 std::string getActiveMaster()
 {
 	return _masterMod;
+}
+
+bool getLoadLastSave()
+{
+	return _loadLastSave && !_loadLastSaveExpended;
+}
+
+void expendLoadLastSave()
+{
+	_loadLastSaveExpended = true;
 }
 
 static void _loadMod(const ModInfo &modInfo, std::set<std::string> circDepCheck)

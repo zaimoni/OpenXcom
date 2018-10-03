@@ -35,7 +35,7 @@ private:
 	BattleAction *_action;
 	ActionMenuItem *_actionMenu[6];
 	/// Adds a new menu item for an action.
-	void addItem(BattleActionType ba, const std::string &name, int *id, SDL_Keycode key, BattleItem *secondaryWeapon = 0);
+	void addItem(BattleActionType ba, const std::string &name, int *id, SDL_Keycode key);
 #ifdef __MOBILE__
 	InteractiveSurface *_outside;
 #endif

@@ -1114,7 +1114,15 @@ void BattlescapeState::mapClick(Action *action)
 			BattleUnit *bu = _save->selectUnit(pos);
 			if (bu && (bu->getVisible() || _save->getDebugMode()))
 			{
-				_game->pushState(new AlienInventoryState(bu));
+				if (_save->getDebugMode() && (SDL_GetModState() & KMOD_CTRL) != 0)
+				{
+					// mind probe
+					popup(new UnitInfoState(bu, this, false, true));
+				}
+				else
+				{
+					_game->pushState(new AlienInventoryState(bu));
+				}
 			}
 		}
 	}
@@ -1916,49 +1924,81 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 			customBg->blit(_rank);
 
 			// show avatar
-			std::string look = soldier->getArmor()->getSpriteInventory();
+			auto defaultPrefix = soldier->getArmor()->getLayersDefaultPrefix();
+			Armor *customArmor = nullptr;
 			if (!soldier->getRules()->getArmorForAvatar().empty())
 			{
-				look = _game->getMod()->getArmor(soldier->getRules()->getArmorForAvatar())->getSpriteInventory();
+				customArmor = _game->getMod()->getArmor(soldier->getRules()->getArmorForAvatar());
+				defaultPrefix = customArmor->getLayersDefaultPrefix();
 			}
-			const std::string gender = soldier->getGender() == GENDER_MALE ? "M" : "F";
-			std::stringstream ss;
-			Surface *surf = 0;
-
-			for (int i = 0; i <= 4; ++i)
+			if (!defaultPrefix.empty())
 			{
-				ss.str("");
-				ss << look;
-				ss << gender;
-				ss << (int)soldier->getLook() + (soldier->getLookVariant() & (15 >> i)) * 4;
-				ss << ".SPK";
-				surf = _game->getMod()->getSurface(ss.str(), false);
-				if (surf)
+				auto layers = soldier->getArmorLayers(customArmor);
+				for (auto layer : layers)
 				{
-					break;
+					auto surf = _game->getMod()->getSurface(layer, true);
+
+					// crop
+					surf->getCrop()->x = soldier->getRules()->getAvatarOffsetX();
+					surf->getCrop()->y = soldier->getRules()->getAvatarOffsetY();
+					surf->getCrop()->w = 26;
+					surf->getCrop()->h = 23;
+
+					surf->blit(_rank);
+
+					// reset crop
+					surf->getCrop()->x = 0;
+					surf->getCrop()->y = 0;
+					surf->getCrop()->w = surf->getWidth();
+					surf->getCrop()->h = surf->getHeight();
 				}
 			}
-			if (!surf)
+			else
 			{
-				ss.str("");
-				ss << look;
-				ss << ".SPK";
-				surf = _game->getMod()->getSurface(ss.str(), true);
+				std::string look = soldier->getArmor()->getSpriteInventory();
+				if (!soldier->getRules()->getArmorForAvatar().empty())
+				{
+					look = _game->getMod()->getArmor(soldier->getRules()->getArmorForAvatar())->getSpriteInventory();
+				}
+				const std::string gender = soldier->getGender() == GENDER_MALE ? "M" : "F";
+				std::stringstream ss;
+				Surface *surf = 0;
+
+				for (int i = 0; i <= 4; ++i)
+				{
+					ss.str("");
+					ss << look;
+					ss << gender;
+					ss << (int)soldier->getLook() + (soldier->getLookVariant() & (15 >> i)) * 4;
+					ss << ".SPK";
+					surf = _game->getMod()->getSurface(ss.str(), false);
+					if (surf)
+					{
+						break;
+					}
+				}
+				if (!surf)
+				{
+					ss.str("");
+					ss << look;
+					ss << ".SPK";
+					surf = _game->getMod()->getSurface(ss.str(), true);
+				}
+
+				// crop
+				surf->getCrop()->x = soldier->getRules()->getAvatarOffsetX();
+				surf->getCrop()->y = soldier->getRules()->getAvatarOffsetY();
+				surf->getCrop()->w = 26;
+				surf->getCrop()->h = 23;
+
+				surf->blit(_rank);
+
+				// reset crop
+				surf->getCrop()->x = 0;
+				surf->getCrop()->y = 0;
+				surf->getCrop()->w = surf->getWidth();
+				surf->getCrop()->h = surf->getHeight();
 			}
-
-			// crop
-			surf->getCrop()->x = soldier->getRules()->getAvatarOffsetX();
-			surf->getCrop()->y = soldier->getRules()->getAvatarOffsetY();
-			surf->getCrop()->w = 26;
-			surf->getCrop()->h = 23;
-
-			surf->blit(_rank);
-
-			// reset crop
-			surf->getCrop()->x = 0;
-			surf->getCrop()->y = 0;
-			surf->getCrop()->w = surf->getWidth();
-			surf->getCrop()->h = surf->getHeight();
 		}
 	}
 	else

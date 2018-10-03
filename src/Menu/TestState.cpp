@@ -269,7 +269,8 @@ void TestState::testCase2()
 			continue;
 		}
 
-		ExtraSprites *spritePack = i.second;
+		for (auto spritePack : i.second)
+		{
 		if (spritePack->getSingleImage())
 		{
 			const std::string& fullPath = FileMap::getFilePath((*spritePack->getSprites())[0]);
@@ -286,7 +287,7 @@ void TestState::testCase2()
 					const std::set<std::string>& contents = FileMap::getVFolderContents(fileName);
 					for (std::set<std::string>::iterator k = contents.begin(); k != contents.end(); ++k)
 					{
-						if (!_game->getMod()->isImageFile((*k).substr((*k).length() - 4, (*k).length())))
+						if (!ExtraSprites::isImageFile(*k))
 							continue;
 						try
 						{
@@ -313,6 +314,7 @@ void TestState::testCase2()
 					}
 				}
 			}
+		}
 		}
 	}
 

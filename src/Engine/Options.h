@@ -119,6 +119,10 @@ namespace Options
 	void updateMods();
 	/// Gets the list of currently active mods.
 	std::vector<const ModInfo*> getActiveMods();
+	/// If we should skip the main menu and just load the last save
+	bool getLoadLastSave();
+	/// And do it only at startup
+	void expendLoadLastSave();
 	/// Sets the user folder (should be called from Java)
 	void setUserFolder(const std::string &userFolder);
 	/// Sets the config folder (should be called from Java)

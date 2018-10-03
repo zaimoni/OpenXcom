@@ -1274,22 +1274,21 @@ void StatsForNerdsState::addRuleStatBonus(std::wostringstream &ss, const RuleSta
  */
 void StatsForNerdsState::addSpriteResourcePath(std::wostringstream &ss, Mod *mod, const std::string &resourceSetName, const int &resourceId)
 {
-	// go through all extra sprites from all mods
-	for (auto resourceSet : mod->getExtraSprites())
+	std::map<std::string, std::vector<ExtraSprites *> >::const_iterator i = mod->getExtraSprites().find(resourceSetName);
+	if (i != mod->getExtraSprites().end())
 	{
-		// only check the relevant ones (e.g. "BIGOBS.PCK")
-		if (resourceSet.first == resourceSetName)
+		for (auto extraSprite : i->second)
 		{
 			// strip mod offset from the in-game ID
-			int originalSpriteId = resourceId - (resourceSet.second->getModIndex());
+			int originalSpriteId = resourceId - (extraSprite->getModIndex());
 
-			auto mapOfSprites = resourceSet.second->getSprites();
+			auto mapOfSprites = extraSprite->getSprites();
 			auto individualSprite = mapOfSprites->find(originalSpriteId);
 			if (individualSprite != mapOfSprites->end())
 			{
 				std::wostringstream numbers;
 				resetStream(numbers);
-				numbers << L"  " << originalSpriteId << L" + " << resourceSet.second->getModIndex();
+				numbers << L"  " << originalSpriteId << L" + " << extraSprite->getModIndex();
 
 				resetStream(ss);
 				ss << Language::utf8ToWstr(individualSprite->second);
@@ -1713,6 +1712,7 @@ void StatsForNerdsState::initItemList()
 		addSection(L"{Recovery}", L"", _white);
 		addBoolean(ss, !itemRule->canBeEquippedBeforeBaseDefense(), "ignoreInBaseDefense"); // negated!
 		addInteger(ss, itemRule->getSpecialType(), "specialType", -1);
+		addBoolean(ss, !itemRule->getRecoveryDividers().empty(), "recoveryDividers*", false); // just say if there are any or not
 		addBoolean(ss, itemRule->isRecoverable(), "recover", true);
 		addBoolean(ss, itemRule->isCorpseRecoverable(), "recoverCorpse", true);
 		addInteger(ss, itemRule->getRecoveryPoints(), "recoveryPoints");
@@ -2114,6 +2114,7 @@ void StatsForNerdsState::initArmorList()
 	addBoolean(ss, armorRule->allowsRunning(), "allowsRunning", true);
 	addBoolean(ss, armorRule->allowsStrafing(), "allowsStrafing", true);
 	addBoolean(ss, armorRule->allowsKneeling(), "allowsKneeling", true);
+	addBoolean(ss, armorRule->allowsMoving(), "allowsMoving", true);
 
 	bool fearImmuneDefault = false;
 	bool bleedImmuneDefault = false;
@@ -2205,6 +2206,9 @@ void StatsForNerdsState::initArmorList()
 		addSection(L"{Inventory}", L"", _white);
 		addSingleString(ss, armorRule->getSpriteInventory(), "spriteInv", "", false);
 		addBoolean(ss, armorRule->hasInventory(), "allowInv", true);
+		addSingleString(ss, armorRule->getLayersDefaultPrefix(), "layersDefaultPrefix", "", false);
+		addBoolean(ss, !armorRule->getLayersSpecificPrefix().empty(), "layersSpecificPrefix*", false); // just say if there are any or not
+		addBoolean(ss, !armorRule->getLayersDefinition().empty(), "layersDefinition*", false); // just say if there are any or not
 
 		addSection(L"{Sprites}", L"", _white);
 		addVectorOfIntegers(ss, armorRule->getCustomArmorPreviewIndex(), "customArmorPreviewIndex");

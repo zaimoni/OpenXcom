@@ -8,7 +8,7 @@ OPT int displayWidth, displayHeight, maxFrameSkip, baseXResolution, baseYResolut
 OPT bool fullscreen, asyncBlit, playIntro, useScaleFilter, useHQXFilter, useXBRZFilter, useOpenGL, checkOpenGLErrors, vSyncForOpenGL, useOpenGLSmoothing,
 	autosave, allowResize, borderless, debug, debugUi, fpsCounter, newSeedOnLoad, keepAspectRatio, nonSquarePixelRatio,
 	cursorInBlackBandsInFullscreen, cursorInBlackBandsInWindow, cursorInBlackBandsInBorderlessWindow, maximizeInfoScreens, musicAlwaysLoop, StereoSound, verboseLogging, soldierDiaries, touchEnabled,
-	rootWindowedMode;
+	rootWindowedMode, lazyLoadResources;
 // SDL2 scalers
 OPT bool useNearestScaler, useLinearScaler, useAnisotropicScaler;
 
@@ -58,7 +58,7 @@ OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch,
 	keyNightVisionToggle, keyNightVisionHold, keySelectMusicTrack;
 
 // Extra options (Meridian's build)
-OPT bool executeUnconsciousEnemies, twoHandedIndicator, twoHandedIndicatorInventory, minimapBorderIndicator, everyoneFightsNobodyQuits;
+OPT bool twoHandedIndicator, twoHandedIndicatorInventory, minimapBorderIndicator, everyoneFightsNobodyQuits;
 OPT bool bleedingIndicator, knockOutIndicator, statisticalBulletConservation;
 
 OPT bool showItemNameAndWeightInInventory;

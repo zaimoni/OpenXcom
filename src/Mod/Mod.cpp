@@ -96,6 +96,8 @@
 #include "RuleConverter.h"
 #include "RuleSoldierTransformation.h"
 
+#define ARRAYLEN(x) (sizeof(x) / sizeof(x[0]))
+
 namespace OpenXcom
 {
 
@@ -294,11 +296,12 @@ Mod::Mod() :
 	_pilotAccuracyZeroPoint(55), _pilotAccuracyRange(40), _pilotReactionsZeroPoint(55), _pilotReactionsRange(60),
 	_performanceBonusFactor(0), _useCustomCategories(false), _showDogfightDistanceInKm(false), _showFullNameInAlienInventory(false),
 	_hidePediaInfoButton(false), _extraNerdyPediaInfo(false), _showAllCommendations(true),
+	_giveScoreAlsoForResearchedArtifacts(false),
 	_theMostUselessOptionEver(0), _theBiggestRipOffEver(0), _shortRadarRange(0),
 	_defeatScore(0), _defeatFunds(0), _startingTime(6, 1, 1, 1999, 12, 0, 0), _startingDifficulty(0),
 	_baseDefenseMapFromLocation(0), _pediaReplaceCraftFuelWithRangeType(-1),
 	_facilityListOrder(0), _craftListOrder(0), _itemCategoryListOrder(0), _itemListOrder(0),
-	_researchListOrder(0),  _manufactureListOrder(0), _transformationListOrder(0), _ufopaediaListOrder(0), _invListOrder(0), _soldierListOrder(0), _modOffset(0)
+	_researchListOrder(0),  _manufactureListOrder(0), _transformationListOrder(0), _ufopaediaListOrder(0), _invListOrder(0), _soldierListOrder(0), _modOffset(0), _statePalette(0)
 {
 	_muteMusic = new Music();
 	_muteSound = new Sound();
@@ -569,9 +572,12 @@ Mod::~Mod()
 	{
 		delete i->second;
 	}
-	for (std::vector< std::pair<std::string, ExtraSprites *> >::const_iterator i = _extraSprites.begin(); i != _extraSprites.end(); ++i)
+	for (std::map<std::string, std::vector<ExtraSprites*> >::iterator i = _extraSprites.begin(); i != _extraSprites.end(); ++i)
 	{
-		delete i->second;
+		for (std::vector<ExtraSprites*>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+		{
+			delete *j;
+		}
 	}
 	for (std::map<std::string, CustomPalettes *>::const_iterator i = _customPalettes.begin(); i != _customPalettes.end(); ++i)
 	{
@@ -638,7 +644,7 @@ T *Mod::getRule(const std::string &id, const std::string &name, const std::map<s
 		return 0;
 	}
 	typename std::map<std::string, T*>::const_iterator i = map.find(id);
-	if (map.end() != i)
+	if (i != map.end() && i->second != 0)
 	{
 		return i->second;
 	}
@@ -663,12 +669,33 @@ Font *Mod::getFont(const std::string &name, bool error) const
 }
 
 /**
+ * Loads any extra sprites associated to a surface when
+ * it's first requested.
+ * @param name Surface name.
+ */
+void Mod::lazyLoadSurface(const std::string &name)
+{
+	if (Options::lazyLoadResources)
+	{
+		std::map<std::string, std::vector<ExtraSprites *> >::const_iterator i = _extraSprites.find(name);
+		if (i != _extraSprites.end())
+		{
+			for (std::vector<ExtraSprites*>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				loadExtraSprite(*j);
+			}
+		}
+	}
+}
+
+/**
  * Returns a specific surface from the mod.
  * @param name Name of the surface.
  * @return Pointer to the surface.
  */
-Surface *Mod::getSurface(const std::string &name, bool error) const
+Surface *Mod::getSurface(const std::string &name, bool error)
 {
+	lazyLoadSurface(name);
 	return getRule(name, "Sprite", _surfaces, error);
 }
 
@@ -677,8 +704,9 @@ Surface *Mod::getSurface(const std::string &name, bool error) const
  * @param name Name of the surface set.
  * @return Pointer to the surface set.
  */
-SurfaceSet *Mod::getSurfaceSet(const std::string &name, bool error) const
+SurfaceSet *Mod::getSurfaceSet(const std::string &name, bool error)
 {
+	lazyLoadSurface(name);
 	return getRule(name, "Sprite Set", _sets, error);
 }
 
@@ -837,13 +865,14 @@ Palette *Mod::getPalette(const std::string &name, bool error) const
  */
 void Mod::setPalette(SDL_Color *colors, int firstcolor, int ncolors)
 {
+	_statePalette = colors;
 	for (std::map<std::string, Font*>::iterator i = _fonts.begin(); i != _fonts.end(); ++i)
 	{
 		i->second->setPalette(colors, firstcolor, ncolors);
-	}
+	}	
 	for (std::map<std::string, Surface*>::iterator i = _surfaces.begin(); i != _surfaces.end(); ++i)
 	{
-		if (i->first.substr(i->first.length() - 3, i->first.length()) == "LBM")
+		if (CrossPlatform::compareExt(i->first, "LBM"))
 			continue;
 		if (i->first.find("_CPAL") != std::string::npos)
 			continue;
@@ -852,7 +881,7 @@ void Mod::setPalette(SDL_Color *colors, int firstcolor, int ncolors)
 	for (std::map<std::string, SurfaceSet*>::iterator i = _sets.begin(); i != _sets.end(); ++i)
 	{
 		i->second->setPalette(colors, firstcolor, ncolors);
-	}
+	}	
 }
 
 /**
@@ -1523,6 +1552,7 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 	_hidePediaInfoButton = doc["hidePediaInfoButton"].as<bool>(_hidePediaInfoButton);
 	_extraNerdyPediaInfo = doc["extraNerdyPediaInfo"].as<bool>(_extraNerdyPediaInfo);
 	_showAllCommendations = doc["showAllCommendations"].as<bool>(_showAllCommendations);
+	_giveScoreAlsoForResearchedArtifacts = doc["giveScoreAlsoForResearchedArtifacts"].as<bool>(_giveScoreAlsoForResearchedArtifacts);
 	_theMostUselessOptionEver = doc["theMostUselessOptionEver"].as<int>(_theMostUselessOptionEver);
 	_theBiggestRipOffEver = doc["theBiggestRipOffEver"].as<int>(_theBiggestRipOffEver);
 	_shortRadarRange = doc["shortRadarRange"].as<int>(_shortRadarRange);
@@ -1594,20 +1624,23 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 			MCDPatch *patch = new MCDPatch();
 			patch->load(*i);
 			_MCDPatches[type] = patch;
-			_MCDPatchesIndex.push_back(type);
 		}
 	}
 	for (YAML::const_iterator i = doc["extraSprites"].begin(); i != doc["extraSprites"].end(); ++i)
 	{
-		std::string type = (*i)["type"].as<std::string>();
+		std::string type;
+		type = (*i)["type"].as<std::string>(type);
+		if (type.empty())
+		{
+			type = (*i)["typeSingle"].as<std::string>();
+		}
 		ExtraSprites *extraSprites = new ExtraSprites();
+		int modOffset = _modOffset;
 		// doesn't support modIndex
-		if (type != "TEXTURE.DAT")
-			extraSprites->load(*i, _modOffset);
-		else
-			extraSprites->load(*i, 0);
-		_extraSprites.push_back(std::make_pair(type, extraSprites));
-		_extraSpritesIndex.push_back(type);
+		if (type == "TEXTURE.DAT")
+			modOffset = 0;
+		extraSprites->load(*i, modOffset);
+		_extraSprites[type].push_back(extraSprites);
 	}
 	for (YAML::const_iterator i = doc["customPalettes"].begin(); i != doc["customPalettes"].end(); ++i)
 	{
@@ -1623,7 +1656,6 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 		ExtraSounds *extraSounds = new ExtraSounds();
 		extraSounds->load(*i, _modOffset);
 		_extraSounds.push_back(std::make_pair(type, extraSounds));
-		_extraSoundsIndex.push_back(type);
 	}
 	for (YAML::const_iterator i = doc["extraStrings"].begin(); i != doc["extraStrings"].end(); ++i)
 	{
@@ -1637,7 +1669,6 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 			ExtraStrings *extraStrings = new ExtraStrings();
 			extraStrings->load(*i);
 			_extraStrings[type] = extraStrings;
-			_extraStringsIndex.push_back(type);
 		}
 	}
 
@@ -2554,7 +2585,7 @@ std::vector<const RuleResearch*> Mod::getResearch(const std::vector<std::string>
 		}
 		else
 		{
-			Log(LOG_ERROR) << "Unknow reserch " + n;
+			throw Exception("Unknown research " + n);
 		}
 	}
 	return dest;
@@ -2739,7 +2770,7 @@ MCDPatch *Mod::getMCDPatch(const std::string &id) const
  * Gets the list of external sprites.
  * @return The list of external sprites.
  */
-const std::vector<std::pair<std::string, ExtraSprites *> > &Mod::getExtraSprites() const
+const std::map<std::string, std::vector<ExtraSprites *> > &Mod::getExtraSprites() const
 {
 	return _extraSprites;
 }
@@ -3255,7 +3286,7 @@ void Mod::loadVanillaResources()
 {
 	// Load palettes
 	const char *pal[] = { "PAL_GEOSCAPE", "PAL_BASESCAPE", "PAL_GRAPHS", "PAL_UFOPAEDIA", "PAL_BATTLEPEDIA" };
-	for (size_t i = 0; i < sizeof(pal) / sizeof(pal[0]); ++i)
+	for (size_t i = 0; i < ARRAYLEN(pal); ++i)
 	{
 		std::string s = "GEODATA/PALETTES.DAT";
 		_palettes[pal[i]] = new Palette();
@@ -3292,7 +3323,7 @@ void Mod::loadVanillaResources()
 		{ 8, 12, 16, 255 },
 		{ 3, 4, 8, 255 },
 		{ 3, 3, 6, 255 } };
-		for (size_t i = 0; i < sizeof(gradient) / sizeof(gradient[0]); ++i)
+		for (size_t i = 0; i < ARRAYLEN(gradient); ++i)
 		{
 			SDL_Color *color = _palettes[s2]->getColors(Palette::backPos + 16 + i);
 			*color = gradient[i];
@@ -3302,10 +3333,10 @@ void Mod::loadVanillaResources()
 
 	// Load surfaces
 	{
-		std::ostringstream s;
-		s << "GEODATA/" << "INTERWIN.DAT";
-		_surfaces["INTERWIN.DAT"] = new Surface(160, 600);
-		_surfaces["INTERWIN.DAT"]->loadScr(FileMap::getFilePath(s.str()));
+		std::string s1 = "GEODATA/INTERWIN.DAT";
+		std::string s2 = "INTERWIN.DAT";
+		_surfaces[s2] = new Surface(160, 600);
+		_surfaces[s2]->loadScr(FileMap::getFilePath(s1));
 	}
 
 	const std::set<std::string> &geographFiles(FileMap::getVFolderContents("GEOGRAPH"));
@@ -3340,7 +3371,7 @@ void Mod::loadVanillaResources()
 		"INTICON.PCK",
 		"TEXTURE.DAT" };
 
-	for (size_t i = 0; i < sizeof(sets) / sizeof(sets[0]); ++i)
+	for (size_t i = 0; i < ARRAYLEN(sets); ++i)
 	{
 		std::ostringstream s;
 		s << "GEOGRAPH/" << sets[i];
@@ -3360,10 +3391,12 @@ void Mod::loadVanillaResources()
 			_sets[sets[i]]->loadDat(FileMap::getFilePath(s.str()));
 		}
 	}
-	_sets["SCANG.DAT"] = new SurfaceSet(4, 4);
-	std::ostringstream scang;
-	scang << "GEODATA/" << "SCANG.DAT";
-	_sets["SCANG.DAT"]->loadDat(FileMap::getFilePath(scang.str()));
+	{
+		std::string s1 = "GEODATA/SCANG.DAT";
+		std::string s2 = "SCANG.DAT";
+		_sets[s2] = new SurfaceSet(4, 4);
+		_sets[s2]->loadDat(FileMap::getFilePath(s1));
+	}
 
 	if (!Options::mute)
 	{
@@ -3384,10 +3417,10 @@ void Mod::loadVanillaResources()
 				cats[1] = catsDos;
 
 			Options::currentSound = SOUND_AUTO;
-			for (size_t i = 0; i < sizeof(catsId) / sizeof(catsId[0]); ++i)
+			for (size_t i = 0; i < ARRAYLEN(catsId); ++i)
 			{
 				SoundSet *sound = 0;
-				for (size_t j = 0; j < sizeof(cats) / sizeof(cats[0]) && sound == 0; ++j)
+				for (size_t j = 0; j < ARRAYLEN(catsId) && sound == 0; ++j)
 				{
 					bool wav = true;
 					if (cats[j] == 0)
@@ -3526,7 +3559,7 @@ void Mod::loadBattlescapeResources()
 
 	std::string scrs[] = { "TAC00.SCR" };
 
-	for (size_t i = 0; i < sizeof(scrs) / sizeof(scrs[0]); ++i)
+	for (size_t i = 0; i < ARRAYLEN(scrs); ++i)
 	{
 		_surfaces[scrs[i]] = new Surface(320, 200);
 		_surfaces[scrs[i]]->loadScr(FileMap::getFilePath("UFOGRAPH/" + scrs[i]));
@@ -3548,7 +3581,7 @@ void Mod::loadBattlescapeResources()
 	{ 2, 0, 24, 255 } };
 
 	std::set<std::string> ufographContents = FileMap::getVFolderContents("UFOGRAPH");
-	for (size_t i = 0; i < sizeof(lbms) / sizeof(lbms[0]); ++i)
+	for (size_t i = 0; i < ARRAYLEN(lbms); ++i)
 	{
 		if (ufographContents.find(lbms[i]) == ufographContents.end())
 		{
@@ -3578,7 +3611,7 @@ void Mod::loadBattlescapeResources()
 		"SCANBORD.PCK",
 		"UNIBORD.PCK" };
 
-	for (size_t i = 0; i < sizeof(spks) / sizeof(spks[0]); ++i)
+	for (size_t i = 0; i < ARRAYLEN(spks); ++i)
 	{
 		std::string fname = spks[i];
 		std::transform(fname.begin(), fname.end(), fname.begin(), tolower);
@@ -3805,7 +3838,7 @@ void Mod::loadExtraResources()
 		for (std::map<std::string, RuleMusic *>::const_iterator i = _musicDefs.begin(); i != _musicDefs.end(); ++i)
 		{
 			Music *music = 0;
-			for (size_t j = 0; j < sizeof(priority) / sizeof(priority[0]) && music == 0; ++j)
+			for (size_t j = 0; j < ARRAYLEN(priority) && music == 0; ++j)
 			{
 				music = loadMusic(priority[j], (*i).first, (*i).second->getCatPos(), (*i).second->getNormalization(), adlibcat, aintrocat, gmcat);
 			}
@@ -3822,150 +3855,14 @@ void Mod::loadExtraResources()
 	}
 #endif
 
-	Log(LOG_INFO) << "Loading extra resources from ruleset...";
-	for (std::vector< std::pair<std::string, ExtraSprites *> >::const_iterator i = _extraSprites.begin(); i != _extraSprites.end(); ++i)
+	if (!Options::lazyLoadResources)
 	{
-		std::string sheetName = i->first;
-		ExtraSprites *spritePack = i->second;
-		bool subdivision = (spritePack->getSubX() != 0 && spritePack->getSubY() != 0);
-		if (spritePack->getSingleImage())
+		Log(LOG_INFO) << "Loading extra resources from ruleset...";
+		for (std::map<std::string, std::vector<ExtraSprites *> >::const_iterator i = _extraSprites.begin(); i != _extraSprites.end(); ++i)
 		{
-			if (_surfaces.find(sheetName) == _surfaces.end())
+			for (std::vector<ExtraSprites*>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				Log(LOG_VERBOSE) << "Creating new single image: " << sheetName;
-				_surfaces[sheetName] = new Surface(spritePack->getWidth(), spritePack->getHeight());
-			}
-			else
-			{
-				Log(LOG_VERBOSE) << "Adding/Replacing single image: " << sheetName;
-				delete _surfaces[sheetName];
-				_surfaces[sheetName] = new Surface(spritePack->getWidth(), spritePack->getHeight());
-			}
-			_surfaces[sheetName]->loadImage(FileMap::getFilePath((*spritePack->getSprites())[0]));
-		}
-		else
-		{
-			bool adding = false;
-			if (_sets.find(sheetName) == _sets.end())
-			{
-				Log(LOG_VERBOSE) << "Creating new surface set: " << sheetName;
-				adding = true;
-				if (subdivision)
-				{
-					_sets[sheetName] = new SurfaceSet(spritePack->getSubX(), spritePack->getSubY());
-				}
-				else
-				{
-					_sets[sheetName] = new SurfaceSet(spritePack->getWidth(), spritePack->getHeight());
-				}
-			}
-			else
-			{
-				Log(LOG_VERBOSE) << "Adding/Replacing items in surface set: " << sheetName;
-			}
-
-			if (subdivision)
-			{
-				int frames = (spritePack->getWidth() / spritePack->getSubX())*(spritePack->getHeight() / spritePack->getSubY());
-				Log(LOG_VERBOSE) << "Subdividing into " << frames << " frames.";
-			}
-
-			for (std::map<int, std::string>::iterator j = spritePack->getSprites()->begin(); j != spritePack->getSprites()->end(); ++j)
-			{
-				int startFrame = j->first;
-				std::string fileName = j->second;
-				if (fileName[fileName.length() - 1] == '/')
-				{
-					Log(LOG_VERBOSE) << "Loading surface set from folder: " << fileName << " starting at frame: " << startFrame;
-					int offset = startFrame;
-					const std::set<std::string>& contents = FileMap::getVFolderContents(fileName);
-					for (std::set<std::string>::iterator k = contents.begin(); k != contents.end(); ++k)
-					{
-						if (!isImageFile((*k).substr((*k).length() - 4, (*k).length())))
-							continue;
-						try
-						{
-							std::string fullPath = FileMap::getFilePath(fileName + *k);
-							if (_sets[sheetName]->getFrame(offset))
-							{
-								Log(LOG_VERBOSE) << "Replacing frame: " << offset;
-								_sets[sheetName]->getFrame(offset)->loadImage(fullPath);
-							}
-							else
-							{
-								if (adding)
-								{
-									_sets[sheetName]->addFrame(offset)->loadImage(fullPath);
-								}
-								else
-								{
-									Log(LOG_VERBOSE) << "Adding frame: " << offset + spritePack->getModIndex();
-									_sets[sheetName]->addFrame(offset + spritePack->getModIndex())->loadImage(fullPath);
-								}
-							}
-							offset++;
-						}
-						catch (Exception &e)
-						{
-							Log(LOG_WARNING) << e.what();
-						}
-					}
-				}
-				else
-				{
-					if (spritePack->getSubX() == 0 && spritePack->getSubY() == 0)
-					{
-						const std::string& fullPath = FileMap::getFilePath(fileName);
-						if (_sets[sheetName]->getFrame(startFrame))
-						{
-							Log(LOG_VERBOSE) << "Replacing frame: " << startFrame;
-							_sets[sheetName]->getFrame(startFrame)->loadImage(fullPath);
-						}
-						else
-						{
-							Log(LOG_VERBOSE) << "Adding frame: " << startFrame << ", using index: " << startFrame + spritePack->getModIndex();
-							_sets[sheetName]->addFrame(startFrame + spritePack->getModIndex())->loadImage(fullPath);
-						}
-					}
-					else
-					{
-						Surface *temp = new Surface(spritePack->getWidth(), spritePack->getHeight());
-						temp->loadImage(FileMap::getFilePath((*spritePack->getSprites())[startFrame]));
-						int xDivision = spritePack->getWidth() / spritePack->getSubX();
-						int yDivision = spritePack->getHeight() / spritePack->getSubY();
-						int offset = startFrame;
-
-						for (int y = 0; y != yDivision; ++y)
-						{
-							for (int x = 0; x != xDivision; ++x)
-							{
-								if (_sets[sheetName]->getFrame(offset))
-								{
-									Log(LOG_VERBOSE) << "Replacing frame: " << offset;
-									_sets[sheetName]->getFrame(offset)->clear();
-									// for some reason regular blit() doesn't work here how i want it, so i use this function instead.
-									temp->blitNShade(_sets[sheetName]->getFrame(offset), 0 - (x * spritePack->getSubX()), 0 - (y * spritePack->getSubY()), 0);
-								}
-								else
-								{
-									if (adding)
-									{
-										// for some reason regular blit() doesn't work here how i want it, so i use this function instead.
-										temp->blitNShade(_sets[sheetName]->addFrame(offset), 0 - (x * spritePack->getSubX()), 0 - (y * spritePack->getSubY()), 0);
-									}
-									else
-									{
-										Log(LOG_VERBOSE) << "Adding frame: " << offset + spritePack->getModIndex();
-										// for some reason regular blit() doesn't work here how i want it, so i use this function instead.
-										temp->blitNShade(_sets[sheetName]->addFrame(offset + spritePack->getModIndex()), 0 - (x * spritePack->getSubX()), 0 - (y * spritePack->getSubY()), 0);
-									}
-								}
-								++offset;
-							}
-						}
-						delete temp;
-					}
-				}
+				loadExtraSprite(*j);
 			}
 		}
 	}
@@ -3974,57 +3871,14 @@ void Mod::loadExtraResources()
 	{
 		std::string setName = i->first;
 		ExtraSounds *soundPack = i->second;
-		if (_sounds.find(setName) == _sounds.end())
+		SoundSet *set = 0;
+
+		std::map<std::string, SoundSet*>::iterator j = _sounds.find(setName);
+		if (j != _sounds.end())
 		{
-			Log(LOG_VERBOSE) << "Creating new sound set: " << setName << ", this will likely have no in-game use.";
-			_sounds[setName] = new SoundSet();
+			set = j->second;
 		}
-		else Log(LOG_VERBOSE) << "Adding/Replacing items in sound set: " << setName;
-		for (std::map<int, std::string>::iterator j = soundPack->getSounds()->begin(); j != soundPack->getSounds()->end(); ++j)
-		{
-			int startSound = j->first;
-			std::string fileName = j->second;
-			if (fileName[fileName.length() - 1] == '/')
-			{
-				Log(LOG_VERBOSE) << "Loading sound set from folder: " << fileName << " starting at index: " << startSound;
-				int offset = startSound;
-				const std::set<std::string>& contents = FileMap::getVFolderContents(fileName);
-				for (std::set<std::string>::iterator k = contents.begin(); k != contents.end(); ++k)
-				{
-					try
-					{
-						std::string fullPath = FileMap::getFilePath(fileName + *k);
-						if (_sounds[setName]->getSound(offset))
-						{
-							_sounds[setName]->getSound(offset)->load(fullPath);
-						}
-						else
-						{
-							_sounds[setName]->addSound(offset + soundPack->getModIndex())->load(fullPath);
-						}
-						offset++;
-					}
-					catch (Exception &e)
-					{
-						Log(LOG_WARNING) << e.what();
-					}
-				}
-			}
-			else
-			{
-				const std::string& fullPath = FileMap::getFilePath(fileName);
-				if (_sounds[setName]->getSound(startSound))
-				{
-					Log(LOG_VERBOSE) << "Replacing index: " << startSound;
-					_sounds[setName]->getSound(startSound)->load(fullPath);
-				}
-				else
-				{
-					Log(LOG_VERBOSE) << "Adding index: " << startSound;
-					_sounds[setName]->addSound(startSound + soundPack->getModIndex())->load(fullPath);
-				}
-			}
-		}
+		_sounds[setName] = soundPack->loadSoundSet(set);
 	}
 
 	Log(LOG_INFO) << "Loading custom palettes from ruleset...";
@@ -4096,11 +3950,65 @@ void Mod::loadExtraResources()
 	}
 }
 
+void Mod::loadExtraSprite(ExtraSprites *spritePack)
+{
+	if (spritePack->isLoaded())
+		return;
+
+	if (spritePack->getSingleImage())
+	{
+		Surface *surface = 0;
+		std::map<std::string, Surface*>::iterator i = _surfaces.find(spritePack->getType());
+		if (i != _surfaces.end())
+		{
+			surface = i->second;
+		}
+
+		_surfaces[spritePack->getType()] = spritePack->loadSurface(surface);
+		if (_statePalette)
+		{
+			if (spritePack->getType().find("_CPAL") == std::string::npos)
+			{
+				_surfaces[spritePack->getType()]->setPalette(_statePalette);
+			}
+		}
+	}
+	else
+	{
+		SurfaceSet *set = 0;
+		std::map<std::string, SurfaceSet*>::iterator i = _sets.find(spritePack->getType());
+		if (i != _sets.end())
+		{
+			set = i->second;
+		}
+
+		_sets[spritePack->getType()] = spritePack->loadSurfaceSet(set);
+		if (_statePalette)
+		{
+			if (spritePack->getType().find("_CPAL") == std::string::npos)
+			{
+				_sets[spritePack->getType()]->setPalette(_statePalette);
+			}
+		}
+	}
+}
+
 /**
  * Applies necessary modifications to vanilla resources.
  */
 void Mod::modResources()
 {
+	// we're gonna need these
+	getSurface("GEOBORD.SCR");
+	getSurface("ALTGEOBORD.SCR", false);
+	getSurface("BACK07.SCR");
+	getSurface("ALTBACK07.SCR", false);
+	getSurface("BACK06.SCR");
+	getSurface("UNIBORD.PCK");
+	getSurfaceSet("HANDOB.PCK");
+	getSurfaceSet("FLOOROB.PCK");
+	getSurfaceSet("BIGOBS.PCK");
+
 	// embiggen the geoscape background by mirroring the contents
 	// modders can provide their own backgrounds via ALTGEOBORD.SCR
 	if (_surfaces.find("ALTGEOBORD.SCR") == _surfaces.end())
@@ -4129,17 +4037,20 @@ void Mod::modResources()
 	}
 
 	// here we create an "alternate" background surface for the base info screen.
-	_surfaces["ALTBACK07.SCR"] = new Surface(320, 200);
-	_surfaces["ALTBACK07.SCR"]->loadScr(FileMap::getFilePath("GEOGRAPH/BACK07.SCR"));
-	for (int y = 172; y >= 152; --y)
-		for (int x = 5; x <= 314; ++x)
-			_surfaces["ALTBACK07.SCR"]->setPixel(x, y + 4, _surfaces["ALTBACK07.SCR"]->getPixel(x, y));
-	for (int y = 147; y >= 134; --y)
-		for (int x = 5; x <= 314; ++x)
-			_surfaces["ALTBACK07.SCR"]->setPixel(x, y + 9, _surfaces["ALTBACK07.SCR"]->getPixel(x, y));
-	for (int y = 132; y >= 109; --y)
-		for (int x = 5; x <= 314; ++x)
-			_surfaces["ALTBACK07.SCR"]->setPixel(x, y + 10, _surfaces["ALTBACK07.SCR"]->getPixel(x, y));
+	if (_surfaces.find("ALTBACK07.SCR") == _surfaces.end())
+	{
+		_surfaces["ALTBACK07.SCR"] = new Surface(320, 200);
+		_surfaces["ALTBACK07.SCR"]->loadScr(FileMap::getFilePath("GEOGRAPH/BACK07.SCR"));
+		for (int y = 172; y >= 152; --y)
+			for (int x = 5; x <= 314; ++x)
+				_surfaces["ALTBACK07.SCR"]->setPixel(x, y + 4, _surfaces["ALTBACK07.SCR"]->getPixel(x, y));
+		for (int y = 147; y >= 134; --y)
+			for (int x = 5; x <= 314; ++x)
+				_surfaces["ALTBACK07.SCR"]->setPixel(x, y + 9, _surfaces["ALTBACK07.SCR"]->getPixel(x, y));
+		for (int y = 132; y >= 109; --y)
+			for (int x = 5; x <= 314; ++x)
+				_surfaces["ALTBACK07.SCR"]->setPixel(x, y + 10, _surfaces["ALTBACK07.SCR"]->getPixel(x, y));
+	}
 
 	// we create extra rows on the soldier stat screens by shrinking them all down one pixel.
 
@@ -4178,41 +4089,6 @@ void Mod::modResources()
 }
 
 /**
- * Determines if an image file is an acceptable format for the game.
- * @param extension Image file extension.
- * @return True/false
- */
-bool Mod::isImageFile(std::string extension) const
-{
-	std::transform(extension.begin(), extension.end(), extension.begin(), toupper);
-
-	return (
-		// arbitrary limitation: let's not use these ones (although they're officially supported by sdl)
-		/*
-		extension == ".ICO" ||
-		extension == ".CUR" ||
-		extension == ".PNM" ||
-		extension == ".PPM" ||
-		extension == ".PGM" ||
-		extension == ".PBM" ||
-		extension == ".XPM" ||
-		extension == "ILBM" ||
-		// excluding jpeg to avoid inevitable issues due to compression
-		extension == ".JPG" ||
-		extension == "JPEG" ||
-		*/
-		extension == ".BMP" ||
-		extension == ".LBM" ||
-		extension == ".IFF" ||
-		extension == ".PCX" ||
-		extension == ".GIF" ||
-		extension == ".PNG" ||
-		extension == ".TGA" ||
-		extension == ".TIF" ||
-		extension == "TIFF");
-}
-
-/**
  * Loads the specified music file format.
  * @param fmt Format of the music.
  * @param file Filename of the music.
@@ -4231,9 +4107,6 @@ Music *Mod::loadMusic(MusicFormat fmt, const std::string &file, int track, float
 	std::set<std::string> soundContents = FileMap::getVFolderContents("SOUND");
 	try
 	{
-		std::string fname = file + exts[fmt];
-		std::transform(fname.begin(), fname.end(), fname.begin(), tolower);
-
 		// Try Adlib music
 		if (fmt == MUSIC_ADLIB)
 		{
@@ -4272,6 +4145,9 @@ Music *Mod::loadMusic(MusicFormat fmt, const std::string &file, int track, float
 		// Try digital tracks
 		else
 		{
+			std::string fname = file + exts[fmt];
+			std::transform(fname.begin(), fname.end(), fname.begin(), ::tolower);
+
 			if (soundContents.find(fname) != soundContents.end())
 			{
 				music = new Music();

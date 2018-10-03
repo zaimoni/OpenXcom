@@ -1303,7 +1303,7 @@ void Globe::drawDetail()
 	// Draw the country names
 	if (_zoom >= 2)
 	{
-		Text *label = new Text(100, 9, 0, 0);
+		Text *label = new Text(150, 9, 0, 0);
 		label->setPalette(getPalette());
 		label->initText(_game->getMod()->getFont("FONT_BIG"), _game->getMod()->getFont("FONT_SMALL"), _game->getLanguage());
 		label->setAlign(ALIGN_CENTER);
@@ -1318,7 +1318,7 @@ void Globe::drawDetail()
 			// Convert coordinates
 			polarToCart((*i)->getRules()->getLabelLongitude(), (*i)->getRules()->getLabelLatitude(), &x, &y);
 
-			label->setX(x - 50);
+			label->setX(x - 75);
 			label->setY(y);
 			label->setText(_game->getLanguage()->getString((*i)->getRules()->getType()));
 			label->setColor(COUNTRY_LABEL_COLOR);
