@@ -45,7 +45,7 @@ ListLoadState::ListLoadState(OptionsOrigin origin) : ListGamesState(origin, 0, t
 	_btnCancel->setX(180);
 
 	add(_btnOld, "button", "saveMenus");
-	
+
 	// Set up objects
 	_txtTitle->setText(tr("STR_SELECT_GAME_TO_LOAD"));
 
@@ -109,14 +109,28 @@ void ListLoadState::loadSave(size_t list_idx)
 void ListLoadState::init()
 {
 	ListGamesState::init();
-	if (_saves.size() > 0  && _origin == OPT_MENU && Options::getLoadLastSave())
+	if (_origin == OPT_MENU && Options::getLoadLastSave())
 	{
 		// make it so that this fires only once
 		Options::expendLoadLastSave();
-		// sort the list so that what we need is at idx=0
-		sortList(SORT_DATE_DESC);
-		// load it
-		loadSave(0);
+		// find the absolutely latest save game including quick and autos
+		time_t timestamp = 0;
+		size_t idx = -1, i = 0;
+		for (auto it = _saves.begin(); it !=_saves.end(); ++it, ++i)
+		{
+			if ((*it).timestamp > timestamp)
+			{
+				idx = i;
+				timestamp = (*it).timestamp;
+			}
+		}
+		if (idx != -1)
+		{
+			// hide the ui
+			toggleScreen();
+			hideAll();
+			loadSave(idx);
+		}
 	}
 }
 

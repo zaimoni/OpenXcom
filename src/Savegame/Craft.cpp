@@ -199,7 +199,7 @@ void Craft::load(const YAML::Node &node, const Mod *mod, SavedGame *save)
 				}
 			}
 		}
-		else if (type == "STR_WAYPOINT")
+		else if (type == "STR_WAY_POINT")
 		{
 			for (std::vector<Waypoint*>::iterator i = save->getWaypoints()->begin(); i != save->getWaypoints()->end(); ++i)
 			{
@@ -984,7 +984,7 @@ bool Craft::detect(Target *target) const
  */
 bool Craft::insideRadarRange(Target *target) const
 {
-	double range = _stats.radarRange * (1 / 60.0) * (M_PI / 180);
+	double range = Nautical(_stats.radarRange);
 	return (getDistance(target) <= range);
 }
 
