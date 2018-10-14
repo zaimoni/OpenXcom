@@ -25,6 +25,16 @@
 namespace OpenXcom
 {
 
+enum AlienMissionOperationType {
+	AMOT_SPACE,
+	AMOT_REGION_EXISTING_BASE,
+	AMOT_REGION_NEW_BASE,
+	AMOT_REGION_NEW_BASE_IF_NECESSARY,
+	AMOT_EARTH_EXISTING_BASE,
+	AMOT_EARTH_NEW_BASE_IF_NECESSARY,
+	AMOT_EXISTING_BASE_HUNT_MISSION
+};
+
 class WeightedOptions;
 
 /**
@@ -134,6 +144,18 @@ public:
 	bool despawnEvenIfTargeted() const { return _despawnEvenIfTargeted; }
 	/// the type of missionSite to spawn (if any)
 	std::string getSiteType() const { return _siteType; }
+	/// From where does this mission operate?
+	AlienMissionOperationType getOperationType() const { return _operationType; }
+	/// Gets the mission zone for spawning the operation base (if necessary).
+	int getOperationSpawnZone() const { return _operationSpawnZone; }
+	/// Gets the type of operation base to spawn (if any).
+	const std::string &getOperationBaseType() const { return _operationBaseType; }
+	/// Gets the odds of this mission targetting an xcom base. Works only for "gen missions" spawned by an alien base.
+	int getTargetBaseOdds() const { return _targetBaseOdds; }
+	/// Does this mission have region weights? Works only for "gen missions" spawned by an alien base.
+	bool hasRegionWeights() const;
+	/// Gets a region based on the game time and the region distribution. Works only for "gen missions" spawned by an alien base.
+	std::string generateRegion(const size_t monthsPassed) const;
 private:
 	/// The mission's type ID.
 	std::string _type;
@@ -159,6 +181,16 @@ private:
 	bool _despawnEvenIfTargeted;
 	/// the type of missionSite to spawn (if any)
 	std::string _siteType;
+	/// From where does this mission operate?
+	AlienMissionOperationType _operationType;
+	/// The mission zone for spawning the operation base (if necessary).
+	int _operationSpawnZone;
+	/// The type of operation base to spawn (if any).
+	std::string _operationBaseType;
+	/// The odds of this mission targetting an xcom base. Works only for "gen missions" spawned by an alien base.
+	int _targetBaseOdds;
+	/// The region distribution over game time. Works only for "gen missions" spawned by an alien base.
+	std::vector<std::pair<size_t, WeightedOptions*> > _regionWeights;
 };
 
 }

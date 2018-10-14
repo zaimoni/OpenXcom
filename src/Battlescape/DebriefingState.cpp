@@ -919,6 +919,12 @@ void ClearAlienBase::operator()(AlienMission *am) const
 	if (am->getAlienBase() == _base)
 	{
 		am->setAlienBase(0);
+
+		// if this is an Earth-based operation, losing the base means mission cannot continue anymore
+		if (am->getRules().getOperationType() != AMOT_SPACE)
+		{
+			am->setInterrupted(true);
+		}
 	}
 }
 
@@ -1116,6 +1122,10 @@ void DebriefingState::prepareDebriefing()
 			{
 				_destroyBase = true;
 			}
+
+			// This is an overkill, since we may not lose any hangar/craft, but doing it properly requires tons of changes
+			_game->getSavedGame()->stopHuntingXcomCrafts(base);
+
 			for (std::vector<BaseFacility*>::iterator k = base->getFacilities()->begin(); k != base->getFacilities()->end();)
 			{
 				// this facility was demolished
