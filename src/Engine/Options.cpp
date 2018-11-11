@@ -280,7 +280,6 @@ void create()
 	_info.push_back(OptionInfo("knockOutIndicator", &knockOutIndicator, false, "STR_KNOCK_OUT_INDICATOR", "STR_OXCE"));
 	_info.push_back(OptionInfo("statisticalBulletConservation", &statisticalBulletConservation, false, "STR_BULLET_SAVING", "STR_OXCE"));
 	_info.push_back(OptionInfo("showItemNameAndWeightInInventory", &showItemNameAndWeightInInventory, false, "STR_SHOW_ITEM_WEIGHT_IN_INVENTORY", "STR_OXCE"));
-	_info.push_back(OptionInfo("showGunMeleeOnTop", &showGunMeleeOnTop, true, "STR_SHOW_GUN_MELEE_ON_TOP", "STR_OXCE"));
 	_info.push_back(OptionInfo("removeWoundedFromTraining", &removeWoundedFromTraining, false, "STR_REMOVE_WOUNDED_FROM_TRAINING", "STR_OXCE"));
 	_info.push_back(OptionInfo("fullNightVision", &fullNightVision, false, "STR_FULL_NIGHT_VISION", "STR_OXCE"));
 	_info.push_back(OptionInfo("nightVisionColor", &nightVisionColor, 8, "STR_NIGHT_VISION_COLOR", "STR_OXCE"));
@@ -292,8 +291,6 @@ void create()
 	_info.push_back(OptionInfo("friendlyCraftEscort", &friendlyCraftEscort, false, "STR_FRIENDLY_CRAFT_ESCORT", "STR_OXCE"));
 	_info.push_back(OptionInfo("drawEnemyRadarCircles", &drawEnemyRadarCircles, true, "STR_DRAW_ENEMY_RADAR_CIRCLES", "STR_OXCE"));
 	_info.push_back(OptionInfo("oneHandedUnloading", &oneHandedUnloading, false, "STR_ALLOW_ONE_HANDED_UNLOADING", "STR_OXCE"));
-
-	_info.push_back(OptionInfo("simpleUppercase", &simpleUppercase, false));
 
 	// controls
 	_info.push_back(KeyOptionInfo("keyOk", &keyOk, SDLK_RETURN, "STR_OK", "STR_GENERAL"));
@@ -636,7 +633,7 @@ static void _scanMods(const std::string &modsDir)
  * and finding and loading any existing ones.
  * @param argc Number of arguments.
  * @param argv Array of argument strings.
- * @return Was initialized.
+ * @return Do we start the game?
  */
 bool init(int argc, char *argv[])
 {
@@ -1090,8 +1087,9 @@ void updateOptions()
 /**
  * Loads options from a YAML file.
  * @param filename YAML filename.
+ * @return Was the loading successful?
  */
-void load(const std::string &filename)
+bool load(const std::string &filename)
 {
 	std::string s = _configFolder + filename + ".cfg";
 	try
@@ -1100,7 +1098,7 @@ void load(const std::string &filename)
 		// Ignore old options file
 		if (doc["options"]["NewBattleMission"])
 		{
-			return;
+			return false;
 		}
 		for (std::vector<OptionInfo>::iterator i = _info.begin(); i != _info.end(); ++i)
 		{
@@ -1122,7 +1120,9 @@ void load(const std::string &filename)
 	catch (YAML::Exception &e)
 	{
 		Log(LOG_WARNING) << e.what();
+		return false;
 	}
+	return true;
 }
 
 void writeNode(const YAML::Node& node, YAML::Emitter& emitter)
@@ -1174,15 +1174,16 @@ void writeNode(const YAML::Node& node, YAML::Emitter& emitter)
 /**
  * Saves options to a YAML file.
  * @param filename YAML filename.
+ * @return Was the saving successful?
  */
-void save(const std::string &filename)
+bool save(const std::string &filename)
 {
 	std::string s = _configFolder + filename + ".cfg";
 	std::ofstream sav(s.c_str());
 	if (!sav)
 	{
 		Log(LOG_WARNING) << "Failed to save " << filename << ".cfg";
-		return;
+		return false;
 	}
 	try
 	{
@@ -1210,8 +1211,15 @@ void save(const std::string &filename)
 	catch (YAML::Exception &e)
 	{
 		Log(LOG_WARNING) << e.what();
+		return false;
 	}
 	sav.close();
+	if (!sav)
+	{
+		Log(LOG_WARNING) << "Failed to save " << filename << ".cfg";
+		return false;
+	}
+	return true;
 }
 
 /**

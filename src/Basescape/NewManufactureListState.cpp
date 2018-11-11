@@ -114,13 +114,13 @@ NewManufactureListState::NewManufactureListState(Base *base) : _base(base), _sho
 	filterOptions.push_back("STR_FILTER_DEFAULT_NO_SUPPLIES");
 	filterOptions.push_back("STR_FILTER_FACILITY_REQUIRED");
 	filterOptions.push_back("STR_FILTER_HIDDEN");
-	_cbxFilter->setOptions(filterOptions);
+	_cbxFilter->setOptions(filterOptions, true);
 	_cbxFilter->onChange((ActionHandler)&NewManufactureListState::cbxFilterChange);
 
 	_catStrings.push_back("STR_ALL_ITEMS");
-	_cbxCategory->setOptions(_catStrings);
+	_cbxCategory->setOptions(_catStrings, true);
 
-	_btnQuickSearch->setText(L""); // redraw
+	_btnQuickSearch->setText(""); // redraw
 	_btnQuickSearch->onEnter((ActionHandler)&NewManufactureListState::btnQuickSearchApply);
 	_btnQuickSearch->setVisible(false);
 
@@ -192,7 +192,7 @@ void NewManufactureListState::lstProdClickRight(Action *)
 			{
 				if (_showRequirements)
 				{
-					std::wostringstream ss;
+					std::ostringstream ss;
 					int count = 0;
 					for (std::vector<std::string>::const_iterator iter = info->getRequireBaseFunc().begin(); iter != info->getRequireBaseFunc().end(); ++iter)
 					{
@@ -276,7 +276,7 @@ void NewManufactureListState::btnQuickSearchToggle(Action *action)
 {
 	if (_btnQuickSearch->getVisible())
 	{
-		_btnQuickSearch->setText(L"");
+		_btnQuickSearch->setText("");
 		_btnQuickSearch->setVisible(false);
 		btnQuickSearchApply(action);
 	}
@@ -332,9 +332,8 @@ void NewManufactureListState::btnMarkAllAsSeenClick(Action *)
  */
 void NewManufactureListState::fillProductionList(bool refreshCategories)
 {
-	std::locale myLocale = CrossPlatform::testLocale();
-	std::wstring searchString = _btnQuickSearch->getText();
-	CrossPlatform::upperCase(searchString, myLocale);
+	std::string searchString = _btnQuickSearch->getText();
+	Unicode::upperCase(searchString);
 
 	if (refreshCategories)
 	{
@@ -379,10 +378,10 @@ void NewManufactureListState::fillProductionList(bool refreshCategories)
 			}
 
 			// quick search
-			if (searchString != L"")
+			if (!searchString.empty())
 			{
-				std::wstring projectName = tr((*it)->getName());
-				CrossPlatform::upperCase(projectName, myLocale);
+				std::string projectName = tr((*it)->getName());
+				Unicode::upperCase(projectName);
 				if (projectName.find(searchString) == std::string::npos)
 				{
 					continue;
@@ -400,12 +399,12 @@ void NewManufactureListState::fillProductionList(bool refreshCategories)
 			{
 				productionPossible = std::min(productionPossible, itemContainer->getItem(iter.first->getType()) / iter.second);
 			}
-			std::wostringstream ss;
+			std::ostringstream ss;
 			if (productionPossible <= 0)
 			{
 				if (basicFilter == MANU_FILTER_DEFAULT_SUPPLIES_OK)
 					continue;
-				ss << L'-';
+				ss << '-';
 			}
 			else
 			{
@@ -417,7 +416,7 @@ void NewManufactureListState::fillProductionList(bool refreshCategories)
 				}
 				else
 				{
-					ss << L'+';
+					ss << '+';
 				}
 			}
 
@@ -445,8 +444,8 @@ void NewManufactureListState::fillProductionList(bool refreshCategories)
 		}
 	}
 
-	std::wstring label = tr("STR_SHOW_ONLY_NEW");
-	_btnShowOnlyNew->setText((hasUnseen ? L"* " : L"") + label);
+	std::string label = tr("STR_SHOW_ONLY_NEW");
+	_btnShowOnlyNew->setText((hasUnseen ? "* " : "") + label);
 	if (_lstScroll > 0)
 	{
 		_lstManufacture->scrollTo(_lstScroll);
@@ -479,7 +478,7 @@ void NewManufactureListState::fillProductionList(bool refreshCategories)
 			}
 		}
 
-		_cbxCategory->setOptions(_catStrings);
+		_cbxCategory->setOptions(_catStrings, true);
 		_cbxCategory->onChange((ActionHandler)&NewManufactureListState::cbxCategoryChange);
 	}
 }

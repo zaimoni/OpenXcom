@@ -24,16 +24,14 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
-#include <locale>
 #include <stdint.h>
 #include <time.h>
-#include <sys/stat.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include "../dirent.h"
 #include "Logger.h"
 #include "Exception.h"
 #include "Options.h"
-#include "Language.h"
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -60,6 +58,7 @@
 #else
 #include <iostream>
 #include <fstream>
+#include <locale>
 #include <SDL_image.h>
 #include <cstring>
 #include <cstdio>
@@ -70,6 +69,7 @@
 #include <pwd.h>
 #ifndef __ANDROID__
 #include <execinfo.h>
+#include "Unicode.h"
 #endif
 #endif
 #include <SDL.h>
@@ -133,7 +133,7 @@ void showError(const std::string &error)
 	else
 	{
 		std::string nError = '"' + error + '"';
-		Language::replace(nError, "\n", "\\n");
+		Unicode::replace(nError, "\n", "\\n");
 		std::string cmd = errorDlg + nError;
 		if (system(cmd.c_str()) != 0)
 			std::cerr << error << std::endl;
@@ -669,7 +669,7 @@ bool compareExt(const std::string &filename, const std::string &extension)
 		return false;
 	if (filename[j - 1] != '.')
 		return false;
-	for (int i = 0; i < extension.length(); ++i)
+	for (size_t i = 0; i < extension.length(); ++i)
 	{
 		if (::tolower(filename[j + i]) != ::tolower(extension[i]))
 			return false;
@@ -705,7 +705,7 @@ std::string getLocale()
 	{
 		l = std::locale("");
 	}
-	catch (std::runtime_error)
+	catch (const std::runtime_error &)
 	{
 		return "x-";
 	}
@@ -728,52 +728,6 @@ std::string getLocale()
 		return name + "-";
 	}
 #endif
-}
-
-/**
- * Tests locale availability and remembers the result in user settings.
- * @return Locale.
- */
-std::locale testLocale()
-{
-	std::locale test;
-	try
-	{
-		// Don't try again if you failed once already
-		if (!Options::simpleUppercase)
-		{
-			test = std::locale("");
-		}
-	}
-	catch (const std::runtime_error &e)
-	{
-		Log(LOG_ERROR) << e.what();
-
-		// Workaround for this issue: https://openxcom.org/forum/index.php/topic,5047.msg93780.html#msg93780
-		Options::simpleUppercase = true;
-	}
-	catch (...)
-	{
-		Options::simpleUppercase = true;
-	}
-	return test;
-}
-
-/**
- * Converts a wide string into upper case.
- */
-void upperCase(std::wstring &input, std::locale &myLocale)
-{
-	if (!Options::simpleUppercase)
-	{
-		// converts non-English characters too
-		for (auto & c : input) c = toupper(c, myLocale);
-	}
-	else
-	{
-		// fallback, works for English characters only
-		for (auto & c : input) c = towupper(c);
-	}
 }
 
 /**
@@ -835,9 +789,9 @@ time_t getDateModified(const std::string &path)
  * @param time Value in timestamp format.
  * @return String pair with date and time.
  */
-std::pair<std::wstring, std::wstring> timeToString(time_t time)
+std::pair<std::string, std::string> timeToString(time_t time)
 {
-	wchar_t localDate[25], localTime[25];
+	char localDate[25], localTime[25];
 
 /*#ifdef _WIN32
 	LARGE_INTEGER li;
@@ -894,35 +848,10 @@ std::pair<std::wstring, std::wstring> timeToString(time_t time)
 	return std::make_pair(aLocalDate.str(), aLocalTime.str());
 	
 #else
-	wcsftime(localDate, 25, L"%Y-%m-%d", timeinfo);
-	wcsftime(localTime, 25, L"%H:%M", timeinfo);
+	strftime(localDate, 25, "%Y-%m-%d", timeinfo);
+	strftime(localTime, 25, "%H:%M", timeinfo);
 #endif
 	return std::make_pair(localDate, localTime);
-}
-
-/**
- * Compares two Unicode strings using natural human ordering.
- * @param a String A.
- * @param b String B.
- * @return String A comes before String B.
- */
-bool naturalCompare(const std::wstring &a, const std::wstring &b)
-{
-#if defined(_WIN32) && (!defined(__MINGW32__) || defined(__MINGW64_VERSION_MAJOR))
-	typedef int (WINAPI *WinStrCmp)(PCWSTR, PCWSTR);
-	WinStrCmp pWinStrCmp = (WinStrCmp)GetProcAddress(GetModuleHandleA("shlwapi.dll"), "StrCmpLogicalW");
-	if (pWinStrCmp)
-	{
-		return (pWinStrCmp(a.c_str(), b.c_str()) < 0);
-	}
-	else
-#endif
-	{
-		// sorry unix users you get ASCII sort
-		std::wstring::const_iterator i, j;
-		for (i = a.begin(), j = b.begin(); i != a.end() && j != b.end() && tolower(*i) == tolower(*j); i++, j++);
-		return (i != a.end() && j != b.end() && tolower(*i) < tolower(*j));
-	}
 }
 
 /**
@@ -950,7 +879,7 @@ bool moveFile(const std::string &src, const std::string &dest)
 		srcStream.close();
 		destStream.close();
 	}
-	catch (std::fstream::failure)
+	catch (const std::fstream::failure &)
 	{
 		return false;
 	}
@@ -1044,14 +973,13 @@ void setWindowIcon(int winResource, const std::string &unixPath, SDL_Window *win
 	/* Android app has its icon and title set by the Java portion, no need to do anything here */
 	return;
 #else
-	std::string utf8 = Language::fsToUtf8(unixPath);
+	std::string utf8 = Unicode::convPathToUtf8(unixPath);
 	SDL_Surface *icon = IMG_Load(utf8.c_str());
 	if (icon != 0)
 	{
 		SDL_SetWindowIcon(winPtr, icon);
 		SDL_FreeSurface(icon);
 	}
-	winResource = winResource;
 #endif
 }
 

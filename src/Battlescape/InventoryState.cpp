@@ -105,7 +105,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	_btnUnload = new BattlescapeButton(32, 25, 288, 32);
 	_btnGround = new BattlescapeButton(32, 15, 289, 137);
 	_btnRank = new BattlescapeButton(26, 23, 0, 0);
-	_btnArmor = new BattlescapeButton(40, 70, 60, 65);
+	_btnArmor = new BattlescapeButton(RuleInventory::PAPERDOLL_W, RuleInventory::PAPERDOLL_H, RuleInventory::PAPERDOLL_X, RuleInventory::PAPERDOLL_Y);
 	_btnCreateTemplate = new BattlescapeButton(32, 22, _templateBtnX, _createTemplateBtnY);
 	_btnApplyTemplate = new BattlescapeButton(32, 22, _templateBtnX, _applyTemplateBtnY);
 	_selAmmo = new Surface(RuleInventory::HAND_W * RuleInventory::SLOT_W, RuleInventory::HAND_H * RuleInventory::SLOT_H, 272, 88);
@@ -219,11 +219,14 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	_btnRank->onMouseIn((ActionHandler)&InventoryState::txtTooltipIn);
 	_btnRank->onMouseOut((ActionHandler)&InventoryState::txtTooltipOut);
 
-	_btnArmor->onMouseClick((ActionHandler)&InventoryState::btnArmorClick);
-	_btnArmor->onMouseClick((ActionHandler)&InventoryState::btnArmorClickRight, SDL_BUTTON_RIGHT);
-	_btnArmor->onMouseClick((ActionHandler)&InventoryState::btnArmorClickMiddle, SDL_BUTTON_MIDDLE);
-	_btnArmor->onMouseIn((ActionHandler)&InventoryState::txtArmorTooltipIn);
-	_btnArmor->onMouseOut((ActionHandler)&InventoryState::txtArmorTooltipOut);
+	if (!_game->getMod()->getInventoryOverlapsPaperdoll())
+	{
+		_btnArmor->onMouseClick((ActionHandler)&InventoryState::btnArmorClick);
+		_btnArmor->onMouseClick((ActionHandler)&InventoryState::btnArmorClickRight, SDL_BUTTON_RIGHT);
+		_btnArmor->onMouseClick((ActionHandler)&InventoryState::btnArmorClickMiddle, SDL_BUTTON_MIDDLE);
+		_btnArmor->onMouseIn((ActionHandler)&InventoryState::txtArmorTooltipIn);
+		_btnArmor->onMouseOut((ActionHandler)&InventoryState::txtArmorTooltipOut);
+	}
 
 	_btnCreateTemplate->onMouseClick((ActionHandler)&InventoryState::btnCreateTemplateClick);
 	_btnCreateTemplate->onKeyboardPress((ActionHandler)&InventoryState::btnCreateTemplateClick, Options::keyInvCreateTemplate);
@@ -240,7 +243,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	_btnApplyTemplate->onMouseOut((ActionHandler)&InventoryState::txtTooltipOut);
 
 	_btnQuickSearch->setHighContrast(true);
-	_btnQuickSearch->setText(L""); // redraw
+	_btnQuickSearch->setText(""); // redraw
 	_btnQuickSearch->onEnter((ActionHandler)&InventoryState::btnQuickSearchApply);
 	_btnQuickSearch->setVisible(false);
 
@@ -381,7 +384,7 @@ void InventoryState::init()
 
 			// reset armor tooltip
 			_currentTooltip = "";
-			_txtItem->setText(L"");
+			_txtItem->setText("");
 
 			// reload done
 			_reloadUnit = false;
@@ -485,7 +488,7 @@ void InventoryState::edtSoldierPress(Action *)
 				// set the soldier's name without a statstring
 				_txtName->setText(s->getName());
 			}
-			
+
 		}
 	}
 }
@@ -544,7 +547,7 @@ void InventoryState::updateStats()
 	}
 	else
 	{
-		_txtPsi->setText(L"");
+		_txtPsi->setText("");
 	}
 }
 
@@ -846,8 +849,8 @@ void InventoryState::btnUnloadClick(Action *)
 {
 	if (_inv->unload())
 	{
-		_txtItem->setText(L"");
-		_txtAmmo->setText(L"");
+		_txtItem->setText("");
+		_txtAmmo->setText("");
 		_selAmmo->clear();
 		updateStats();
 		_game->getMod()->getSoundByDepth(0, Mod::ITEM_DROP)->play();
@@ -862,7 +865,7 @@ void InventoryState::btnQuickSearchToggle(Action *action)
 {
 	if (_btnQuickSearch->getVisible())
 	{
-		_btnQuickSearch->setText(L"");
+		_btnQuickSearch->setText("");
 		_btnQuickSearch->setVisible(false);
 		btnQuickSearchApply(action);
 	}
@@ -1268,7 +1271,7 @@ void InventoryState::calculateCurrentDamageTooltip()
 			totalDamage += rule->getPowerBonus(currentUnit);
 			//totalDamage -= rule->getPowerRangeReduction(distance * 16);
 			if (totalDamage < 0) totalDamage = 0;
-			std::wostringstream ss;
+			std::ostringstream ss;
 			ss << rule->getDamageType()->getRandomDamage(totalDamage, 1);
 			ss << "-";
 			ss << rule->getDamageType()->getRandomDamage(totalDamage, 2);
@@ -1308,17 +1311,17 @@ void InventoryState::invMouseOver(Action *)
 		{
 			currentDamageTooltipItemChanged = true;
 			_currentDamageTooltipItem = item;
-			_currentDamageTooltip = L"";
+			_currentDamageTooltip = "";
 		}
 	}
 	else
 	{
 		_currentDamageTooltipItem = nullptr;
-		_currentDamageTooltip = L"";
+		_currentDamageTooltip = "";
 	}
 	if (item != 0)
 	{
-		std::wstring itemName;
+		std::string itemName;
 		if (item->getUnit() && item->getUnit()->getStatus() == STATUS_UNCONSCIOUS)
 		{
 			itemName = item->getUnit()->getName(_game->getLanguage());
@@ -1328,7 +1331,7 @@ void InventoryState::invMouseOver(Action *)
 			auto save = _game->getSavedGame();
 			if (save->isResearched(item->getRules()->getRequirements()))
 			{
-				std::wstring text = tr(item->getRules()->getName());
+				std::string text = tr(item->getRules()->getName());
 				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 				{
 					if (!item->needsAmmoForSlot(slot))
@@ -1345,7 +1348,7 @@ void InventoryState::invMouseOver(Action *)
 					const auto& ammoName = ammo->getRules()->getNameAsAmmo();
 					if (!ammoName.empty())
 					{
-						text += L" ";
+						text += " ";
 						text += tr(ammoName);
 					}
 				}
@@ -1370,11 +1373,11 @@ void InventoryState::invMouseOver(Action *)
 
 		if (!altPressed && Options::showItemNameAndWeightInInventory)
 		{
-			std::wostringstream ss;
+			std::ostringstream ss;
 			ss << itemName;
-			ss << L" [";
+			ss << " [";
 			ss << item->getTotalWeight();
-			ss << L"]";
+			ss << "]";
 			_txtItem->setText(ss.str().c_str());
 		}
 		else
@@ -1387,13 +1390,13 @@ void InventoryState::invMouseOver(Action *)
 		if ((item->isWeaponWithAmmo() || hasSelfAmmo) && item->haveAnyAmmo())
 		{
 			updateTemplateButtons(false);
-			_txtAmmo->setText(L"");
+			_txtAmmo->setText("");
 		}
 		else
 		{
 			_mouseHoverItem = nullptr;
 			updateTemplateButtons(!_tu);
-			std::wstring s;
+			std::string s;
 			if (item->getAmmoQuantity() != 0 && item->getRules()->getBattleType() == BT_AMMO)
 			{
 				s = tr("STR_AMMO_ROUNDS_LEFT").arg(item->getAmmoQuantity());
@@ -1409,9 +1412,9 @@ void InventoryState::invMouseOver(Action *)
 	{
 		if (_currentTooltip.empty())
 		{
-			_txtItem->setText(L"");
+			_txtItem->setText("");
 		}
-		_txtAmmo->setText(L"");
+		_txtAmmo->setText("");
 		_selAmmo->clear();
 		updateTemplateButtons(!_tu);
 	}
@@ -1423,13 +1426,13 @@ void InventoryState::invMouseOver(Action *)
  */
 void InventoryState::invMouseOut(Action *)
 {
-	_txtItem->setText(L"");
-	_txtAmmo->setText(L"");
+	_txtItem->setText("");
+	_txtAmmo->setText("");
 	_selAmmo->clear();
 	_inv->setMouseOverItem(0);
 	_mouseHoverItem = nullptr;
 	_currentDamageTooltipItem = nullptr;
-	_currentDamageTooltip = L"";
+	_currentDamageTooltip = "";
 	updateTemplateButtons(!_tu);
 }
 
@@ -1463,7 +1466,7 @@ void InventoryState::onMoveGroundInventoryToBase(Action *)
 		// we're either not in a craft or not in a hangar (should not happen, but just in case)
 		return;
 	}
-		
+
 	Tile                     *groundTile = unit->getTile();
 	std::vector<BattleItem*> *groundInv = groundTile->getInventory();
 
@@ -1637,7 +1640,7 @@ void InventoryState::txtTooltipOut(Action *action)
 		if (_currentTooltip == action->getSender()->getTooltip())
 		{
 			_currentTooltip = "";
-			_txtItem->setText(L"");
+			_txtItem->setText("");
 		}
 	}
 }
@@ -1657,11 +1660,11 @@ void InventoryState::txtArmorTooltipIn(Action *action)
 			_currentTooltip = action->getSender()->getTooltip();
 			if (Options::showItemNameAndWeightInInventory)
 			{
-				std::wostringstream ss;
+				std::ostringstream ss;
 				ss << tr(_currentTooltip);
-				ss << L" [";
+				ss << " [";
 				ss << unit->getArmor()->getWeight();
-				ss << L"]";
+				ss << "]";
 				_txtItem->setText(ss.str().c_str());
 			}
 			else
@@ -1683,7 +1686,7 @@ void InventoryState::txtArmorTooltipOut(Action *action)
 		if (_currentTooltip == action->getSender()->getTooltip())
 		{
 			_currentTooltip = "";
-			_txtItem->setText(L"");
+			_txtItem->setText("");
 		}
 	}
 }

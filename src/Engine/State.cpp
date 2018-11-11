@@ -32,8 +32,6 @@
 #include "../Interface/TextEdit.h"
 #include "../Interface/TextList.h"
 #include "../Interface/BattlescapeButton.h"
-#include "../Interface/ArrowButton.h"
-#include "../Interface/Slider.h"
 #include "../Interface/ComboBox.h"
 #include "../Interface/Cursor.h"
 #include "../Interface/FpsCounter.h"
@@ -392,6 +390,18 @@ const LocalizedText &State::trAlt(const std::string &id, int alt) const
 LocalizedText State::tr(const std::string &id, unsigned n) const
 {
 	return _game->getLanguage()->getString(id, n);
+}
+
+/**
+ * Get a modifiable copy of the localized text for dictionary key @a id.
+ * This function forwards the call to Language::getString(const std::string &, SoldierGender).
+ * @param id The dictionary key to search for.
+ * @param gender Current soldier gender.
+ * @return A reference to the localized text.
+ */
+const LocalizedText &State::tr(const std::string &id, SoldierGender gender) const
+{
+	return _game->getLanguage()->getString(id, gender);
 }
 
 /**

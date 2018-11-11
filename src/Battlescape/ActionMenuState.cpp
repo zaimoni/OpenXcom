@@ -22,6 +22,7 @@
 #include "../Engine/LocalizedText.h"
 #include "../Engine/Action.h"
 #include "../Engine/Sound.h"
+#include "../Engine/Unicode.h"
 #include "../Savegame/BattleUnit.h"
 #include "../Savegame/BattleItem.h"
 #include "../Mod/Mod.h"
@@ -80,20 +81,6 @@ ActionMenuState::ActionMenuState(BattleAction *action, int x, int y) : _action(a
 		addItem(BA_THROW, "STR_THROW", &id, Options::keyBattleActionItem5);
 	}
 
-	if (!Options::showGunMeleeOnTop && weapon->getCostMelee().Time > 0)
-	{
-		// stun rod
-		if (weapon->getBattleType() == BT_MELEE && weapon->getDamageType()->ResistType == DT_STUN)
-		{
-			addItem(BA_HIT, "STR_STUN", &id, Options::keyBattleActionItem4);
-		}
-		else
-			// melee weapon
-		{
-			addItem(BA_HIT, "STR_HIT_MELEE", &id, Options::keyBattleActionItem4);
-		}
-	}
-
 	if (weapon->isPsiRequired() && _action->actor->getBaseStats()->psiSkill <= 0)
 	{
 		return;
@@ -141,7 +128,7 @@ ActionMenuState::ActionMenuState(BattleAction *action, int x, int y) : _action(a
 		}
 	}
 
-	if (Options::showGunMeleeOnTop && weapon->getCostMelee().Time > 0)
+	if (weapon->getCostMelee().Time > 0)
 	{
 		std::string name = weapon->getConfigMelee()->name;
 		if (name.empty())
@@ -219,12 +206,12 @@ void ActionMenuState::init()
  */
 void ActionMenuState::addItem(BattleActionType ba, const std::string &name, int *id, SDL_Keycode key)
 {
-	std::wstring s1, s2;
+	std::string s1, s2;
 	int acc = _action->actor->getFiringAccuracy(ba, _action->weapon, _game->getMod());
 	int tu = _action->actor->getActionTUs(ba, _action->weapon).Time;
 
 	if (ba == BA_THROW || ba == BA_AIMEDSHOT || ba == BA_SNAPSHOT || ba == BA_AUTOSHOT || ba == BA_LAUNCH || ba == BA_HIT)
-		s1 = tr("STR_ACCURACY_SHORT").arg(Text::formatPercentage(acc));
+		s1 = tr("STR_ACCURACY_SHORT").arg(Unicode::formatPercentage(acc));
 	s2 = tr("STR_TIME_UNITS_SHORT").arg(tu);
 	_actionMenu[*id]->setAction(ba, tr(name), s1, s2, tu);
 	_actionMenu[*id]->setVisible(true);
@@ -480,10 +467,10 @@ void ActionMenuState::btnActionMenuItemClick(Action *action)
 		if (newHitLog)
 		{
 			// start new hit log
-			_game->getSavedGame()->getSavedBattle()->hitLog.str(L"");
+			_game->getSavedGame()->getSavedBattle()->hitLog.str("");
 			_game->getSavedGame()->getSavedBattle()->hitLog.clear();
 			// log weapon
-			_game->getSavedGame()->getSavedBattle()->hitLog << tr("STR_HIT_LOG_WEAPON") << L": " << tr(weapon->getType()) << L"\n\n";
+			_game->getSavedGame()->getSavedBattle()->hitLog << tr("STR_HIT_LOG_WEAPON") << ": " << tr(weapon->getType()) << "\n\n";
 		}
 	}
 	action->getDetails()->type = SDL_FIRSTEVENT;

@@ -128,6 +128,7 @@ private:
 	std::map<std::string, Armor*> _armors;
 	std::map<std::string, ArticleDefinition*> _ufopaediaArticles;
 	std::map<std::string, RuleInventory*> _invs;
+	bool _inventoryOverlapsPaperdoll;
 	std::map<std::string, RuleResearch *> _research;
 	std::map<std::string, RuleManufacture *> _manufacture;
 	std::map<std::string, RuleSoldierTransformation *> _soldierTransformation;
@@ -157,7 +158,7 @@ private:
 	int _costEngineer, _costScientist, _timePersonnel, _initialFunding;
 	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayMelee, _aiUseDelayPsionic;
 	int _aiFireChoiceIntelCoeff, _aiFireChoiceAggroCoeff;
-	bool _aiExtendedFireModeChoice, _aiRespectMaxRange;
+	bool _aiExtendedFireModeChoice, _aiRespectMaxRange, _aiDestroyBaseFacilities;
 	int _maxLookVariant, _tooMuchSmokeThreshold, _customTrainingFactor, _minReactionAccuracy;
 	int _chanceToStopRetaliation;
 	bool _allowCountriesToCancelAlienPact;
@@ -182,7 +183,7 @@ private:
 	int _shortRadarRange;
 	int _defeatScore, _defeatFunds;
 	std::pair<std::string, int> _alienFuel;
-	std::string _fontName, _finalResearch, _psiUnlockResearch;
+	std::string _fontName, _finalResearch, _psiUnlockResearch, _destroyedFacility;
 	YAML::Node _startingBase;
 	GameTime _startingTime;
 	int _startingDifficulty;
@@ -412,6 +413,8 @@ public:
 	std::map<std::string, RuleInventory*> *getInventories();
 	/// Gets the ruleset for a specific inventory.
 	RuleInventory *getInventory(const std::string &id, bool error = false) const;
+	/// Gets whether or not the inventory slots overlap with the paperdoll button
+	bool getInventoryOverlapsPaperdoll() const { return _inventoryOverlapsPaperdoll; }
 	/// Gets max view distance in BattleScape.
 	int getMaxViewDistance() const { return _maxViewDistance; }
 	/// Gets threshold of darkness for LoS calculation.
@@ -454,6 +457,8 @@ public:
 	bool getAIExtendedFireModeChoice() const {return _aiExtendedFireModeChoice;}
 	/// Gets whether or not the AI should try to shoot beyond a weapon's max range, true = don't shoot if you can't
 	bool getAIRespectMaxRange() const {return _aiRespectMaxRange;}
+	/// Gets whether or not the AI should be allowed to continue destroying base facilities after first encountering XCom
+	bool getAIDestroyBaseFacilities() const { return _aiDestroyBaseFacilities; }
 	/// Gets maximum supported lookVariant (0-15)
 	int getMaxLookVariant() const  {return abs(_maxLookVariant) % 16;}
 	/// Gets the threshold for too much smoke (vanilla default = 10).
@@ -633,6 +638,7 @@ public:
 	/// Get global script data.
 	ScriptGlobal *getScriptGlobal() const;
 	RuleResearch *getFinalResearch() const;
+	RuleBaseFacility *getDestroyedFacility() const;
 	const std::map<int, std::string> *getMissionRatings() const;
 	const std::map<int, std::string> *getMonthlyRatings() const;
 	const std::map<std::string, std::string> &getFixedUserOptions() const;

@@ -27,7 +27,6 @@
 #include "../Engine/Font.h"
 #include "../Engine/Surface.h"
 #include "../Engine/SurfaceSet.h"
-#include "../Engine/Language.h"
 #include "../Engine/Music.h"
 #include "../Engine/GMCat.h"
 #include "../Engine/SoundSet.h"
@@ -279,11 +278,12 @@ public:
  * Creates an empty mod.
  */
 Mod::Mod() :
+	_inventoryOverlapsPaperdoll(false),
 	_maxViewDistance(20), _maxDarknessToSeeUnits(9), _maxStaticLightDistance(16), _maxDynamicLightDistance(24), _enhancedLighting(0),
 	_costHireEngineer(0), _costHireScientist(0),
 	_costEngineer(0), _costScientist(0), _timePersonnel(0), _initialFunding(0),
 	_aiUseDelayBlaster(3), _aiUseDelayFirearm(0), _aiUseDelayGrenade(3), _aiUseDelayMelee(0), _aiUseDelayPsionic(0),
-	_aiFireChoiceIntelCoeff(5), _aiFireChoiceAggroCoeff(5), _aiExtendedFireModeChoice(false), _aiRespectMaxRange(false),
+	_aiFireChoiceIntelCoeff(5), _aiFireChoiceAggroCoeff(5), _aiExtendedFireModeChoice(false), _aiRespectMaxRange(false), _aiDestroyBaseFacilities(false),
 	_maxLookVariant(0), _tooMuchSmokeThreshold(10), _customTrainingFactor(100), _minReactionAccuracy(0), _chanceToStopRetaliation(0),
 	_allowCountriesToCancelAlienPact(false), _kneelBonusGlobal(115), _oneHandedPenaltyGlobal(80),
 	_enableCloseQuartersCombat(0), _closeQuartersAccuracyGlobal(100), _closeQuartersTuCostGlobal(12), _closeQuartersEnergyCostGlobal(8),
@@ -1060,10 +1060,35 @@ void Mod::loadAll(const std::vector< std::pair< std::string, std::vector<std::st
 		j->second->updateCategories(&replacementRules);
 	}
 
+	// find out if paperdoll overlaps with inventory slots
+	int x1 = RuleInventory::PAPERDOLL_X;
+	int y1 = RuleInventory::PAPERDOLL_Y;
+	int w1 = RuleInventory::PAPERDOLL_W;
+	int h1 = RuleInventory::PAPERDOLL_H;
+	for (auto invCategory : _invs)
+	{
+		for (auto invSlot : *invCategory.second->getSlots())
+		{
+			int x2 = invCategory.second->getX() + (invSlot.x * RuleInventory::SLOT_W);
+			int y2 = invCategory.second->getY() + (invSlot.y * RuleInventory::SLOT_H);
+			int w2 = RuleInventory::SLOT_W;
+			int h2 = RuleInventory::SLOT_H;
+			if (x1 + w1 < x2 || x2 + w2 < x1 || y1 + h1 < y2 || y2 + h2 < y1)
+			{
+				// intersection is empty
+			}
+			else
+			{
+				_inventoryOverlapsPaperdoll = true;
+			}
+		}
+	}
+
 	afterLoadHelper("research", this, _research, &RuleResearch::afterLoad);
 	afterLoadHelper("items", this, _items, &RuleItem::afterLoad);
 	afterLoadHelper("manufacture", this, _manufacture, &RuleManufacture::afterLoad);
 	afterLoadHelper("units", this, _units, &Unit::afterLoad);
+	afterLoadHelper("facilities", this, _facilities, &RuleBaseFacility::afterLoad);
 
 	// fixed user options
 	if (!_fixedUserOptions.empty())
@@ -1484,6 +1509,7 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 	_alienFuel = doc["alienFuel"].as<std::pair<std::string, int> >(_alienFuel);
 	_fontName = doc["fontName"].as<std::string>(_fontName);
 	_psiUnlockResearch = doc["psiUnlockResearch"].as<std::string>(_psiUnlockResearch);
+	_destroyedFacility = doc["destroyedFacility"].as<std::string>(_destroyedFacility);
 
 	_aiUseDelayGrenade = doc["turnAIUseGrenade"].as<int>(_aiUseDelayGrenade);
 	_aiUseDelayBlaster = doc["turnAIUseBlaster"].as<int>(_aiUseDelayBlaster);
@@ -1499,6 +1525,7 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 		_aiFireChoiceAggroCoeff = nodeAI["fireChoiceAggroCoeff"].as<int>(_aiFireChoiceAggroCoeff);
 		_aiExtendedFireModeChoice = nodeAI["extendedFireModeChoice"].as<bool>(_aiExtendedFireModeChoice);
 		_aiRespectMaxRange = nodeAI["respectMaxRange"].as<bool>(_aiRespectMaxRange);
+		_aiDestroyBaseFacilities = nodeAI["destroyBaseFacilities"].as<bool>(_aiDestroyBaseFacilities);
 	}
 	_maxLookVariant = doc["maxLookVariant"].as<int>(_maxLookVariant);
 	_tooMuchSmokeThreshold = doc["tooMuchSmokeThreshold"].as<int>(_tooMuchSmokeThreshold);
@@ -1635,19 +1662,31 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 	}
 	for (YAML::const_iterator i = doc["extraSprites"].begin(); i != doc["extraSprites"].end(); ++i)
 	{
-		std::string type;
-		type = (*i)["type"].as<std::string>(type);
-		if (type.empty())
+		if ((*i)["type"] || (*i)["typeSingle"])
 		{
-			type = (*i)["typeSingle"].as<std::string>();
+			std::string type;
+			type = (*i)["type"].as<std::string>(type);
+			if (type.empty())
+			{
+				type = (*i)["typeSingle"].as<std::string>();
+			}
+			ExtraSprites *extraSprites = new ExtraSprites();
+			int modOffset = _modOffset;
+			// doesn't support modIndex
+			if (type == "TEXTURE.DAT")
+				modOffset = 0;
+			extraSprites->load(*i, modOffset);
+			_extraSprites[type].push_back(extraSprites);
 		}
-		ExtraSprites *extraSprites = new ExtraSprites();
-		int modOffset = _modOffset;
-		// doesn't support modIndex
-		if (type == "TEXTURE.DAT")
-			modOffset = 0;
-		extraSprites->load(*i, modOffset);
-		_extraSprites[type].push_back(extraSprites);
+		else if ((*i)["delete"])
+		{
+			std::string type = (*i)["delete"].as<std::string>();
+			std::map<std::string, std::vector<ExtraSprites*> >::iterator j = _extraSprites.find(type);
+			if (j != _extraSprites.end())
+			{
+				_extraSprites.erase(j);
+			}
+		}
 	}
 	for (YAML::const_iterator i = doc["customPalettes"].begin(); i != doc["customPalettes"].end(); ++i)
 	{
@@ -3159,6 +3198,19 @@ ScriptGlobal *Mod::getScriptGlobal() const
 RuleResearch *Mod::getFinalResearch() const
 {
 	return getResearch(_finalResearch, true);
+}
+
+RuleBaseFacility *Mod::getDestroyedFacility() const
+{
+	if (_destroyedFacility.empty())
+		return 0;
+
+	auto temp = getBaseFacility(_destroyedFacility, true);
+	if (temp->getSize() != 1)
+	{
+		throw Exception("Destroyed base facility definition must have size: 1");
+	}
+	return temp;
 }
 
 const std::map<int, std::string> *Mod::getMissionRatings() const

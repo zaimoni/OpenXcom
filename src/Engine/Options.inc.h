@@ -62,7 +62,6 @@ OPT bool twoHandedIndicator, twoHandedIndicatorInventory, minimapBorderIndicator
 OPT bool bleedingIndicator, knockOutIndicator, statisticalBulletConservation;
 
 OPT bool showItemNameAndWeightInInventory;
-OPT bool showGunMeleeOnTop;
 OPT bool removeWoundedFromTraining;
 OPT bool fullNightVision;
 OPT int nightVisionColor;
@@ -74,9 +73,6 @@ OPT bool ufoLandingAlert;
 OPT bool friendlyCraftEscort;
 OPT bool drawEnemyRadarCircles;
 OPT bool oneHandedUnloading;
-
-// Extra hidden flags (Meridian's build)
-OPT bool simpleUppercase;
 
 // System-specific options
 OPT bool swipeToTurn, holdToTurn;

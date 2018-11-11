@@ -21,6 +21,7 @@
 #include "../Mod/Mod.h"
 #include "../Engine/LocalizedText.h"
 #include "../Engine/Options.h"
+#include "../Engine/Unicode.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextEdit.h"
@@ -37,7 +38,6 @@
 #include "ChangeHeadquartersState.h"
 #include "../Geoscape/BuildNewBaseState.h"
 #include "../Engine/Action.h"
-#include "../Savegame/Craft.h"
 #include "BaseInfoState.h"
 #include "SoldiersState.h"
 #include "CraftsState.h"
@@ -218,7 +218,7 @@ void BasescapeState::init()
 		}
 	}
 
-	_txtFunds->setText(tr("STR_FUNDS").arg(Text::formatFunding(_game->getSavedGame()->getFunds())));
+	_txtFunds->setText(tr("STR_FUNDS").arg(Unicode::formatFunding(_game->getSavedGame()->getFunds())));
 
 	_btnNewBase->setVisible(_game->getSavedGame()->getBases()->size() < MiniBaseView::MAX_BASES);
 }
@@ -516,7 +516,7 @@ void BasescapeState::viewMiddleClick(Action *)
 void BasescapeState::viewMouseOver(Action *)
 {
 	BaseFacility *f = _view->getSelectedFacility();
-	std::wostringstream ss;
+	std::ostringstream ss;
 	if (f != 0)
 	{
 		if (f->getRules()->getCrafts() == 0 || f->getBuildTime() > 0)
@@ -528,7 +528,7 @@ void BasescapeState::viewMouseOver(Action *)
 			ss << tr(f->getRules()->getType());
 			if (f->getCraftForDrawing() != 0)
 			{
-				ss << L" " << tr("STR_CRAFT_").arg(f->getCraftForDrawing()->getName(_game->getLanguage()));
+				ss << " " << tr("STR_CRAFT_").arg(f->getCraftForDrawing()->getName(_game->getLanguage()));
 			}
 		}
 	}
@@ -541,7 +541,7 @@ void BasescapeState::viewMouseOver(Action *)
  */
 void BasescapeState::viewMouseOut(Action *)
 {
-	_txtFacility->setText(L"");
+	_txtFacility->setText("");
 }
 
 /**

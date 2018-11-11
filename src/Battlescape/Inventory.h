@@ -52,8 +52,7 @@ private:
 	std::map<int, std::map<int, int> > _stackLevel;
 	Surface *_stunIndicator, *_woundIndicator, *_burnIndicator, *_shockIndicator;
 	NumberText *_stackNumber;
-	std::wstring _searchString;
-	std::locale _myLocale;
+	std::string _searchString;
 	Timer *_animTimer;
 #ifdef __MOBILE__
 	Timer *_longPressTimer;
@@ -106,7 +105,7 @@ public:
 	/// Sets the currently selected item.
 	void setSelectedItem(BattleItem *item);
 	/// Sets the search string.
-	void setSearchString(const std::wstring &searchString);
+	void setSearchString(const std::string &searchString);
 	/// Gets the mouse over item.
 	BattleItem *getMouseOverItem() const;
 	/// Sets the mouse over item.
@@ -132,7 +131,7 @@ public:
 	/// Checks for item overlap.
 	static bool overlapItems(BattleUnit *unit, BattleItem *item, RuleInventory *slot, int x = 0, int y = 0);
 	/// Shows a warning message.
-	void showWarning(const std::wstring &msg);
+	void showWarning(const std::string &msg);
 	/// Animate surface.
 	void animate();
 	/// Get current animation frame for invenotry.

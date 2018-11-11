@@ -37,6 +37,7 @@
 #include "Options.h"
 #include "CrossPlatform.h"
 #include "FileMap.h"
+#include "Unicode.h"
 #include "../Menu/TestState.h"
 #include <algorithm>
 
@@ -82,6 +83,10 @@ Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0
 
 	// Set the window caption
 	/* SDL_WM_SetCaption(title.c_str(), 0); FIXME */
+
+	// Set up unicode
+	//SDL_EnableUNICODE(1); // doesn't exist in SDL 2.0
+	Unicode::getUtf8Locale();
 
 	// Create display
 	_screen = new Screen();
@@ -584,7 +589,7 @@ void Game::quit()
 	// Always save ironman
 	if (_save != 0 && _save->isIronman() && !_save->getName().empty())
 	{
-		std::string filename = CrossPlatform::sanitizeFilename(Language::wstrToFs(_save->getName())) + ".sav";
+		std::string filename = CrossPlatform::sanitizeFilename(Unicode::convUtf8ToPath(_save->getName())) + ".sav";
 		_save->save(filename, _mod);
 	}
 	_quit = true;
@@ -879,7 +884,7 @@ void Game::defaultLanguage()
 		std::string locale = CrossPlatform::getLocale();
 		std::string lang = locale.substr(0, locale.find_first_of('-'));
 		// Try to load full locale
-		Language::replace(path, defaultLang, locale);
+		Unicode::replace(path, defaultLang, locale);
 		if (CrossPlatform::fileExists(path))
 		{
 			currentLang = locale;
@@ -887,7 +892,7 @@ void Game::defaultLanguage()
 		else
 		{
 			// Try to load language locale
-			Language::replace(path, locale, lang);
+			Unicode::replace(path, locale, lang);
 			if (CrossPlatform::fileExists(path))
 			{
 				currentLang = lang;
@@ -902,7 +907,7 @@ void Game::defaultLanguage()
 	else
 	{
 		// Use options language
-		Language::replace(path, defaultLang, Options::language);
+		Unicode::replace(path, defaultLang, Options::language);
 		if (CrossPlatform::fileExists(path))
 		{
 			currentLang = Options::language;

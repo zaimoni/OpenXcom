@@ -357,7 +357,7 @@ void OptionsBaseState::txtTooltipOut(Action *action)
 {
 	if (_currentTooltip == action->getSender()->getTooltip())
 	{
-		_txtTooltip->setText(L"");
+		_txtTooltip->setText("");
 	}
 }
 

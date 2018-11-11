@@ -106,7 +106,7 @@ StartState::StartState() : _anim(0)
 
 	_cursor->initText(_font, _font, _lang);
 	_cursor->setColor(0);
-	_cursor->setText(L"_");
+	_cursor->setText("_");
 
 	_timer->onTimer((StateHandler)&StartState::animate);
 	_timer->start();
@@ -117,12 +117,12 @@ StartState::StartState() : _anim(0)
 
 	if (Options::reload)
 	{
-		addLine(L"Restarting...");
-		addLine(L"");
+		addLine("Restarting...");
+		addLine("");
 	}
 	else
 	{
-		addLine(Language::utf8ToWstr(CrossPlatform::getDosPath()) + L">openxcom");
+		addLine(CrossPlatform::getDosPath() + ">openxcom");
 	}
 }
 
@@ -179,21 +179,20 @@ void StartState::think()
 	case LOADING_FAILED:
 	{
 		CrossPlatform::flashWindow(_game->getScreen()->getWindow());
-		addLine(L"");
-		addLine(L"ERROR: " + Language::utf8ToWstr(error));
-		addLine(L"");
-		addLine(L"More details here: " + Language::utf8ToWstr(Logger::logFile()));
-		addLine(L"Make sure OpenXcom and any mods are installed correctly.");
-		addLine(L"");
+		addLine("");
+		addLine("ERROR: " + error);
+		addLine("");
+		addLine("More details here: " + Logger::logFile());
+		addLine("Make sure OpenXcom and any mods are installed correctly.");
+		addLine("");
 #ifdef __ANDROID__
-		std::wstring wsDataFolder(Language::utf8ToWstr(Options::getDataFolder()));
-		addLine(L"Android users: your data folder is located at:");
-		addLine(wsDataFolder);
-		addLine(L"(as reported by your system)");
-		addLine(L"");
+		addLine("Android users: your data folder is located at:");
+		addLine(Options::getDataFolder());
+		addLine("(as reported by your system)");
+		addLine("");
 		CrossPlatform::findDirDialog();
 #endif
-		addLine(L"Press any key to continue.");
+		addLine("Press any key to continue.");
 		loading = LOADING_DONE;
 		break;
 	}
@@ -244,8 +243,8 @@ void StartState::animate()
 
 	if (loading == LOADING_STARTED)
 	{
-		std::wostringstream ss;
-		ss << L"Loading OpenXcom " << Language::utf8ToWstr(OPENXCOM_VERSION_SHORT) << Language::utf8ToWstr(OPENXCOM_VERSION_GIT) << "...";
+		std::ostringstream ss;
+		ss << "Loading OpenXcom " << OPENXCOM_VERSION_SHORT << OPENXCOM_VERSION_GIT << "...";
 		if (Options::reload)
 		{
 			if (_anim == 2)
@@ -256,29 +255,29 @@ void StartState::animate()
 			switch (_anim)
 			{
 			case 1:
-				addLine(L"DOS/4GW Protected Mode Run-time  Version 1.9");
-				addLine(L"Copyright (c) Rational Systems, Inc. 1990-1993");
+				addLine("DOS/4GW Protected Mode Run-time  Version 1.9");
+				addLine("Copyright (c) Rational Systems, Inc. 1990-1993");
 				break;
 			case 6:
-				addLine(L"");
-				addLine(L"OpenXcom initialisation");
+				addLine("");
+				addLine("OpenXcom initialisation");
 				break;
 			case 7:
-				addLine(L"");
+				addLine("");
 				if (Options::mute)
 				{
-					addLine(L"No Sound Detected");
+					addLine("No Sound Detected");
 				}
 				else
 				{
-					addLine(L"SoundBlaster Sound Effects");
+					addLine("SoundBlaster Sound Effects");
 					if (Options::preferredMusic == MUSIC_MIDI)
-						addLine(L"General MIDI Music");
+						addLine("General MIDI Music");
 					else
-						addLine(L"SoundBlaster Music");
-					addLine(L"Base Port 220  Irq 7  Dma 1");
+						addLine("SoundBlaster Music");
+					addLine("Base Port 220  Irq 7  Dma 1");
 				}
-				addLine(L"");
+				addLine("");
 				break;
 			case 9:
 				addLine(ss.str());
@@ -293,9 +292,9 @@ void StartState::animate()
  * the cursor appropriately.
  * @param str Text line to add.
  */
-void StartState::addLine(const std::wstring &str)
+void StartState::addLine(const std::string &str)
 {
-	_output << L"\n" << str;
+	_output << "\n" << str;
 	_text->setText(_output.str());
 	int y = _text->getTextHeight() - _font->getHeight();
 	int x = _text->getTextWidth(y / _font->getHeight());

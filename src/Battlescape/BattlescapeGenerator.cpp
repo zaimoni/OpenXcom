@@ -40,7 +40,6 @@
 #include "../Savegame/AlienBase.h"
 #include "../Savegame/EquipmentLayoutItem.h"
 #include "../Engine/Game.h"
-#include "../Engine/LocalizedText.h"
 #include "../Engine/FileMap.h"
 #include "../Engine/Options.h"
 #include "../Engine/RNG.h"
@@ -1515,6 +1514,12 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 	}
 
 	mapFile.close();
+
+	// Add the craft offset to the positions of the items if we're loading a craft map
+	if (craft)
+	{
+		zoff += _craftZ;
+	}
 
 	if (_generateFuel)
 	{

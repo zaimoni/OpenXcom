@@ -137,8 +137,8 @@ CraftEquipmentState::CraftEquipmentState(Base *base, size_t craft) : _lstScroll(
 
 	_txtUsed->setText(tr("STR_SPACE_USED").arg(c->getSpaceUsed()));
 
-	std::wostringstream ss3;
-	ss3 << tr("STR_SOLDIERS_UC") << ">" << L'\x01'<< c->getNumSoldiers();
+	std::ostringstream ss3;
+	ss3 << tr("STR_SOLDIERS_UC") << ">" << Unicode::TOK_COLOR_FLIP << c->getNumSoldiers();
 	_txtCrew->setText(ss3.str());
 
 	// populate sort options
@@ -184,7 +184,7 @@ CraftEquipmentState::CraftEquipmentState(Base *base, size_t craft) : _lstScroll(
 		_categoryStrings.push_back("STR_UNASSIGNED");
 	}
 
-	_cbxFilterBy->setOptions(_categoryStrings);
+	_cbxFilterBy->setOptions(_categoryStrings, true);
 	_cbxFilterBy->setSelected(0);
 	_cbxFilterBy->onChange((ActionHandler)&CraftEquipmentState::cbxFilterByChange);
 
@@ -203,7 +203,7 @@ CraftEquipmentState::CraftEquipmentState(Base *base, size_t craft) : _lstScroll(
 
 	_lstEquipment->onMouseWheel((ActionHandler)&CraftEquipmentState::lstEquipmentMouseWheel);
 
-	_btnQuickSearch->setText(L""); // redraw
+	_btnQuickSearch->setText(""); // redraw
 	_btnQuickSearch->onEnter((ActionHandler)&CraftEquipmentState::btnQuickSearchApply);
 	_btnQuickSearch->setVisible(false);
 
@@ -261,7 +261,7 @@ void CraftEquipmentState::btnQuickSearchToggle(Action *action)
 {
 	if (_btnQuickSearch->getVisible())
 	{
-		_btnQuickSearch->setText(L"");
+		_btnQuickSearch->setText("");
 		_btnQuickSearch->setVisible(false);
 		btnQuickSearchApply(action);
 	}
@@ -286,9 +286,8 @@ void CraftEquipmentState::btnQuickSearchApply(Action *)
  */
 void CraftEquipmentState::initList()
 {
-	std::locale myLocale = CrossPlatform::testLocale();
-	std::wstring searchString = _btnQuickSearch->getText();
-	CrossPlatform::upperCase(searchString, myLocale);
+	std::string searchString = _btnQuickSearch->getText();
+	Unicode::upperCase(searchString);
 
 	size_t selIdx = _cbxFilterBy->getSelected();
 	if (selIdx == (size_t)-1)
@@ -345,10 +344,10 @@ void CraftEquipmentState::initList()
 		}
 
 		// quick search
-		if (searchString != L"")
+		if (!searchString.empty())
 		{
-			std::wstring projectName = tr((*i));
-			CrossPlatform::upperCase(projectName, myLocale);
+			std::string projectName = tr((*i));
+			Unicode::upperCase(projectName);
 			if (projectName.find(searchString) == std::string::npos)
 			{
 				continue;
@@ -360,7 +359,7 @@ void CraftEquipmentState::initList()
 			(_base->getStorageItems()->getItem(*i) > 0 || cQty > 0))
 		{
 			_items.push_back(*i);
-			std::wostringstream ss, ss2;
+			std::ostringstream ss, ss2;
 			if (_game->getSavedGame()->getMonthsPassed() > -1)
 			{
 				ss << _base->getStorageItems()->getItem(*i);
@@ -371,10 +370,10 @@ void CraftEquipmentState::initList()
 			}
 			ss2 << cQty;
 
-			std::wstring s = tr(*i);
+			std::string s = tr(*i);
 			if (rule->getBattleType() == BT_AMMO)
 			{
-				s.insert(0, L"  ");
+				s.insert(0, "  ");
 			}
 			_lstEquipment->addRow(3, s.c_str(), ss.str().c_str(), ss2.str().c_str());
 
@@ -559,7 +558,7 @@ void CraftEquipmentState::updateQuantity()
 	{
 		cQty = c->getItems()->getItem(_items[_sel]);
 	}
-	std::wostringstream ss, ss2;
+	std::ostringstream ss, ss2;
 	if (_game->getSavedGame()->getMonthsPassed() > -1)
 	{
 		ss << _base->getStorageItems()->getItem(_items[_sel]);
@@ -853,7 +852,7 @@ void CraftEquipmentState::saveGlobalLoadout(int index)
 void CraftEquipmentState::loadGlobalLoadout(int index)
 {
 	// reset filters and reload the full equipment list
-	_btnQuickSearch->setText(L"");
+	_btnQuickSearch->setText("");
 	_cbxFilterBy->setSelected(0);
 	initList();
 
@@ -874,7 +873,7 @@ void CraftEquipmentState::loadGlobalLoadout(int index)
 
 	// lastly check and report what's missing
 	Craft *c = _base->getCrafts()->at(_craft);
-	std::wstring craftName = c->getName(_game->getLanguage());
+	std::string craftName = c->getName(_game->getLanguage());
 	std::vector<ReequipStat> _missingItems;
 	for (auto& templateItem : *tmpl->getContents())
 	{

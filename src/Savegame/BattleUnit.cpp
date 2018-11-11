@@ -2083,6 +2083,10 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
 		}
 		return;
 	}
+	else
+	{
+		recoverTimeUnits();
+	}
 
 	// transition between stages, don't do damage or panic
 	if (!fullProcess)
@@ -2095,7 +2099,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
 		return;
 	}
 
-	updateUnitStats(true, true);
+	updateUnitStats(false, true);
 }
 
 /**
@@ -3144,7 +3148,7 @@ const Armor *BattleUnit::getArmor() const
  * Set the unit's name.
  * @param name Name
  */
-void BattleUnit::setName(const std::wstring &name)
+void BattleUnit::setName(const std::string &name)
 {
 	_name = name;
 }
@@ -3157,11 +3161,11 @@ void BattleUnit::setName(const std::wstring &name)
  * @param debugAppendId Append unit ID to name for debug purposes.
  * @return name Widecharstring of the unit's name.
  */
-std::wstring BattleUnit::getName(Language *lang, bool debugAppendId) const
+std::string BattleUnit::getName(Language *lang, bool debugAppendId) const
 {
 	if (_type != "SOLDIER" && lang != 0)
 	{
-		std::wstring ret;
+		std::string ret;
 
 		if (_type.find("STR_") != std::string::npos)
 			ret = lang->getString(_type);
@@ -3170,8 +3174,8 @@ std::wstring BattleUnit::getName(Language *lang, bool debugAppendId) const
 
 		if (debugAppendId)
 		{
-			std::wostringstream ss;
-			ss << ret << L" " << _id;
+			std::ostringstream ss;
+			ss << ret << " " << _id;
 			ret = ss.str();
 		}
 		return ret;

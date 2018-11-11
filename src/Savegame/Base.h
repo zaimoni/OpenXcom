@@ -38,6 +38,7 @@ class BaseFacility;
 class ResearchProject;
 class Production;
 class Vehicle;
+class Ufo;
 
 /**
  * Represents a player base on the globe.
@@ -80,7 +81,7 @@ public:
 	/// Gets the base's type.
 	std::string getType() const;
 	/// Gets the base's name.
-	std::wstring getName(Language *lang = 0) const;
+	std::string getName(Language *lang = 0) const;
 	/// Gets the base's marker sprite.
 	int getMarker() const;
 	/// Gets the base's facilities.
@@ -197,7 +198,8 @@ public:
 	int getUsedTraining() const;
 	/// Gets the base's total available training space.
 	int getAvailableTraining() const;
-	/// Gets the total amount of Containment Space
+	/// Gets the base's total free training space.
+	int getFreeTrainingSpace() const;
 	/// Gets the amount of free Containment space.
 	int getFreeContainment(int prisonType) const;
 	/// Gets the total amount of Containment space.
@@ -222,6 +224,10 @@ public:
 	std::vector<BaseFacility*> *getDefenses();
 	/// Gets the base's vehicles.
 	std::vector<Vehicle*> *getVehicles();
+	/// Damage and/or destroy facilities after a missile impact.
+	void damageFacilities(Ufo *ufo);
+	/// Damage a given facility.
+	int damageFacility(BaseFacility *toBeDamaged);
 	/// Destroys all disconnected facilities in the base.
 	void destroyDisconnectedFacilities();
 	/// Gets a sorted list of the facilities(=iterators) NOT connected to the Access Lift.
