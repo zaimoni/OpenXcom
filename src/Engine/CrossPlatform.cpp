@@ -809,7 +809,7 @@ std::pair<std::string, std::string> timeToString(time_t time)
 	struct tm *timeinfo = localtime(&(time));
 #ifdef __ANDROID__
 	/* oh android, why do you have to be so broken...*/
-	std::wostringstream aLocalDate, aLocalTime;
+	std::ostringstream aLocalDate, aLocalTime;
 
 	/*char cLocalDate[25], cLocalTime[25];
 	strftime(cLocalDate, 25, "%Y-%m-%d", timeinfo);
@@ -821,28 +821,28 @@ std::pair<std::string, std::string> timeToString(time_t time)
 	}*/
 	
 	aLocalDate << (1900 + timeinfo->tm_year);
-	aLocalDate << L"-";
+	aLocalDate << "-";
 	if (timeinfo->tm_mon < 9) 
 	{ 
-		aLocalDate << L"0";
+		aLocalDate << "0";
 	}
 	aLocalDate << timeinfo->tm_mon + 1;
-	aLocalDate << L"-";
+	aLocalDate << "-";
 	if (timeinfo->tm_mday < 10)
 	{
-		aLocalDate << L"0";
+		aLocalDate << "0";
 	}
 	aLocalDate << timeinfo->tm_mday;
 	
 	if (timeinfo->tm_hour < 10)
 	{
-		aLocalTime << L"0";
+		aLocalTime << "0";
 	}
 	aLocalTime << timeinfo->tm_hour;
-	aLocalTime << L":";
+	aLocalTime << ":";
 	if (timeinfo->tm_min < 10)
 	{
-		aLocalTime << L"0";
+		aLocalTime << "0";
 	}
 	aLocalTime << timeinfo->tm_min;
 	return std::make_pair(aLocalDate.str(), aLocalTime.str());
