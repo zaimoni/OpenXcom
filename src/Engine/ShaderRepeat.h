@@ -34,13 +34,14 @@ public:
 	typedef helper::ShaderBase<const Pixel> _base;
 	friend struct helper::controler<ShaderRepeat<Pixel> >;
 
-	inline ShaderRepeat(const Surface* s):
+	inline ShaderRepeat(SurfaceRaw<Pixel> s):
 		_base(s)
 	{
 		setOffset(0, 0);
 	}
-	inline ShaderRepeat(const std::vector<Pixel>& f, int max_x, int max_y):
-		_base(f, max_x, max_y)
+
+	inline ShaderRepeat(SurfaceRaw<const Pixel> s):
+		_base(s)
 	{
 		setOffset(0, 0);
 	}
@@ -125,16 +126,16 @@ struct controler<ShaderRepeat<Pixel> >
 	inline void set_y(const int& begin, const int&)
 	{
 		_curr_y = (_curr_y + begin)%_size_y;
-		_ptr_curr_y += (_range_domain.beg_y+_curr_y)*_pitch;
+		_ptr_curr_y = pointerByteOffset(_ptr_curr_y, (_range_domain.beg_y + _curr_y) * _pitch);
 	}
 	inline void inc_y()
 	{
 		++_curr_y;
-		_ptr_curr_y += _pitch;
+		_ptr_curr_y = pointerByteOffset(_ptr_curr_y, _pitch);
 		if (_curr_y == _size_y)
 		{
 			_curr_y = 0;
-			_ptr_curr_y -= _size_y*_pitch;
+			_ptr_curr_y = pointerByteOffset(_ptr_curr_y, -_size_y*_pitch);
 		}
 	}
 

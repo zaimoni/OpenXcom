@@ -360,16 +360,16 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	// Set up objects
 	RuleInterface *dogfightInterface = _game->getMod()->getInterface("dogfight");
 
-	Surface *graphic;
-	graphic = _game->getMod()->getSurface("INTERWIN.DAT");
-	graphic->setX(0);
-	graphic->setY(0);
-	graphic->getCrop()->x = 0;
-	graphic->getCrop()->y = 0;
-	graphic->getCrop()->w = _window->getWidth();
-	graphic->getCrop()->h = _window->getHeight();
-	_window->drawRect(graphic->getCrop(), 15);
-	graphic->blit(_window);
+	auto crop = _game->getMod()->getSurface("INTERWIN.DAT")->getCrop();
+	crop.setX(0);
+	crop.setY(0);
+	crop.getCrop()->x = 0;
+	crop.getCrop()->y = 0;
+	crop.getCrop()->w = _window->getWidth();
+	crop.getCrop()->h = _window->getHeight();
+	_window->drawRect(crop.getCrop(), 15);
+	crop.blit(_window);
+
 	if (_ufoIsAttacking)
 	{
 		_window->drawRect(_btnStandoff->getX() + 2, _btnStandoff->getY() + 2, _btnStandoff->getWidth() - 4, _btnStandoff->getHeight() - 4, dogfightInterface->getElement("standoffButton")->color + 4);
@@ -386,26 +386,28 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 		_window->drawRect(_btnMinimize->getX() + 1 + offset, _btnMinimize->getY() + 1, _btnMinimize->getWidth() - 2 - offset, _btnMinimize->getHeight() - 2, dogfightInterface->getElement("minimizeButtonDummy")->color + 4);
 	}
 
-	_preview->drawRect(graphic->getCrop(), 15);
-	graphic->getCrop()->y = dogfightInterface->getElement("previewTop")->y;
-	graphic->getCrop()->h = dogfightInterface->getElement("previewTop")->h;
-	graphic->blit(_preview);
-	graphic->setY(_window->getHeight() - dogfightInterface->getElement("previewBot")->h);
-	graphic->getCrop()->y = dogfightInterface->getElement("previewBot")->y;
-	graphic->getCrop()->h = dogfightInterface->getElement("previewBot")->h;
-	graphic->blit(_preview);
+	_preview->drawRect(crop.getCrop(), 15);
+	crop.getCrop()->y = dogfightInterface->getElement("previewTop")->y;
+	crop.getCrop()->h = dogfightInterface->getElement("previewTop")->h;
+	crop.blit(_preview);
+	crop.setY(_window->getHeight() - dogfightInterface->getElement("previewBot")->h);
+	crop.getCrop()->y = dogfightInterface->getElement("previewBot")->y;
+	crop.getCrop()->h = dogfightInterface->getElement("previewBot")->h;
+	crop.blit(_preview);
+
 	if (ufo->getRules()->getModSprite().empty())
 	{
-		graphic->getCrop()->y = dogfightInterface->getElement("previewMid")->y + dogfightInterface->getElement("previewMid")->h * _ufo->getRules()->getSprite();
-		graphic->getCrop()->h = dogfightInterface->getElement("previewMid")->h;
+		crop.getCrop()->y = dogfightInterface->getElement("previewMid")->y + dogfightInterface->getElement("previewMid")->h * _ufo->getRules()->getSprite();
+		crop.getCrop()->h = dogfightInterface->getElement("previewMid")->h;
 	}
 	else
 	{
-		graphic = _game->getMod()->getSurface(ufo->getRules()->getModSprite());
+		crop = _game->getMod()->getSurface(ufo->getRules()->getModSprite())->getCrop();
 	}
-	graphic->setX(dogfightInterface->getElement("previewTop")->x);
-	graphic->setY(dogfightInterface->getElement("previewTop")->h);
-	graphic->blit(_preview);
+	crop.setX(dogfightInterface->getElement("previewTop")->x);
+	crop.setY(dogfightInterface->getElement("previewTop")->h);
+	crop.blit(_preview);
+
 	_preview->setVisible(false);
 	_preview->onMouseClick((ActionHandler)&DogfightState::previewClick);
 
@@ -454,9 +456,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 
 	// Create the minimized dogfight icon.
 	Surface *frame = set->getFrame(_craft->getRules()->getSprite());
-	frame->setX(0);
-	frame->setY(0);
-	frame->blit(_btnMinimizedIcon);
+	frame->blitNShade(_btnMinimizedIcon, 0, 0);
 	_btnMinimizedIcon->onMouseClick((ActionHandler)&DogfightState::btnMinimizedIconClick);
 	_btnMinimizedIcon->setVisible(false);
 
@@ -519,10 +519,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 
 		// Draw weapon icon
 		frame = set->getFrame(w->getRules()->getSprite() + 5);
-
-		frame->setX(0);
-		frame->setY(0);
-		frame->blit(weapon);
+		frame->blitNShade(weapon, 0, 0);
 
 		// Draw ammo
 		std::ostringstream ss;
@@ -574,9 +571,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 
 	// Draw damage indicator.
 	frame = set->getFrame(_craft->getRules()->getSprite() + 11);
-	frame->setX(0);
-	frame->setY(0);
-	frame->blit(_craftSprite);
+	frame->blitNShade(_craftSprite, 0, 0);
 
 	_craftDamageAnimTimer->onTimer((StateHandler)&DogfightState::animateCraftDamage);
 
