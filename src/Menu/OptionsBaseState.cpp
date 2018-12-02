@@ -233,7 +233,7 @@ void OptionsBaseState::btnOkClick(Action *)
 	{
 		Options::mapResources();
 	}
-	_game->loadLanguage(Options::language);
+	_game->loadLanguages();
 	SDL_SetWindowGrab(_game->getScreen()->getWindow(), (Options::captureMouse)?SDL_TRUE:SDL_FALSE); //Breaks stuff. Hard.
 	CrossPlatform::setSystemUI();
 	_game->getScreen()->resetDisplay();

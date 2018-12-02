@@ -133,7 +133,7 @@ public:
 	/// Loads a general image file.
 	void loadImage(const std::string &filename);
 	/// Clears the surface's contents eith a specified colour.
-	void clear(Uint32 color = 0);
+	void clear();
 	/// Offsets the surface's colors by a set amount.
 	void offset(int off, int min = -1, int max = -1, int mul = 1);
 	/// Offsets the surface's colors in a color block.
@@ -370,30 +370,42 @@ public:
 
 	/// Constructor, SFINAE enable it only for `Uint8`
 	template<typename = std::enable_if<std::is_same<Uint8, Pixel>::value, void>>
-	SurfaceRaw(Surface* surf) : SurfaceRaw{ surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() }
+	SurfaceRaw(Surface* surf) : SurfaceRaw{ }
 	{
-
+		if (surf)
+		{
+			*this = SurfaceRaw{ surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() };
+		}
 	}
 
 	/// Constructor, SFINAE enable it only for `Uint8`
 	template<typename = std::enable_if<std::is_same<const Uint8, Pixel>::value, void>>
-	SurfaceRaw(const Surface* surf) : SurfaceRaw{ surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() }
+	SurfaceRaw(const Surface* surf) : SurfaceRaw{ }
 	{
-
+		if (surf)
+		{
+			*this = SurfaceRaw{ surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() };
+		}
 	}
 
 	/// Constructor, SFINAE enable it only for `Uint8`
 	template<typename = std::enable_if<std::is_same<Uint8, Pixel>::value, void>>
-	SurfaceRaw(SDL_Surface* surf) : SurfaceRaw{ (Pixel*)surf->pixels, surf->w, surf->h, surf->pitch }
+	SurfaceRaw(SDL_Surface* surf) : SurfaceRaw{ }
 	{
-
+		if (surf)
+		{
+			*this = SurfaceRaw{ (Pixel*)surf->pixels, surf->w, surf->h, surf->pitch };
+		}
 	}
 
 	/// Constructor, SFINAE enable it only for `const Uint8`
 	template<typename = std::enable_if<std::is_same<const Uint8, Pixel>::value, void>>
-	SurfaceRaw(const SDL_Surface* surf) : SurfaceRaw{ (Pixel*)surf->pixels, surf->w, surf->h, surf->pitch }
+	SurfaceRaw(const SDL_Surface* surf) : SurfaceRaw{ }
 	{
-
+		if (surf)
+		{
+			*this = SurfaceRaw{ (Pixel*)surf->pixels, surf->w, surf->h, surf->pitch };
+		}
 	}
 
 	/// Constructor, SFINAE enable it only for non const `PixelType`
