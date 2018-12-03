@@ -140,7 +140,7 @@ OptionsSystemState::OptionsSystemState(OptionsOrigin origin) : OptionsBaseState(
 		mouseMode.push_back("STR_MOUSE_EXTENDED");
     }
 
-	_cbxSystemUI->setOptions(sysUI);
+	_cbxSystemUI->setOptions(sysUI, true);
 	_cbxSystemUI->setSelected((int)Options::systemUI);
 	_cbxSystemUI->onChange((ActionHandler)&OptionsSystemState::cbxSystemUIChange);
 	_cbxSystemUI->setTooltip("STR_SYSTEM_UI_DESC");
@@ -149,7 +149,7 @@ OptionsSystemState::OptionsSystemState(OptionsOrigin origin) : OptionsBaseState(
         
     _txtMouseMode->setText(tr("STR_MOUSE_MODE"));
 
-    _cbxMouseMode->setOptions(mouseMode);
+    _cbxMouseMode->setOptions(mouseMode, true);
     _cbxMouseMode->setSelected((int)Options::mouseMode);
     _cbxMouseMode->onChange((ActionHandler)&OptionsSystemState::cbxMouseModeChange);
     _cbxMouseMode->setTooltip("STR_MOUSE_MODE_DESC");
