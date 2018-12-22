@@ -4241,7 +4241,7 @@ void TileEngine::addMovingUnit(BattleUnit* unit)
 {
 	if (_movingUnit != nullptr)
 	{
-		throw Exception("There is already TileEngine movingUnit");
+		_movingUnitPrev.push_back(_movingUnit);
 	}
 	_movingUnit = unit;
 }
@@ -4255,7 +4255,15 @@ void TileEngine::removeMovingUnit(BattleUnit* unit)
 	{
 		throw Exception("Wrong unit is removed from TileEngine movingUnit");
 	}
-	_movingUnit = nullptr;
+	if (_movingUnitPrev.empty())
+	{
+		_movingUnit = nullptr;
+	}
+	else
+	{
+		_movingUnit = _movingUnitPrev.back();
+		_movingUnitPrev.pop_back();
+	}
 }
 
 /**

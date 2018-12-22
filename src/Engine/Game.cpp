@@ -59,6 +59,8 @@ Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0
 	// Initialize SDL
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
+		Log(LOG_ERROR) << SDL_GetError();
+		Log(LOG_WARNING) << "No video detected, quit.";
 		throw Exception(SDL_GetError());
 	}
 	Log(LOG_INFO) << "SDL initialized successfully.";
@@ -100,7 +102,7 @@ Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0
 
 	// Create cursor
 	_cursor = new Cursor(9, 13);
-	
+
 	// Create invisible hardware cursor to workaround bug with absolute positioning pointing devices
 	SDL_ShowCursor(SDL_ENABLE);
 	Uint8 cursor = 0;
@@ -524,7 +526,7 @@ void Game::run()
 					break;
 			}
 		}
-		
+
 		// Process rendering
 		if (runningState != PAUSED)
 		{
@@ -570,7 +572,7 @@ void Game::run()
 		// Save on CPU
 		switch (runningState)
 		{
-			case RUNNING: 
+			case RUNNING:
 				SDL_Delay(1); //Save CPU from going 100%
 				break;
 			case SLOWED: case PAUSED:

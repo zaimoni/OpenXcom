@@ -267,7 +267,7 @@ int Pathfinding::getTUCost(Position startPosition, int direction, Position *endP
 	bool fellDown = false;
 	bool triedStairs = false;
 	int size = _unit->getArmor()->getSize() - 1;
-	bool armorAllowsStrafing = _unit->getArmor()->allowsStrafing();
+	bool armorAllowsStrafing = _unit->getArmor()->allowsStrafing(!size);
 	int cost = 0;
 	int numberOfPartsGoingUp = 0;
 	int numberOfPartsGoingDown = 0;
@@ -464,11 +464,6 @@ int Pathfinding::getTUCost(Position startPosition, int direction, Position *endP
 					// Armor doesn't support strafing, turn off strafe move and continue
 					_strafeMove = false;
 				}
-				else if (size) {
-					// 4-tile units not supported.
-					// Turn off strafe move and continue
-					_strafeMove = false;
-				}
 				else
 				{
 					if (std::min(abs(8 + direction - _unit->getDirection()), std::min( abs(_unit->getDirection() - direction), abs(8 + _unit->getDirection() - direction))) > 2) {
@@ -602,13 +597,13 @@ bool Pathfinding::isBlocked(Tile *tile, const int part, BattleUnit *missileTarge
 		{
 			BattleUnit *unit = tile->getUnit();
 			if (unit == _unit || unit == missileTarget || unit->isOut()) return false;
-			if (missileTarget && unit != missileTarget && unit->getFaction() == FACTION_HOSTILE) 
+			if (missileTarget && unit != missileTarget && unit->getFaction() == FACTION_HOSTILE)
 				return true;			// AI pathfinding with missiles shouldn't path through their own units
 			if (_unit)
 			{
 				if (_unit->getFaction() == FACTION_PLAYER && unit->getVisible()) return true;		// player know all visible units
 				if (_unit->getFaction() == unit->getFaction()) return true;
-				if (_unit->getFaction() == FACTION_HOSTILE && 
+				if (_unit->getFaction() == FACTION_HOSTILE &&
 					std::find(_unit->getUnitsSpottedThisTurn().begin(), _unit->getUnitsSpottedThisTurn().end(), unit) != _unit->getUnitsSpottedThisTurn().end()) return true;
 			}
 		}
@@ -915,7 +910,7 @@ bool Pathfinding::previewPath(bool bRemove)
 		_save->getBattleGame()->setTUReserved(BA_AUTOSHOT);
 	}
 	_modifierUsed = (SDL_GetModState() & KMOD_CTRL) != 0;
-	bool running = Options::strafe && _modifierUsed && _unit->getArmor()->getSize() == 1 && _unit->getArmor()->allowsRunning() && _path.size() > 1;
+	bool running = Options::strafe && _modifierUsed && _unit->getArmor()->allowsRunning(_unit->getArmor()->getSize() == 1) && _path.size() > 1;
 	for (std::vector<int>::reverse_iterator i = _path.rbegin(); i != _path.rend(); ++i)
 	{
 		int dir = *i;

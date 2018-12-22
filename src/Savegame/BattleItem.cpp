@@ -586,7 +586,7 @@ bool BattleItem::occupiesSlot(int x, int y, BattleItem *item) const
  * Gets the item's floor sprite.
  * @return Return current floor sprite.
  */
-Surface *BattleItem::getFloorSprite(SurfaceSet *set) const
+Surface *BattleItem::getFloorSprite(SurfaceSet *set, int animFrame, int shade) const
 {
 	int i = _rules->getFloorSprite();
 	if (i != -1)
@@ -599,15 +599,15 @@ Surface *BattleItem::getFloorSprite(SurfaceSet *set) const
 		}
 
 		ModScript::SelectItemSprite::Output arg{ i, 0 };
-		ModScript::SelectItemSprite::Worker work{ this, BODYPART_ITEM_FLOOR, 0, 0 };
+		ModScript::SelectItemSprite::Worker work{ this, BODYPART_ITEM_FLOOR, animFrame, shade };
 		work.execute(_rules->getScript<ModScript::SelectItemSprite>(), arg);
 
-		surf = set->getFrame(arg.getFirst());
-		if (surf == nullptr)
+		auto newSurf = set->getFrame(arg.getFirst());
+		if (newSurf == nullptr)
 		{
-			throw Exception("Invlid surface set 'FLOOROB.PCK' for item '" + _rules->getType() + "': not enough frames");
+			newSurf = surf;
 		}
-		return surf;
+		return newSurf;
 	}
 	else
 	{
@@ -619,7 +619,7 @@ Surface *BattleItem::getFloorSprite(SurfaceSet *set) const
  * Gets the item's inventory sprite.
  * @return Return current inventory sprite.
  */
-Surface *BattleItem::getBigSprite(SurfaceSet *set) const
+Surface *BattleItem::getBigSprite(SurfaceSet *set, int animFrame) const
 {
 	int i = _rules->getBigSprite();
 	if (i != -999)
@@ -632,15 +632,15 @@ Surface *BattleItem::getBigSprite(SurfaceSet *set) const
 		}
 
 		ModScript::SelectItemSprite::Output arg{ i, 0 };
-		ModScript::SelectItemSprite::Worker work{ this, BODYPART_ITEM_INVENTORY, 0, 0 };
+		ModScript::SelectItemSprite::Worker work{ this, BODYPART_ITEM_INVENTORY, animFrame, 0 };
 		work.execute(_rules->getScript<ModScript::SelectItemSprite>(), arg);
 
-		surf = set->getFrame(arg.getFirst());
-		if (surf == nullptr)
+		auto newSurf = set->getFrame(arg.getFirst());
+		if (newSurf == nullptr)
 		{
-			throw Exception("Invlid surface set 'BIGOBS.PCK' for item '" + _rules->getType() + "': not enough frames");
+			newSurf = surf;
 		}
-		return surf;
+		return newSurf;
 	}
 	else
 	{
