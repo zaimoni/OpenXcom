@@ -1674,7 +1674,11 @@ void BattlescapeState::btnSpecialClick(Action *action)
 		bool middleClick = action->getDetails()->button.button == SDL_BUTTON_MIDDLE;
 		handleItemClick(specialItem, middleClick);
 	}
-	action->getDetails()->type = SDL_NOEVENT; // consume the event
+	action->getDetails()->type = SDL_FIRSTEVENT; // consume the event
+#ifdef __MOBILE__
+	// Seems we have an issue with a timer.
+	_longPressTimer->stop();
+#endif
 }
 
 /**
