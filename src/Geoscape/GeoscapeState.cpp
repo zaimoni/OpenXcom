@@ -764,14 +764,19 @@ void GeoscapeState::timeAdvance()
 		{
 		case TIME_1MONTH:
 			time1Month();
+			[[gnu::fallthrough]];
 		case TIME_1DAY:
 			time1Day();
+			[[gnu::fallthrough]];
 		case TIME_1HOUR:
 			time1Hour();
+			[[gnu::fallthrough]];
 		case TIME_30MIN:
 			time30Minutes();
+			[[gnu::fallthrough]];
 		case TIME_10MIN:
 			time10Minutes();
+			[[gnu::fallthrough]];
 		case TIME_5SEC:
 			time5Seconds();
 		}
@@ -1405,7 +1410,7 @@ void GeoscapeState::time10Minutes()
 				if ((*j)->getDestination() == 0 && (*j)->getCraftStats().sightRange > 0)
 				{
 					double range = Nautical((*j)->getCraftStats().sightRange);
-					for (std::vector<AlienBase*>::iterator b = _game->getSavedGame()->getAlienBases()->begin(); b != _game->getSavedGame()->getAlienBases()->end(); b++)
+					for (std::vector<AlienBase*>::iterator b = _game->getSavedGame()->getAlienBases()->begin(); b != _game->getSavedGame()->getAlienBases()->end(); ++b)
 					{
 						if ((*j)->getDistance(*b) <= range)
 						{
@@ -1650,18 +1655,10 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
 		bool noFollowers = site->getFollowers()->empty();
 		if (site->getRules()->despawnEvenIfTargeted())
 		{
-			for (std::vector<Target*>::iterator k = site->getFollowers()->begin(); k != site->getFollowers()->end();)
+			std::vector<Craft*> followers = site->getCraftFollowers();
+			for (std::vector<Craft*>::iterator k = followers.begin(); k != followers.end(); ++k)
 			{
-				Craft* c = dynamic_cast<Craft*>(*k);
-				if (c != 0)
-				{
-					c->returnToBase();
-					k = site->getFollowers()->begin();
-				}
-				else
-				{
-					++k;
-				}
+				(*k)->returnToBase();
 			}
 			if (!noFollowers)
 			{
@@ -1844,6 +1841,7 @@ void GeoscapeState::time30Minutes()
 		{
 		case Ufo::LANDED:
 			points *= 2;
+			[[gnu::fallthrough]];
 		case Ufo::FLYING:
 			// Get area
 			for (std::vector<Region*>::iterator k = _game->getSavedGame()->getRegions()->begin(); k != _game->getSavedGame()->getRegions()->end(); ++k)
@@ -1873,6 +1871,7 @@ void GeoscapeState::time30Minutes()
 					case 2:	// hyper-wave decoder
 						(*u)->setHyperDetected(true);
 						hyperdetected = true;
+						[[gnu::fallthrough]];
 					case 1: // conventional radar
 						detected = true;
 					}

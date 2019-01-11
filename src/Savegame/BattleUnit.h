@@ -94,6 +94,7 @@ private:
 	std::unordered_set<Tile *> _visibleTilesLookup;
 	int _tu, _energy, _health, _morale, _stunlevel;
 	bool _kneeled, _floating, _dontReselect;
+	bool _haveNoFloorBelow = false;
 	int _currentArmor[SIDE_MAX], _maxArmor[SIDE_MAX];
 	int _fatalWounds[BODYPART_MAX];
 	int _fire;
@@ -178,7 +179,7 @@ public:
 	/// Creates a BattleUnit from solder.
 	BattleUnit(Soldier *soldier, int depth, int maxViewDistance);
 	/// Creates a BattleUnit from unit.
-	BattleUnit(Unit *unit, UnitFaction faction, int id, Armor *armor, StatAdjustment *adjustment, int depth, int maxViewDistance);
+	BattleUnit(Unit *unit, UnitFaction faction, int id, const RuleStartingCondition* sc, Armor *armor, StatAdjustment *adjustment, int depth, int maxViewDistance);
 	/// Updates BattleUnit's armor and related attributes (after a change/transformation of armor).
 	void updateArmorFromSoldier(Soldier *soldier, Armor *ruleArmor, int depth, int maxViewDistance);
 	/// Cleans up the BattleUnit.
@@ -220,9 +221,9 @@ public:
 	/// Mark the unit as surrendering this turn.
 	void setSurrendering(bool isSurrendering);
 	/// Start the walkingPhase
-	void startWalking(int direction, Position destination, Tile *tileBelowMe, bool cache);
+	void startWalking(int direction, Position destination, SavedBattleGame *savedBattleGame);
 	/// Increase the walkingPhase
-	void keepWalking(Tile *tileBelowMe, bool cache);
+	void keepWalking(SavedBattleGame *savedBattleGame, bool fullWalkCycle);
 	/// Gets the walking phase for animation and sound
 	int getWalkingPhase() const;
 	/// Gets the walking phase for diagonal walking
@@ -249,6 +250,9 @@ public:
 	bool isKneeled() const;
 	/// Is floating?
 	bool isFloating() const;
+	/// Have unit floor below?
+	bool haveNoFloorBelow() const { return _haveNoFloorBelow; }
+
 	/// Aim.
 	void aim(bool aiming);
 	/// Get direction to a certain point
@@ -368,7 +372,9 @@ public:
 	/// Get whether this unit is visible
 	bool getVisible() const;
 	/// Sets the unit's tile it's standing on
-	void setTile(Tile *tile, Tile *tileBelow = 0);
+	void setTile(Tile *tile, SavedBattleGame *saveBattleGame = 0);
+	/// Set only unit tile without any addtional logic.
+	void setInventoryTile(Tile *tile);
 	/// Gets the unit's tile.
 	Tile *getTile() const;
 	/// Gets the item in the specified slot.

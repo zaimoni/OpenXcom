@@ -128,15 +128,16 @@ void RuleGlobe::load(const YAML::Node &node)
 			}
 		}
 	}
+
 	Globe::COUNTRY_LABEL_COLOR = node["countryColor"].as<int>(Globe::COUNTRY_LABEL_COLOR);
 	Globe::CITY_LABEL_COLOR = node["cityColor"].as<int>(Globe::CITY_LABEL_COLOR);
 	Globe::BASE_LABEL_COLOR = node["baseColor"].as<int>(Globe::BASE_LABEL_COLOR);
-	Globe::LINE_COLOR = node["lineColor"].as<int>(Globe::LINE_COLOR);
-	
+	Globe::LINE_COLOR = node["lineColor"].as<int>(Globe::LINE_COLOR);	
 	if (node["oceanPalette"])
 	{
 		Globe::OCEAN_COLOR = Palette::blockOffset(node["oceanPalette"].as<int>(Globe::OCEAN_COLOR));
 	}
+	Globe::OCEAN_SHADING = node["oceanShading"].as<bool>(Globe::OCEAN_SHADING);
 }
 
 /**
@@ -246,27 +247,6 @@ std::vector<std::string> RuleGlobe::getTerrains(const std::string &deployment) c
 		}
 	}
 	return terrains;
-}
-
-/**
- * Returns a list of all globe base defense terrains associated with this deployment.
- * @param deployment Deployment name.
- * @return List of terrains.
- */
-std::vector<std::string> RuleGlobe::getBaseTerrains(const std::string &deployment) const
-{
-	std::vector<std::string> baseTerrains;
-	for (std::map<int, Texture*>::const_iterator i = _textures.begin(); i != _textures.end(); ++i)
-	{
-		if ((deployment == "" && i->second->getDeployments().empty()) || i->second->getDeployments().find(deployment) != i->second->getDeployments().end())
-		{
-			for (std::vector<TerrainCriteria>::const_iterator j = i->second->getBaseTerrain()->begin(); j != i->second->getBaseTerrain()->end(); ++j)
-			{
-				baseTerrains.push_back(j->name);
-			}
-		}
-	}
-	return baseTerrains;
 }
 
 }

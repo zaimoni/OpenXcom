@@ -207,8 +207,7 @@ BattlescapeState::BattlescapeState() : _reserve(0), _firstInit(true), _paletteRe
 	_txtTooltip = new Text(300, 10, x + 2, y - 10);
 
 	// Palette transformations
-	std::string startingConditionType = _game->getSavedGame()->getSavedBattle()->getStartingConditionType();
-	RuleStartingCondition *startingCondition = _game->getMod()->getStartingCondition(startingConditionType);
+	auto startingCondition = _game->getSavedGame()->getSavedBattle()->getStartingCondition();
 	if (startingCondition)
 	{
 		for (auto change : *startingCondition->getPaletteTransformations())
@@ -1675,6 +1674,7 @@ void BattlescapeState::btnSpecialClick(Action *action)
 		bool middleClick = action->getDetails()->button.button == SDL_BUTTON_MIDDLE;
 		handleItemClick(specialItem, middleClick);
 	}
+	action->getDetails()->type = SDL_NOEVENT; // consume the event
 }
 
 /**
@@ -2521,7 +2521,7 @@ inline void BattlescapeState::handle(Action *action)
 							Tile *tile = _save->getTile(newPos);
 							if (tile)
 							{
-								BattleUnit *unit = tile->getUnit();
+								BattleUnit *unit = tile->getOverlappingUnit(_save);
 								if (unit && !unit->isOut())
 								{
 									debug("Bingo!");
@@ -2556,21 +2556,24 @@ inline void BattlescapeState::handle(Action *action)
 					else if (_save->getDebugMode() && key == SDLK_w && ctrlPressed)
 					{
 						BattleUnit *unit = _save->getSelectedUnit();
-						if (unit && unit->getArmor()->getSize() < 2)
+						if (unit)
 						{
 							Position newPos;
 							_map->getSelectorPosition(&newPos);
-							Tile *tile = _save->getTile(newPos);
-							if (tile)
+							if (_save->getBattleGame()->getTileEngine()->isPositionValidForUnit(newPos, unit))
 							{
 								debug("Beam me up Scotty");
 								_save->getPathfinding()->removePreview();
 
-								unit->getTile()->setUnit(0);
+								unit->setTile(_save->getTile(newPos), _save);
 								unit->setPosition(newPos);
-								tile->setUnit(unit);
+
+								//free refreash as bonus
+								unit->setTimeUnits(unit->getBaseStats()->tu);
+								unit->setEnergy(unit->getBaseStats()->stamina);
 								_save->getTileEngine()->calculateLighting(LL_UNITS);
 								_save->getBattleGame()->handleState();
+								updateSoldierInfo(true);
 							}
 						}
 					}
@@ -2691,7 +2694,7 @@ void BattlescapeState::saveAIMap()
 					break;
 				}
 				pos.z--;
-				if (z > 0 && !t->hasNoFloor(_save->getTile(pos))) break; // no seeing through floors
+				if (z > 0 && !t->hasNoFloor(_save)) break; // no seeing through floors
 			}
 
 			if (t->getMapData(O_NORTHWALL) && t->getMapData(O_NORTHWALL)->getTUCost(MT_FLY) == 255)
@@ -2775,7 +2778,7 @@ void BattlescapeState::saveVoxelView()
 			black = true;
 			if (test!=0 && test!=6)
 			{
-				tile = _save->getTile(Position(_trajectory.at(0).x/16, _trajectory.at(0).y/16, _trajectory.at(0).z/24));
+				tile = _save->getTile(_trajectory.at(0).toTile());
 				if (_debug
 					|| (tile->isDiscovered(0) && test == 2)
 					|| (tile->isDiscovered(1) && test == 3)
@@ -2793,7 +2796,7 @@ void BattlescapeState::saveVoxelView()
 						}
 						else
 						{
-							tile = _save->getTile(Position(_trajectory.at(0).x/16, _trajectory.at(0).y/16, _trajectory.at(0).z/24-1));
+							tile = _save->getBelowTile(tile);
 							if (tile && tile->getUnit())
 							{
 								if (tile->getUnit()->getFaction()==FACTION_NEUTRAL) test=9;
@@ -2802,7 +2805,7 @@ void BattlescapeState::saveVoxelView()
 							}
 						}
 					}
-					hitPos = Position(_trajectory.at(0).x, _trajectory.at(0).y, _trajectory.at(0).z);
+					hitPos =_trajectory.at(0);
 					dist = sqrt((double)((hitPos.x-originVoxel.x)*(hitPos.x-originVoxel.x)
 						+ (hitPos.y-originVoxel.y)*(hitPos.y-originVoxel.y)
 						+ (hitPos.z-originVoxel.z)*(hitPos.z-originVoxel.z)) );
@@ -2903,7 +2906,7 @@ void BattlescapeState::saveVoxelMap()
 					}
 					else
 					{
-						tile = _save->getTile(Position(x/16, y/16, z/12-1));
+						tile = _save->getBelowTile(tile);
 						if (tile && tile->getUnit())
 						{
 							if (tile->getUnit()->getFaction()==FACTION_NEUTRAL) test=9;
@@ -3451,7 +3454,7 @@ void BattlescapeState::resize(int &dX, int &dY)
 
 	for (std::vector<Surface*>::const_iterator i = _surfaces.begin(); i != _surfaces.end(); ++i)
 	{
-		if (*i != _map && (*i) != _btnPsi && *i != _btnLaunch && *i != _txtDebug)
+		if (*i != _map && (*i) != _btnPsi && *i != _btnLaunch && *i != _btnSpecial && *i != _txtDebug)
 		{
 			(*i)->setX((*i)->getX() + dX / 2);
 			(*i)->setY((*i)->getY() + dY);

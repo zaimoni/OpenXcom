@@ -1331,7 +1331,7 @@ void DebriefingState::prepareDebriefing()
 		if (!(*j)->getTile())
 		{
 			Position pos = (*j)->getPosition();
-			if (pos == Position(-1, -1, -1))
+			if (pos == TileEngine::invalid)
 			{
 				for (std::vector<BattleItem*>::iterator k = battle->getItems()->begin(); k != battle->getItems()->end(); ++k)
 				{
@@ -1348,7 +1348,7 @@ void DebriefingState::prepareDebriefing()
 					}
 				}
 			}
-			(*j)->setTile(battle->getTile(pos));
+			(*j)->setInventoryTile(battle->getTile(pos));
 		}
 
 		if (status == STATUS_DEAD)
@@ -2056,11 +2056,6 @@ void DebriefingState::recoverItems(std::vector<BattleItem*> *from, Base *base)
 						{
 							recoverAlien(corpseUnit, base);
 						}
-						else if (corpseUnit->getOriginalFaction() == FACTION_NEUTRAL)
-						{
-							addStat("STR_CIVILIANS_SAVED", 1, corpseUnit->getValue());
-							recoverCivilian((*it)->getUnit(), base);
-						}
 					}
 				}
 				// only add recovery points for unresearched items
@@ -2117,6 +2112,7 @@ void DebriefingState::recoverItems(std::vector<BattleItem*> *from, Base *base)
 						// It's a weapon, count any rounds left in the clip.
 						recoveryAmmoInWeapon(*it);
 						// Fall-through, to recover the weapon itself.
+						[[gnu::fallthrough]];
 					default:
 						if (recoverWeapon)
 						{

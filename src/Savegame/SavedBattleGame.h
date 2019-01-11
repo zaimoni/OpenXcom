@@ -35,6 +35,7 @@ class BattlescapeState;
 class Position;
 class Pathfinding;
 class TileEngine;
+class RuleStartingCondition;
 class BattleItem;
 class Mod;
 class State;
@@ -66,7 +67,8 @@ private:
 	std::vector<BattleItem*> _items, _deleted;
 	Pathfinding *_pathfinding;
 	TileEngine *_tileEngine;
-	std::string _missionType, _alienCustomDeploy, _alienCustomMission, _startingConditionType;
+	std::string _missionType, _alienCustomDeploy, _alienCustomMission;
+	const RuleStartingCondition *_startingCondition;
 	int _globalShade;
 	UnitFaction _side;
 	int _turn, _bughuntMinTurn;
@@ -121,10 +123,10 @@ public:
 	const std::string &getMissionType() const;
 	/// Gets the base's items BEFORE the mission.
 	ItemContainer *getBaseStorageItems();
-	/// Sets the starting condition type.
-	void setStartingConditionType(const std::string &startingConditionType);
-	/// Gets the starting condition type.
-	const std::string &getStartingConditionType() const;
+	/// Sets the starting condition.
+	void setStartingCondition(const RuleStartingCondition* startingCondition);
+	/// Gets the starting condition.
+	const RuleStartingCondition *getStartingCondition() const;
 	/// Sets the custom alien data.
 	void setAlienCustom(const std::string &deploy, const std::string &mission);
 	/// Gets the custom alien deploy.
@@ -162,7 +164,7 @@ public:
 	}
 
 	/// Converts a tile index to its coordinates.
-	void getTileCoords(int index, int *x, int *y, int *z) const;
+	Position getTileCoords(int index) const;
 
 	/**
 	 * Gets the Tile at a given position on the map.
@@ -189,6 +191,71 @@ public:
 	{
 		return &_tiles[i];
 	}
+
+	/**
+	 * Get tile that is below current one (const version).
+	 * @param tile
+	 * @return Tile below
+	 */
+	inline const Tile *getBelowTile(const Tile* tile) const
+	{
+		if (!tile || tile->getPosition().z == 0)
+		{
+			return nullptr;
+		}
+		// diffrence of pointers between layers is equal `_mapsize_y * _mapsize_x`
+		// when we subtrack this value from valid tile we get valid tile from lower layer.
+		return tile - _mapsize_y * _mapsize_x;
+	}
+
+	/**
+	 * Get tile that is below current one.
+	 * @param tile
+	 * @return Tile below
+	 */
+	inline Tile *getBelowTile(Tile* tile)
+	{
+		if (!tile || tile->getPosition().z == 0)
+		{
+			return nullptr;
+		}
+		// diffrence of pointers between layers is equal `_mapsize_y * _mapsize_x`
+		// when we subtrack this value from valid tile we get valid tile from lower layer.
+		return tile - _mapsize_y * _mapsize_x;
+	}
+
+	/**
+	 * Get tile that is over current one (const version).
+	 * @param tile
+	 * @return Tile over
+	 */
+	inline const Tile *getAboveTile(const Tile* tile) const
+	{
+		if (!tile || tile->getPosition().z == _mapsize_z - 1)
+		{
+			return nullptr;
+		}
+		// diffrence of pointers between layers is equal `_mapsize_y * _mapsize_x`
+		// when we add this value from valid tile we get valid tile from upper layer.
+		return tile + _mapsize_y * _mapsize_x;
+	}
+
+	/**
+	 * Get tile that is over current one.
+	 * @param tile
+	 * @return Tile over
+	 */
+	inline Tile *getAboveTile(Tile* tile)
+	{
+		if (!tile || tile->getPosition().z == _mapsize_z - 1)
+		{
+			return nullptr;
+		}
+		// diffrence of pointers between layers is equal `_mapsize_y * _mapsize_x`
+		// when we add this value from valid tile we get valid tile from upper layer.
+		return tile + _mapsize_y * _mapsize_x;
+	}
+
 	/// Gets the currently selected unit.
 	BattleUnit *getSelectedUnit() const;
 	/// Sets the currently selected unit.

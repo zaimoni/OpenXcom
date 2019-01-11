@@ -48,6 +48,11 @@ public:
 	/// Value represent not exisiting position.
 	static constexpr Position invalid = { -1, -1, -1 };
 
+	/// Size of tile in voxels
+	static constexpr Position voxelTileSize = { 16, 16, 24 };
+	/// Half of size of tile in voxels
+	static constexpr Position voxelTileCenter = { 8, 8, 12 };
+
 private:
 	/**
 	 * Helper class storing cached visibility blockage data.
@@ -161,7 +166,7 @@ public:
 	/// Handles unit hit.
 	bool hitUnit(BattleActionAttack attack, BattleUnit *target, const Position &relative, int damage, const RuleDamageType *type, bool rangeAtack = true);
 	/// Handles bullet/weapon hits.
-	BattleUnit *hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack = true);
+	void hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack = true);
 	/// Handles explosions.
 	void explode(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, int maxRadius, bool rangeAtack = true);
 	/// Checks if a destroyed tile starts an explosion.

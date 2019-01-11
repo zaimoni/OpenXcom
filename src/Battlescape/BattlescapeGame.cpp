@@ -520,7 +520,7 @@ void BattlescapeGame::endTurn()
 				{
 					if (rule->getBattleType() == BT_GRENADE) // it's a grenade to explode now
 					{
-						Position p = tile->getPosition().toVexel() + Position(8, 8, - tile->getTerrainLevel() + (unit ? unit->getHeight() / 2 : 0));
+						Position p = tile->getPosition().toVoxel() + Position(8, 8, - tile->getTerrainLevel() + (unit ? unit->getHeight() / 2 : 0));
 						statePushNext(new ExplosionBState(this, p, BattleActionAttack{ BA_NONE, unit, item, item, }));
 						exploded = true;
 					}
@@ -545,7 +545,7 @@ void BattlescapeGame::endTurn()
 	Tile *t = _save->getTileEngine()->checkForTerrainExplosions();
 	if (t)
 	{
-		Position p = t->getPosition().toVexel();
+		Position p = t->getPosition().toVoxel();
 		statePushNext(new ExplosionBState(this, p, BattleActionAttack{ }, t));
 		statePushBack(0);
 		return;
@@ -1625,8 +1625,8 @@ void BattlescapeGame::primaryAction(Position pos)
 					// Use voxel positions to get more uniform spacing
 					// We add Position(8, 8, 12) to target middle of tile
 					int waypointIndex = std::max(0, std::min(numberOfWaypoints - 1, i * (numberOfWaypoints - 1) / (numberOfShots - 1)));
-					Position previousWaypoint = getMap()->getWaypoints()->at(waypointIndex).toVexel() + Position(8, 8, 12);
-					Position nextWaypoint = getMap()->getWaypoints()->at(std::min((int)getMap()->getWaypoints()->size() - 1, waypointIndex + 1)).toVexel() + Position(8, 8, 12);
+					Position previousWaypoint = getMap()->getWaypoints()->at(waypointIndex).toVoxel() + TileEngine::voxelTileCenter;
+					Position nextWaypoint = getMap()->getWaypoints()->at(std::min((int)getMap()->getWaypoints()->size() - 1, waypointIndex + 1)).toVoxel() + TileEngine::voxelTileCenter;
 					Position targetPos;
 					targetPos.x = previousWaypoint.x + (nextWaypoint.x - previousWaypoint.x) * (i * (numberOfWaypoints - 1) % (numberOfShots - 1)) / (numberOfShots - 1);
 					targetPos.y = previousWaypoint.y + (nextWaypoint.y - previousWaypoint.y) * (i * (numberOfWaypoints - 1) % (numberOfShots - 1)) / (numberOfShots - 1);
@@ -1634,7 +1634,7 @@ void BattlescapeGame::primaryAction(Position pos)
 
 					_currentAction.waypoints.push_back(targetPos);
 				}
-				_currentAction.waypoints.push_back(getMap()->getWaypoints()->front().toVexel() + Position(8, 8, 12));
+				_currentAction.waypoints.push_back(getMap()->getWaypoints()->front().toVoxel() + TileEngine::voxelTileCenter);
 				_currentAction.target = _currentAction.waypoints.back().toTile();
 
 				getMap()->getWaypoints()->clear();
@@ -1985,24 +1985,26 @@ BattleUnit *BattlescapeGame::convertUnit(BattleUnit *unit)
 
 	unit->instaKill();
 
-	getSave()->getTileEngine()->itemDropInventory(unit->getTile(), unit);
+	auto tile = unit->getTile();
+
+	getSave()->getTileEngine()->itemDropInventory(tile, unit);
 
 	// remove unit-tile link
-	unit->setTile(0);
+	unit->setTile(nullptr, _save);
 
 	Unit* type = getMod()->getUnit(unit->getSpawnUnit(), true);
-	getSave()->getTile(unit->getPosition())->setUnit(0);
 
 	BattleUnit *newUnit = new BattleUnit(type,
 		FACTION_HOSTILE,
 		_save->getUnits()->back()->getId() + 1,
+		_save->getStartingCondition(),
 		type->getArmor(),
 		getMod()->getStatAdjustment(_parentState->getGame()->getSavedGame()->getDifficulty()),
 		getDepth(),
 		getMod()->getMaxViewDistance());
 
 	getSave()->initUnit(newUnit);
-	getSave()->getTile(unit->getPosition())->setUnit(newUnit, _save->getTile(unit->getPosition() + Position(0,0,-1)));
+	newUnit->setTile(tile, _save);
 	newUnit->setPosition(unit->getPosition());
 	newUnit->setDirection(unit->getDirection());
 	newUnit->setTimeUnits(0);
@@ -2034,7 +2036,6 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 
 	const RuleItem *item = attack.damage_item->getRules();
 	Unit *type = getMod()->getUnit(item->getSpawnUnit(), true);
-	BattleUnit *newUnit = 0;
 
 	// Check which faction the new unit will be
 	UnitFaction faction;
@@ -2062,27 +2063,14 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 	}
 
 	// Create the unit
-	switch (faction)
-	{
-		case FACTION_HOSTILE: // Enemy units get stat adjustments based on difficulty
-			newUnit = new BattleUnit(type,
-				faction,
-				_save->getUnits()->back()->getId() + 1,
-				type->getArmor(),
-				getMod()->getStatAdjustment(_parentState->getGame()->getSavedGame()->getDifficulty()),
-				getDepth(),
-				getMod()->getMaxViewDistance());
-			break;
-		default: // Everybody else doesn't
-			newUnit = new BattleUnit(type,
-				faction,
-				_save->getUnits()->back()->getId() + 1,
-				type->getArmor(),
-				0,
-				getDepth(),
-				getMod()->getMaxViewDistance());
-			break;
-	}
+	BattleUnit *newUnit = new BattleUnit(type,
+		faction,
+		_save->getUnits()->back()->getId() + 1,
+		faction != FACTION_PLAYER ? _save->getStartingCondition() : nullptr,
+		type->getArmor(),
+		faction == FACTION_HOSTILE ? getMod()->getStatAdjustment(_parentState->getGame()->getSavedGame()->getDifficulty()) : nullptr,
+		getDepth(),
+		getMod()->getMaxViewDistance());
 
 	// Validate the position for the unit, checking if there's a surrounding tile if necessary
 	int checkDirection = attack.attacker ? (attack.attacker->getDirection() + 4) % 8 : 0;
@@ -2117,14 +2105,7 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 		}
 
 		getSave()->initUnit(newUnit);
-		for (int x = newUnit->getArmor()->getSize() - 1; x >= 0; x--)
-		{
-			for (int y = newUnit->getArmor()->getSize() - 1; y >= 0; y--)
-			{
-				Tile* tile = getSave()->getTile(position + Position(x, y, 0));
-				tile->setUnit(newUnit, getSave()->getTile(position + Position(x, y, -1)));
-			}
-		}
+		newUnit->setTile(_save->getTile(position), _save);
 		newUnit->setPosition(position);
 		newUnit->setDirection(unitDirection);
 		newUnit->setTimeUnits(0);
@@ -2187,15 +2168,7 @@ void BattlescapeGame::removeSummonedPlayerUnits()
 			if ((*unit)->getStatus() == STATUS_UNCONSCIOUS || (*unit)->getStatus() == STATUS_DEAD)
 				_save->removeUnconsciousBodyItem((*unit));
 
-			for (int x = (*unit)->getArmor()->getSize() - 1; x >= 0; x--)
-			{
-				for (int y = (*unit)->getArmor()->getSize() - 1; y >= 0; y--)
-				{
-					Tile *tile = getSave()->getTile((*unit)->getPosition() + Position(x, y, 0));
-					tile->setUnit(0);
-				}
-			}
-
+			(*unit)->setTile(nullptr, _save);
 			delete (*unit);
 			unit = _save->getUnits()->erase(unit);
 		}
@@ -2732,7 +2705,7 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
 					{
 						if (ruleItem->getBattleType() == BT_GRENADE || ruleItem->getBattleType() == BT_PROXIMITYGRENADE)
 						{
-							Position p = t->getPosition().toVexel() + Position(8, 8, t->getTerrainLevel());
+							Position p = t->getPosition().toVoxel() + Position(8, 8, t->getTerrainLevel());
 							statePushNext(new ExplosionBState(this, p, BattleActionAttack{ BA_NONE, nullptr, item, item, }));
 							exploded = true;
 						}

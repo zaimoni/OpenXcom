@@ -32,11 +32,13 @@
 #include "../Battlescape/BattlescapeGame.h"
 #include "../Battlescape/AIModule.h"
 #include "../Battlescape/Inventory.h"
+#include "../Battlescape/TileEngine.h"
 #include "../Mod/Mod.h"
 #include "../Mod/Armor.h"
 #include "../Mod/Unit.h"
 #include "../Mod/RuleInventory.h"
 #include "../Mod/RuleSoldier.h"
+#include "../Mod/RuleStartingCondition.h"
 #include "../Mod/Mod.h"
 #include "Soldier.h"
 #include "Tile.h"
@@ -166,7 +168,7 @@ BattleUnit::BattleUnit(Soldier *soldier, int depth, int maxViewDistance) :
 
 	_activeHand = "STR_RIGHT_HAND";
 
-	lastCover = Position(-1, -1, -1);
+	lastCover = TileEngine::invalid;
 
 	_statistics = new BattleUnitStatistics();
 
@@ -229,11 +231,12 @@ void BattleUnit::updateArmorFromSoldier(Soldier *soldier, Armor *ruleArmor, int 
  * @param unit Pointer to Unit object.
  * @param faction Which faction the units belongs to.
  * @param id Unique unit ID.
+ * @param sc Pointer to a battle starting condition.
  * @param armor Pointer to unit Armor.
  * @param diff difficulty level (for stat adjustment).
  * @param depth the depth of the battlefield (used to determine movement type in case of MT_FLOAT).
  */
-BattleUnit::BattleUnit(Unit *unit, UnitFaction faction, int id, Armor *armor, StatAdjustment *adjustment, int depth, int maxViewDistance) :
+BattleUnit::BattleUnit(Unit *unit, UnitFaction faction, int id, const RuleStartingCondition* sc, Armor *armor, StatAdjustment *adjustment, int depth, int maxViewDistance) :
 	_faction(faction), _originalFaction(faction), _killedBy(faction), _id(id),
 	_tile(0), _lastPos(Position()), _direction(0), _toDirection(0), _directionTurret(0),
 	_toDirectionTurret(0), _verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0),
@@ -245,6 +248,14 @@ BattleUnit::BattleUnit(Unit *unit, UnitFaction faction, int id, Armor *armor, St
 	_fatalShotBodyPart(BODYPART_HEAD), _armor(armor), _geoscapeSoldier(0),  _unitRules(unit),
 	_rankInt(0), _turretType(-1), _hidingForTurn(false), _respawn(false), _alreadyRespawned(false), _isLeeroyJenkins(false), _summonedPlayerUnit(false)
 {
+	if (sc)
+	{
+		auto newArmor = sc->getArmorTransformation(_armor);
+		if (newArmor)
+		{
+			_armor = newArmor;
+		}
+	}
 	_type = unit->getType();
 	_rank = unit->getRank();
 	_race = unit->getRace();
@@ -331,7 +342,7 @@ BattleUnit::BattleUnit(Unit *unit, UnitFaction faction, int id, Armor *armor, St
 	_activeHand = "STR_RIGHT_HAND";
 	_gender = GENDER_MALE;
 
-	lastCover = Position(-1, -1, -1);
+	lastCover = TileEngine::invalid;
 
 	_statistics = new BattleUnitStatistics();
 
@@ -601,7 +612,7 @@ Position BattleUnit::getLastPosition() const
  */
 Position BattleUnit::getPositionVexels() const
 {
-	Position center = _pos.toVexel();
+	Position center = _pos.toVoxel();
 	center += Position(8, 8, 0) * _armor->getSize();
 	return center;
 }
@@ -724,10 +735,9 @@ void BattleUnit::setSurrendering(bool isSurrendering)
  * Initialises variables to start walking.
  * @param direction Which way to walk.
  * @param destination The position we should end up on.
- * @param tileBelowMe Which tile is currently below the unit.
- * @param cache Update cache?
+ * @param savedBattleGame Which is used to get tile is currently below the unit.
  */
-void BattleUnit::startWalking(int direction, Position destination, Tile *tileBelowMe, bool cache)
+void BattleUnit::startWalking(int direction, Position destination, SavedBattleGame *savedBattleGame)
 {
 	if (direction >= Pathfinding::DIR_UP)
 	{
@@ -739,12 +749,7 @@ void BattleUnit::startWalking(int direction, Position destination, Tile *tileBel
 		_direction = direction;
 		_status = STATUS_WALKING;
 	}
-	bool floorFound = false;
-	if (!_tile->hasNoFloor(tileBelowMe))
-	{
-		floorFound = true;
-	}
-	if (!floorFound || direction >= Pathfinding::DIR_UP)
+	if (_haveNoFloorBelow || direction >= Pathfinding::DIR_UP)
 	{
 		_status = STATUS_FLYING;
 		_floating = true;
@@ -767,10 +772,10 @@ void BattleUnit::startWalking(int direction, Position destination, Tile *tileBel
 
 /**
  * This will increment the walking phase.
- * @param tileBelowMe Pointer to tile currently below the unit.
- * @param cache Refresh the unit cache.
+ * @param savedBattleGame Pointer to save to get tile currently below the unit.
+ * @param fullWalkCycle Do full walk cycle or short one when unit is offscreen.
  */
-void BattleUnit::keepWalking(Tile *tileBelowMe, bool cache)
+void BattleUnit::keepWalking(SavedBattleGame *savedBattleGame, bool fullWalkCycle)
 {
 	int middle, end;
 	if (_verticalDirection)
@@ -795,7 +800,8 @@ void BattleUnit::keepWalking(Tile *tileBelowMe, bool cache)
 				middle = 1;
 		}
 	}
-	if (!cache)
+
+	if (!fullWalkCycle)
 	{
 		_pos = _destination;
 		end = 2;
@@ -810,9 +816,14 @@ void BattleUnit::keepWalking(Tile *tileBelowMe, bool cache)
 		_pos = _destination;
 	}
 
+	if (!fullWalkCycle || (_walkPhase == middle))
+	{
+		setTile(savedBattleGame->getTile(_destination), savedBattleGame);
+	}
+
 	if (_walkPhase >= end)
 	{
-		if (_floating && !_tile->hasNoFloor(tileBelowMe))
+		if (_floating && !_haveNoFloorBelow)
 		{
 			_floating = false;
 		}
@@ -2403,6 +2414,7 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 			{
 				break;
 			}
+			[[gnu::fallthrough]];
 		}
 	default:
 		if (rule->getBattleType() == BT_PSIAMP && getFaction() == FACTION_HOSTILE)
@@ -2499,31 +2511,82 @@ bool BattleUnit::getVisible() const
 /**
  * Sets the unit's tile it's standing on
  * @param tile Pointer to tile.
- * @param tileBelow Pointer to tile below.
+ * @param saveBattleGame Pointer to save to get tile below.
  */
-void BattleUnit::setTile(Tile *tile, Tile *tileBelow)
+void BattleUnit::setTile(Tile *tile, SavedBattleGame *saveBattleGame)
 {
+	if (_tile == tile)
+	{
+		return;
+	}
+
+	auto armorSize = _armor->getSize() - 1;
+	// Reset tiles moved from.
+	if (_tile)
+	{
+		auto prevPos = _tile->getPosition();
+		for (int x = armorSize; x >= 0; --x)
+		{
+			for (int y = armorSize; y >= 0; --y)
+			{
+				auto t = saveBattleGame->getTile(prevPos + Position(x,y, 0));
+				if (t && t->getUnit() == this)
+				{
+					t->setUnit(nullptr);
+				}
+			}
+		}
+	}
+
 	_tile = tile;
 	if (!_tile)
 	{
 		_floating = false;
+		_haveNoFloorBelow = false;
 		return;
 	}
+
+	// Update tiles moved to.
+	auto newPos = _tile->getPosition();
+	_haveNoFloorBelow = true;
+	for (int x = armorSize; x >= 0; --x)
+	{
+		for (int y = armorSize; y >= 0; --y)
+		{
+			auto t = saveBattleGame->getTile(newPos + Position(x, y, 0));
+			if (t)
+			{
+				_haveNoFloorBelow &= t->hasNoFloor(saveBattleGame);
+				t->setUnit(this);
+			}
+		}
+	}
 	// unit could have changed from flying to walking or vice versa
-	if (_status == STATUS_WALKING && _tile->hasNoFloor(tileBelow) && _movementType == MT_FLY)
+	if (_status == STATUS_WALKING && _haveNoFloorBelow && _movementType == MT_FLY)
 	{
 		_status = STATUS_FLYING;
 		_floating = true;
 	}
-	else if (_status == STATUS_FLYING && !_tile->hasNoFloor(tileBelow) && _verticalDirection == 0)
+	else if (_status == STATUS_FLYING && !_haveNoFloorBelow && _verticalDirection == 0)
 	{
 		_status = STATUS_WALKING;
 		_floating = false;
 	}
 	else if (_status == STATUS_UNCONSCIOUS)
 	{
-		_floating = _movementType == MT_FLY && _tile->hasNoFloor(tileBelow);
+		_floating = _movementType == MT_FLY && _haveNoFloorBelow;
 	}
+}
+
+/**
+ * Set only unit tile without any addtional logic.
+ * Used only in before battle, other wise will break game.
+ * Need call setTile after to fix links
+ * @param tile
+ */
+void BattleUnit::setInventoryTile(Tile *tile)
+{
+	_tile = tile;
 }
 
 /**

@@ -44,6 +44,7 @@
 #include "SerializationHelper.h"
 #include "../Mod/RuleItem.h"
 #include "../Mod/RuleSoldier.h"
+#include "../Mod/RuleStartingCondition.h"
 
 namespace OpenXcom
 {
@@ -125,7 +126,11 @@ void SavedBattleGame::load(const YAML::Node &node, Mod *mod, SavedGame* savedGam
 	initMap(mapsize_x, mapsize_y, mapsize_z);
 
 	_missionType = node["missionType"].as<std::string>(_missionType);
-	_startingConditionType = node["startingConditionType"].as<std::string>(_startingConditionType);
+	if (node["startingConditionType"])
+	{
+		std::string startingConditionType = node["startingConditionType"].as<std::string>();
+		_startingCondition = mod->getStartingCondition(startingConditionType);
+	}
 	_alienCustomDeploy = node["alienCustomDeploy"].as<std::string>(_alienCustomDeploy);
 	_alienCustomMission = node["alienCustomMission"].as<std::string>(_alienCustomMission);
 	_globalShade = node["globalshade"].as<int>(_globalShade);
@@ -218,7 +223,7 @@ void SavedBattleGame::load(const YAML::Node &node, Mod *mod, SavedGame* savedGam
 			std::string armor = (*i)["genUnitArmor"].as<std::string>();
 			// create a new Unit.
 			if(!mod->getUnit(type) || !mod->getArmor(armor)) continue;
-			unit = new BattleUnit(mod->getUnit(type), originalFaction, id, mod->getArmor(armor), mod->getStatAdjustment(savedGame->getDifficulty()), _depth, mod->getMaxViewDistance());
+			unit = new BattleUnit(mod->getUnit(type), originalFaction, id, nullptr, mod->getArmor(armor), mod->getStatAdjustment(savedGame->getDifficulty()), _depth, mod->getMaxViewDistance());
 		}
 		unit->load(*i, this->getMod()->getScriptGlobal());
 		unit->setSpecialWeapon(this);
@@ -423,7 +428,10 @@ YAML::Node SavedBattleGame::save() const
 	node["length"] = _mapsize_y;
 	node["height"] = _mapsize_z;
 	node["missionType"] = _missionType;
-	node["startingConditionType"] = _startingConditionType;
+	if (_startingCondition)
+	{
+		node["startingConditionType"] = _startingCondition->getType();
+	}
 	node["alienCustomDeploy"] = _alienCustomDeploy;
 	node["alienCustomMission"] = _alienCustomMission;
 	node["globalshade"] = _globalShade;
@@ -543,9 +551,7 @@ void SavedBattleGame::initMap(int mapsize_x, int mapsize_y, int mapsize_z, bool 
 	_tiles.reserve(_mapsize_z * _mapsize_y * _mapsize_x);
 	for (int i = 0; i < _mapsize_z * _mapsize_y * _mapsize_x; ++i)
 	{
-		Position pos;
-		getTileCoords(i, &pos.x, &pos.y, &pos.z);
-		_tiles.push_back(Tile(pos));
+		_tiles.push_back(Tile(getTileCoords(i)));
 	}
 
 }
@@ -601,21 +607,21 @@ ItemContainer *SavedBattleGame::getBaseStorageItems()
 }
 
 /**
- * Sets the starting condition type.
- * @param startingConditionType The starting condition type.
+ * Sets the starting condition.
+ * @param startingCondition The starting condition.
  */
-void SavedBattleGame::setStartingConditionType(const std::string &startingConditionType)
+void SavedBattleGame::setStartingCondition(const RuleStartingCondition* startingCondition)
 {
-	_startingConditionType = startingConditionType;
+	_startingCondition = startingCondition;
 }
 
 /**
- * Gets the starting condition type.
- * @return The starting condition type.
+ * Gets the starting condition.
+ * @return The starting condition.
  */
-const std::string &SavedBattleGame::getStartingConditionType() const
+const RuleStartingCondition* SavedBattleGame::getStartingCondition() const
 {
-	return _startingConditionType;
+	return _startingCondition;
 }
 
 /**
@@ -704,11 +710,13 @@ int SavedBattleGame::getMapSizeXYZ() const
  * @param y Pointer to the Y coordinate.
  * @param z Pointer to the Z coordinate.
  */
-void SavedBattleGame::getTileCoords(int index, int *x, int *y, int *z) const
+Position SavedBattleGame::getTileCoords(int index) const
 {
-	*z = index / (_mapsize_y * _mapsize_x);
-	*y = (index % (_mapsize_y * _mapsize_x)) / _mapsize_x;
-	*x = (index % (_mapsize_y * _mapsize_x)) % _mapsize_x;
+	Position p;
+	p.z = index / (_mapsize_y * _mapsize_x);
+	p.y = (index % (_mapsize_y * _mapsize_x)) / _mapsize_x;
+	p.x = (index % (_mapsize_y * _mapsize_x)) % _mapsize_x;
+	return p;
 }
 
 /**
@@ -1177,26 +1185,7 @@ void SavedBattleGame::resetUnitTiles()
 	{
 		if (!(*i)->isOut())
 		{
-			int size = (*i)->getArmor()->getSize() - 1;
-			if ((*i)->getTile() && (*i)->getTile()->getUnit() == (*i))
-			{
-				for (int x = size; x >= 0; x--)
-				{
-					for (int y = size; y >= 0; y--)
-					{
-						getTile((*i)->getTile()->getPosition() + Position(x,y,0))->setUnit(0);
-					}
-				}
-			}
-			for (int x = size; x >= 0; x--)
-			{
-				for (int y = size; y >= 0; y--)
-				{
-					Tile *t = getTile((*i)->getPosition() + Position(x,y,0));
-					t->setUnit((*i), getTile(t->getPosition() + Position(0,0,-1)));
-				}
-			}
-
+			(*i)->setTile(getTile((*i)->getPosition()), this);
 		}
 		if ((*i)->getFaction() == FACTION_PLAYER)
 		{
@@ -1755,7 +1744,7 @@ void SavedBattleGame::prepareNewTurn()
 			// smoke from fire spreads upwards one level if there's no floor blocking it.
 			Position pos = Position(0,0,1);
 			Tile *t = getTile((*i)->getPosition() + pos);
-			if (t && t->hasNoFloor(*i))
+			if (t && t->hasNoFloor(this))
 			{
 				// only add smoke equal to half the intensity of the fire
 				t->addSmoke((*i)->getSmoke()/2);
@@ -1877,11 +1866,10 @@ bool SavedBattleGame::setUnitPosition(BattleUnit *bu, Position position, bool te
 		for (int y = size; y >= 0; y--)
 		{
 			Tile *t = getTile(position + Position(x,y,0) + zOffset);
-			Tile *tb = getTile(position + Position(x,y,-1) + zOffset);
 			if (t == 0 ||
 				(t->getUnit() != 0 && t->getUnit() != bu) ||
 				t->getTUCost(O_OBJECT, bu->getMovementType()) == 255 ||
-				(t->hasNoFloor(tb) && bu->getMovementType() != MT_FLY) ||
+				(t->hasNoFloor(this) && bu->getMovementType() != MT_FLY) ||
 				(t->getMapData(O_OBJECT) && t->getMapData(O_OBJECT)->getBigWall() && t->getMapData(O_OBJECT)->getBigWall() <= 3))
 			{
 				return false;
@@ -1908,17 +1896,8 @@ bool SavedBattleGame::setUnitPosition(BattleUnit *bu, Position position, bool te
 
 	if (testOnly) return true;
 
-	for (int x = size; x >= 0; x--)
-	{
-		for (int y = size; y >= 0; y--)
-		{
-			if (x==0 && y==0)
-			{
-				bu->setPosition(position + zOffset);
-			}
-			getTile(position + Position(x,y,0) + zOffset)->setUnit(bu, getTile(position + Position(x,y,-1) + zOffset));
-		}
-	}
+	bu->setTile(getTile(position + zOffset), this);
+	bu->setPosition(position + zOffset);
 
 	return true;
 }
@@ -2033,12 +2012,16 @@ int SavedBattleGame::getUnitMoraleModifier(BattleUnit* unit)
 		{
 		case 5:
 			result += 25;
+			[[gnu::fallthrough]];
 		case 4:
 			result += 20;
+			[[gnu::fallthrough]];
 		case 3:
 			result += 10;
+			[[gnu::fallthrough]];
 		case 2:
 			result += 20;
+			[[gnu::fallthrough]];
 		default:
 			break;
 		}
@@ -2090,12 +2073,16 @@ int SavedBattleGame::getFactionMoraleModifier(bool player)
 			{
 			case 5:
 				result += 25;
+				[[gnu::fallthrough]];
 			case 4:
 				result += 10;
+				[[gnu::fallthrough]];
 			case 3:
 				result += 5;
+				[[gnu::fallthrough]];
 			case 2:
 				result += 10;
+				[[gnu::fallthrough]];
 			default:
 				break;
 			}
@@ -2147,7 +2134,7 @@ bool SavedBattleGame::placeUnitNearPosition(BattleUnit *unit, const Position& en
 	if (unit->getMovementType() == MT_FLY)
 	{
 		Tile *t = getTile(entryPoint + Position(0, 0, 1));
-		if (t && t->hasNoFloor(getTile(entryPoint)) && setUnitPosition(unit, entryPoint + Position(0, 0, 1)))
+		if (t && t->hasNoFloor(this) && setUnitPosition(unit, entryPoint + Position(0, 0, 1)))
 		{
 			return true;
 		}

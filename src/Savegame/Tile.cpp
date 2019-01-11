@@ -30,6 +30,7 @@
 #include "SerializationHelper.h"
 #include "../Battlescape/Particle.h"
 #include "../fmath.h"
+#include "SavedBattleGame.h"
 
 namespace OpenXcom
 {
@@ -266,13 +267,17 @@ int Tile::getTUCost(int part, MovementType movementType) const
 
 /**
  * Whether this tile has a floor or not. If no object defined as floor, it has no floor.
- * @param tileBelow
+ * @param savedBattleGame Save to get tile below to check if it can work as floor.
  * @return bool
  */
-bool Tile::hasNoFloor(Tile *tileBelow) const
+bool Tile::hasNoFloor(const SavedBattleGame *savedBattleGame) const
 {
-	if (tileBelow != 0 && tileBelow->getTerrainLevel() == -24)
-		return false;
+	if (_pos.z > 0 && savedBattleGame)
+	{
+		const Tile* tileBelow = savedBattleGame->getBelowTile(this);
+		if (tileBelow != 0 && tileBelow->getTerrainLevel() == -24)
+			return false;
+	}
 	if (_objects[O_FLOOR])
 		return _objects[O_FLOOR]->isNoFloor();
 	else
@@ -716,17 +721,23 @@ void Tile::updateSprite(TilePart part)
 }
 
 /**
- * Set a unit on this tile.
- * @param unit
- * @param tileBelow
+ * Get unit from this tile or from tile below if unit poke out.
+ * @param saveBattleGame
+ * @return BattleUnit.
  */
-void Tile::setUnit(BattleUnit *unit, Tile *tileBelow)
+BattleUnit *Tile::getOverlappingUnit(const SavedBattleGame *saveBattleGame, TileUnitOverlapping range) const
 {
-	if (unit != 0)
+	auto bu = getUnit();
+	if (!bu && _pos.z > 0 && hasNoFloor(saveBattleGame))
 	{
-		unit->setTile(this, tileBelow);
+		auto tileBelow = saveBattleGame->getBelowTile(this);
+		bu = tileBelow->getUnit();
+		if (bu && bu->getHeight() + bu->getFloatHeight() - tileBelow->getTerrainLevel() <= static_cast<int>(range))
+		{
+			bu = nullptr; // if the unit below has no voxels poking into the tile, don't select it.
+		}
 	}
-	_unit = unit;
+	return bu;
 }
 
 /**

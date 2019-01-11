@@ -18,6 +18,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <yaml-cpp/yaml.h>
+#include <SDL_types.h>
 
 namespace OpenXcom
 {
@@ -28,16 +29,17 @@ namespace OpenXcom
 class Position
 {
 public:
-	int x, y, z;
+	Sint16 x, y, z;
 
 	/// Null position constructor.
 	constexpr Position() : x(0), y(0), z(0) {};
 	/// X Y Z position constructor.
 	constexpr Position(int x_, int y_, int z_) : x(x_), y(y_), z(z_) {};
 	/// Copy constructor.
-	constexpr Position(const Position& pos) : x(pos.x), y(pos.y), z(pos.z) {};
+	constexpr Position(const Position& pos) = default;
 
-	Position& operator=(const Position& pos) { x = pos.x; y = pos.y; z = pos.z; return *this; }
+	/// Assigment
+	Position& operator=(const Position& pos) = default;
 
 	Position operator+(const Position& pos) const { return Position(x + pos.x, y + pos.y, z + pos.z); }
 	Position& operator+=(const Position& pos) { x+=pos.x; y+=pos.y; z+=pos.z; return *this; }
@@ -66,17 +68,16 @@ public:
 		return x != pos.x || y != pos.y || z != pos.z;
 	}
 
-	/// Convert tile position to vexel position.
-	Position toVexel() const
+	/// Convert tile position to voxel position.
+	constexpr Position toVoxel() const
 	{
 		return Position(x * 16, y * 16, z * 24);
 	}
-	/// Convert vexel position to tile position.
-	Position toTile() const
+	/// Convert voxel position to tile position.
+	constexpr Position toTile() const
 	{
 		return Position(x / 16, y / 16, z / 24);
 	}
-
 };
 
 inline std::ostream& operator<<(std::ostream& out, const Position& pos)

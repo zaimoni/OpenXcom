@@ -248,21 +248,9 @@ void BattlescapeGenerator::nextStage()
 				(*i)->setAIModule(0);
 			}
 		}
-		if ((*i)->getTile())
-		{
-			const Position pos = (*i)->getPosition();
-			const int size = (*i)->getArmor()->getSize();
-			for (int x = 0; x != size; ++x)
-			{
-				for (int y = 0; y != size; ++y)
-				{
-					_save->getTile(pos + Position(x,y,0))->setUnit(0);
-				}
-			}
-		}
 		(*i)->setFire(0);
-		(*i)->setTile(0);
-		(*i)->setPosition(Position(-1,-1,-1), false);
+		(*i)->setTile(nullptr, _save);
+		(*i)->setPosition(TileEngine::invalid, false);
 	}
 
 	// remove all items not belonging to our soldiers from the map.
@@ -399,7 +387,7 @@ void BattlescapeGenerator::nextStage()
 	{
 		startingCondition = temp;
 	}
-	_save->setStartingConditionType(startingCondition != 0 ? startingCondition->getType() : "");
+	_save->setStartingCondition(startingCondition);
 
 	// starting conditions - armor transformation (no armor replacement! that is done only before the 1st stage)
 	if (startingCondition != 0)
@@ -408,8 +396,8 @@ void BattlescapeGenerator::nextStage()
 		{
 			if ((*j)->getOriginalFaction() == FACTION_PLAYER && (*j)->getGeoscapeSoldier())
 			{
-				std::string transformedArmor = startingCondition->getArmorTransformation((*j)->getArmor()->getType());
-				if (!transformedArmor.empty())
+				auto transformedArmor = startingCondition->getArmorTransformation((*j)->getArmor());
+				if (transformedArmor)
 				{
 					// remember the original armor (i.e. only if there were no transformations in earlier stage(s)!)
 					if (!(*j)->getGeoscapeSoldier()->getTransformedArmor())
@@ -417,9 +405,9 @@ void BattlescapeGenerator::nextStage()
 						(*j)->getGeoscapeSoldier()->setTransformedArmor(_game->getMod()->getArmor((*j)->getArmor()->getType()));
 					}
 					// change soldier's armor (needed for inventory view!)
-					(*j)->getGeoscapeSoldier()->setArmor(_game->getMod()->getArmor(transformedArmor));
+					(*j)->getGeoscapeSoldier()->setArmor(transformedArmor);
 					// change battleunit's armor
-					(*j)->updateArmorFromSoldier((*j)->getGeoscapeSoldier(), _game->getMod()->getArmor(transformedArmor), _save->getDepth(), _game->getMod()->getMaxViewDistance());
+					(*j)->updateArmorFromSoldier((*j)->getGeoscapeSoldier(), transformedArmor, _save->getDepth(), _game->getMod()->getMaxViewDistance());
 				}
 			}
 		}
@@ -472,11 +460,13 @@ void BattlescapeGenerator::nextStage()
 					{
 						_save->setUnitPosition((*j), node->getPosition());
 					}
+
 					if (!_craftInventoryTile)
 					{
 						_craftInventoryTile = (*j)->getTile();
 					}
-					_craftInventoryTile->setUnit(*j);
+
+					(*j)->setInventoryTile(_craftInventoryTile);
 					(*j)->setVisible(false);
 					if ((*j)->getId() > highestSoldierID)
 					{
@@ -503,7 +493,6 @@ void BattlescapeGenerator::nextStage()
 			_craftInventoryTile->addItem(*i, ground);
 			if ((*i)->getUnit())
 			{
-				_craftInventoryTile->setUnit((*i)->getUnit());
 				(*i)->getUnit()->setPosition(_craftInventoryTile->getPosition());
 			}
 		}
@@ -674,7 +663,7 @@ void BattlescapeGenerator::run()
  */
 void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondition)
 {
-	_save->setStartingConditionType(startingCondition != 0 ? startingCondition->getType() : "");
+	_save->setStartingCondition(startingCondition);
 
 	RuleInventory *ground = _game->getMod()->getInventory("STR_GROUND", true);
 
@@ -767,11 +756,11 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 			// starting conditions - armor transformation or replacement
 			if (startingCondition != 0)
 			{
-				std::string transformedArmor = startingCondition->getArmorTransformation((*i)->getArmor()->getType());
-				if (!transformedArmor.empty())
+				auto transformedArmor = startingCondition->getArmorTransformation((*i)->getArmor());
+				if (transformedArmor)
 				{
 					(*i)->setTransformedArmor((*i)->getArmor());
-					(*i)->setArmor(_game->getMod()->getArmor(transformedArmor));
+					(*i)->setArmor(transformedArmor);
 				}
 				else
 				{
@@ -800,7 +789,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 	{
 		if ((*i)->getFaction() == FACTION_PLAYER)
 		{
-			_craftInventoryTile->setUnit(*i);
+			(*i)->setInventoryTile(_craftInventoryTile);
 			(*i)->setVisible(false);
 		}
 	}
@@ -978,7 +967,7 @@ void BattlescapeGenerator::autoEquip(std::vector<BattleUnit*> units, Mod *mod, s
 BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
 {
 	Unit *rule = v->getRules()->getVehicleUnit();
-	BattleUnit *unit = addXCOMUnit(new BattleUnit(rule, FACTION_PLAYER, _unitSequence++, rule->getArmor(), 0, _save->getDepth(), _game->getMod()->getMaxViewDistance()));
+	BattleUnit *unit = addXCOMUnit(new BattleUnit(rule, FACTION_PLAYER, _unitSequence++, nullptr, rule->getArmor(), 0, _save->getDepth(), _game->getMod()->getMaxViewDistance()));
 	if (unit)
 	{
 		_save->createItemForUnit(v->getRules(), unit, true);
@@ -1218,7 +1207,7 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  */
 BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outside)
 {
-	BattleUnit *unit = new BattleUnit(rules, FACTION_HOSTILE, _unitSequence++, rules->getArmor(), _game->getMod()->getStatAdjustment(_game->getSavedGame()->getDifficulty()), _save->getDepth(), _game->getMod()->getMaxViewDistance());
+	BattleUnit *unit = new BattleUnit(rules, FACTION_HOSTILE, _unitSequence++, _save->getStartingCondition(), rules->getArmor(), _game->getMod()->getStatAdjustment(_game->getSavedGame()->getDifficulty()), _save->getDepth(), _game->getMod()->getMaxViewDistance());
 	Node *node = 0;
 
 	// safety to avoid index out of bounds errors
@@ -1290,7 +1279,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  */
 BattleUnit *BattlescapeGenerator::addCivilian(Unit *rules)
 {
-	BattleUnit *unit = new BattleUnit(rules, FACTION_NEUTRAL, _unitSequence++, rules->getArmor(), 0, _save->getDepth(), _game->getMod()->getMaxViewDistance());
+	BattleUnit *unit = new BattleUnit(rules, FACTION_NEUTRAL, _unitSequence++, _save->getStartingCondition(), rules->getArmor(), 0, _save->getDepth(), _game->getMod()->getMaxViewDistance());
 	Node *node = _save->getSpawnNode(0, unit);
 
 	if (node)
@@ -1756,7 +1745,7 @@ void BattlescapeGenerator::explodePowerSources()
 	{
 		int power = t->getExplosive();
 		t->setExplosive(0, 0, true);
-		Position p = t->getPosition().toVexel() + Position(8,8,0);
+		Position p = t->getPosition().toVoxel() + Position(8,8,0);
 		_save->getTileEngine()->explode({ }, p, power, _game->getMod()->getDamageType(DT_HE), power / 10);
 		t = _save->getTileEngine()->checkForTerrainExplosions();
 	}
@@ -1838,13 +1827,13 @@ bool BattlescapeGenerator::placeUnitNearFriend(BattleUnit *unit)
 	}
 	for (int i = 0; i != 10; ++i)
 	{
-		Position entryPoint = Position(-1, -1, -1);
+		Position entryPoint = TileEngine::invalid;
 		int tries = 100;
 		bool largeUnit = false;
-		while (entryPoint == Position(-1, -1, -1) && tries)
+		while (entryPoint == TileEngine::invalid && tries)
 		{
 			BattleUnit* k = _save->getUnits()->at(RNG::generate(0, _save->getUnits()->size()-1));
-			if (k->getFaction() == unit->getFaction() && k->getPosition() != Position(-1, -1, -1) && k->getArmor()->getSize() >= unit->getArmor()->getSize())
+			if (k->getFaction() == unit->getFaction() && k->getPosition() != TileEngine::invalid && k->getArmor()->getSize() >= unit->getArmor()->getSize())
 			{
 				entryPoint = k->getPosition();
 				largeUnit = (k->getArmor()->getSize() != 1);

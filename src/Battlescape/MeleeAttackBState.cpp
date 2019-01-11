@@ -136,7 +136,7 @@ void MeleeAttackBState::init()
 	}
 
 	int height = _target->getFloatHeight() + (_target->getHeight() / 2) - _parent->getSave()->getTile(_action.target)->getTerrainLevel();
-	_voxel = _action.target.toVexel() + Position(8, 8, height);
+	_voxel = _action.target.toVoxel() + Position(8, 8, height);
 
 	if (_unit->getFaction() == FACTION_HOSTILE)
 	{
@@ -211,8 +211,8 @@ void MeleeAttackBState::performMeleeAttack()
 	// offset the damage voxel ever so slightly so that the target knows which side the attack came from
 	Position difference = _unit->getPosition() - _action.target;
 	// large units may cause it to offset too much, so we'll clamp the values.
-	difference.x = Clamp(difference.x, -1, 1);
-	difference.y = Clamp(difference.y, -1, 1);
+	difference.x = Clamp<Sint16>(difference.x, -1, 1);
+	difference.y = Clamp<Sint16>(difference.y, -1, 1);
 
 	Position damagePosition = _voxel + difference;
 

@@ -172,6 +172,7 @@ void Mod::resetGlobalStatics()
 	DEBRIEF_MUSIC_BAD = "GMMARS";
 
 	Globe::OCEAN_COLOR = Palette::blockOffset(12);
+	Globe::OCEAN_SHADING = true;
 	Globe::COUNTRY_LABEL_COLOR = 239;
 	Globe::LINE_COLOR = 162;
 	Globe::CITY_LABEL_COLOR = 138;
@@ -1022,26 +1023,34 @@ void Mod::loadAll(const std::vector< std::pair< std::string, std::vector<std::st
 		catch (Exception &e)
 		{
 			const std::string &modId = mods[i].first;
-			Log(LOG_WARNING) << "disabling mod with invalid ruleset: " << modId;
-			std::vector<std::pair<std::string, bool> >::iterator it =
-				std::find(Options::mods.begin(), Options::mods.end(),
-					std::pair<std::string, bool>(modId, true));
-			if (it == Options::mods.end())
-			{
-				Log(LOG_ERROR) << "cannot find broken mod in mods list: " << modId;
-				Log(LOG_ERROR) << "clearing mods list";
-				Options::mods.clear();
-			}
-			else
-			{
-				it->second = false;
-			}
-			Options::save();
+			std::ostringstream ss;
+			ss << "failed to load '"
+				<< Options::getModInfos().at(modId).getName()
+				<< "'";
 
-			throw Exception("failed to load '" +
-				Options::getModInfos().at(modId).getName() +
-				"'; mod disabled for next startup\n" +
-				e.what());
+			if (!Options::debug)
+			{
+				Log(LOG_WARNING) << "disabling mod with invalid ruleset: " << modId;
+				std::vector<std::pair<std::string, bool> >::iterator it =
+					std::find(Options::mods.begin(), Options::mods.end(),
+						std::pair<std::string, bool>(modId, true));
+				if (it == Options::mods.end())
+				{
+					Log(LOG_ERROR) << "cannot find broken mod in mods list: " << modId;
+					Log(LOG_ERROR) << "clearing mods list";
+					Options::mods.clear();
+				}
+				else
+				{
+					it->second = false;
+				}
+				Options::save();
+
+				ss << "; mod disabled";
+			}
+
+			ss << std::endl << e.what();
+			throw Exception(ss.str());
 		}
 	}
 	_scriptGlobal->endLoad();
@@ -1089,6 +1098,7 @@ void Mod::loadAll(const std::vector< std::pair< std::string, std::vector<std::st
 	afterLoadHelper("manufacture", this, _manufacture, &RuleManufacture::afterLoad);
 	afterLoadHelper("units", this, _units, &Unit::afterLoad);
 	afterLoadHelper("facilities", this, _facilities, &RuleBaseFacility::afterLoad);
+	afterLoadHelper("startingConditions", this, _startingConditions, &RuleStartingCondition::afterLoad);
 
 	// fixed user options
 	if (!_fixedUserOptions.empty())
@@ -1608,15 +1618,6 @@ void Mod::loadFile(const std::string &filename, ModScript &parsers)
 		{
 			DIFFICULTY_COEFFICIENT[num] = (*i).as<int>(DIFFICULTY_COEFFICIENT[num]);
 			_statAdjustment[num].growthMultiplier = DIFFICULTY_COEFFICIENT[num];
-			++num;
-		}
-	}
-	if (doc["difficultyBasedRetaliationDelay"])
-	{
-		size_t num = 0;
-		for (YAML::const_iterator i = doc["difficultyBasedRetaliationDelay"].begin(); i != doc["difficultyBasedRetaliationDelay"].end() && num < 5; ++i)
-		{
-			DIFFICULTY_BASED_RETAL_DELAY[num] = (*i).as<int>(DIFFICULTY_BASED_RETAL_DELAY[num]);
 			++num;
 		}
 	}

@@ -121,7 +121,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) 
 	_txtAccuracy->initText(_game->getMod()->getFont("FONT_BIG"), _game->getMod()->getFont("FONT_SMALL"), _game->getLanguage());
 	_cacheActiveWeaponUfopediaArticleUnlocked = -1;
 	_cacheIsCtrlPressed = false;
-	_cacheCursorPosition = Position(-1, -1, -1);
+	_cacheCursorPosition = TileEngine::invalid;
 	_cacheHasLOS = -1;
 
 	_nightVisionOn = false;
@@ -132,8 +132,8 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) 
 	_fadeTimer->onTimer((SurfaceHandler)&Map::fadeShade);
 	_fadeTimer->start();
 
-	const RuleStartingCondition *startingCondition = _game->getMod()->getStartingCondition(_save->getStartingConditionType());
-	if (startingCondition != 0)
+	auto startingCondition = _save->getStartingCondition();
+	if (startingCondition)
 	{
 		_bgColor = startingCondition->getMapBackgroundColor();
 	}
@@ -144,16 +144,11 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) 
 	_shockIndicator = _game->getMod()->getSurface("FloorShockIndicator", false);
 	_anyIndicator = _stunIndicator || _woundIndicator || _burnIndicator || _shockIndicator;
 
-	const SavedBattleGame *battleSave = _game->getSavedGame()->getSavedBattle();
-	if (battleSave)
+	if (startingCondition)
 	{
-		const RuleStartingCondition *startingCondition = _game->getMod()->getStartingCondition(battleSave->getStartingConditionType());
-		if (startingCondition)
+		if (!startingCondition->getMapShockIndicator().empty())
 		{
-			if (!startingCondition->getMapShockIndicator().empty())
-			{
-				_shockIndicator = _game->getMod()->getSurface(startingCondition->getMapShockIndicator(), false);
-			}
+			_shockIndicator = _game->getMod()->getSurface(startingCondition->getMapShockIndicator(), false);
 		}
 	}
 }
@@ -250,7 +245,7 @@ void Map::draw()
 	_projectileInFOV = _save->getDebugMode();
 	if (_projectile)
 	{
-		t = _save->getTile(Position(_projectile->getPosition(0).x/16, _projectile->getPosition(0).y/16, _projectile->getPosition(0).z/24));
+		t = _save->getTile(_projectile->getPosition(0).toTile());
 		if (_save->getSide() == FACTION_PLAYER || (t && t->getVisible()))
 		{
 			_projectileInFOV = true;
@@ -261,7 +256,7 @@ void Map::draw()
 	{
 		for (std::list<Explosion*>::iterator i = _explosions.begin(); i != _explosions.end(); ++i)
 		{
-			t = _save->getTile(Position((*i)->getPosition().x/16, (*i)->getPosition().y/16, (*i)->getPosition().z/24));
+			t = _save->getTile((*i)->getPosition().toTile());
 			if (t && ((*i)->isBig() || t->getVisible()))
 			{
 				_explosionInFOV = true;
@@ -364,25 +359,19 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
 	{
 		return;
 	}
-	BattleUnit* bu = unitTile->getUnit();
+	BattleUnit* bu = unitTile->getOverlappingUnit(_save, TUO_ALWAYS);
 	Position unitOffset;
 	bool unitFromBelow = false;
-	if (!bu)
+	if (bu)
 	{
-		Tile *below = _save->getTile(unitTile->getPosition() + Position(0,0,-1));
-		if (below && unitTile->hasNoFloor(below))
+		if (bu != unitTile->getUnit())
 		{
-			bu = below->getUnit();
-			if (!bu)
-			{
-				return;
-			}
 			unitFromBelow = true;
 		}
-		else
-		{
-			return;
-		}
+	}
+	else
+	{
+		return;
 	}
 
 	if (!(bu->getVisible() || _save->getDebugMode()))
@@ -411,8 +400,8 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
 	}
 	else
 	{
-		Tile *top = _save->getTile(unitTile->getPosition() + Position(0, 0, +1));
-		if (top && top->hasNoFloor(unitTile))
+		const Tile *top = _save->getAboveTile(unitTile);
+		if (top && top->hasNoFloor(_save))
 		{
 			topMargin = -tileFoorHeight / 2;
 		}
@@ -1045,10 +1034,13 @@ void Map::drawTerrain(Surface *surface)
 							{
 							case 3:
 								surface->setPixel(vaporX+1, vaporY+1, (*_transparencies)[((*i)->getColor() * 1024) + ((*i)->getOpacity() * 256) + surface->getPixel(vaporX+1, vaporY+1)]);
+								[[gnu::fallthrough]];
 							case 2:
 								surface->setPixel(vaporX + 1, vaporY, (*_transparencies)[((*i)->getColor() * 1024) + ((*i)->getOpacity() * 256) + surface->getPixel(vaporX + 1, vaporY)]);
+								[[gnu::fallthrough]];
 							case 1:
 								surface->setPixel(vaporX, vaporY + 1, (*_transparencies)[((*i)->getColor() * 1024) + ((*i)->getOpacity() * 256) + surface->getPixel(vaporX, vaporY + 1)]);
+								[[gnu::fallthrough]];
 							default:
 								surface->setPixel(vaporX, vaporY, (*_transparencies)[((*i)->getColor() * 1024) + ((*i)->getOpacity() * 256) + surface->getPixel(vaporX, vaporY)]);
 								break;
@@ -1059,7 +1051,7 @@ void Map::drawTerrain(Surface *surface)
 					// Draw Path Preview
 					if (tile->getPreview() != -1 && tile->isDiscovered(0) && (_previewSetting & PATH_ARROWS))
 					{
-						if (itZ > 0 && tile->hasNoFloor(_save->getTile(tile->getPosition() + Position(0,0,-1))))
+						if (itZ > 0 && tile->hasNoFloor(_save))
 						{
 							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
 							if (tmpSurface)
@@ -1278,7 +1270,7 @@ void Map::drawTerrain(Surface *surface)
 											float attackStrength = action->actor->getPsiAccuracy(action->type, action->weapon);
 											float defenseStrength = 30.0f; // indicator ignores: +victim->getArmor()->getPsiDefence(victim);
 
-											Position p = action->actor->getPosition().toVexel() - Position(itX, itY, itZ).toVexel();
+											Position p = action->actor->getPosition().toVoxel() - Position(itX, itY, itZ).toVoxel();
 											p *= p;
 											int min = attackStrength - defenseStrength - rule->getPsiAccuracyRangeReduction(sqrt(float(p.x + p.y + p.z)));
 											int max = min + 55;
@@ -1403,13 +1395,12 @@ void Map::drawTerrain(Surface *surface)
 						screenPosition.y > -_spriteHeight && screenPosition.y < surface->getHeight() + _spriteHeight )
 					{
 						tile = _save->getTile(mapPosition);
-						Tile *tileBelow = _save->getTile(mapPosition - Position(0,0,1));
 						if (!tile || !tile->isDiscovered(0) || tile->getPreview() == -1)
 							continue;
 						int adjustment = -tile->getTerrainLevel();
 						if (_previewSetting & PATH_ARROWS)
 						{
-							if (itZ > 0 && tile->hasNoFloor(tileBelow))
+							if (itZ > 0 && tile->hasNoFloor(_save))
 							{
 								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
 								if (tmpSurface)
@@ -1907,7 +1898,7 @@ void Map::setCursorType(CursorType type, int size)
 	// reset cursor indicator cache
 	_cacheActiveWeaponUfopediaArticleUnlocked = -1;
 	_cacheIsCtrlPressed = false;
-	_cacheCursorPosition = Position(-1, -1, -1);
+	_cacheCursorPosition = TileEngine::invalid;
 	_cacheHasLOS = -1;
 
 	_cursorType = type;
