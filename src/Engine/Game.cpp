@@ -561,7 +561,7 @@ void Game::run()
 			// Uint32 milliseconds do wrap around in about 49.7 days
 			Uint32 timeFrameEnded = SDL_GetTicks();
 			Uint32 elapsedFrameTime =  timeFrameEnded > timeFrameStarted ? timeFrameEnded - timeFrameStarted : 0;
-			Uint32 nominalFPS = SDL_GetAppState() & SDL_APPINPUTFOCUS ? Options::FPS : Options::FPSInactive;
+			Uint32 nominalFPS = SDL_GetWindowFlags(getScreen()->getWindow()) & SDL_WINDOW_INPUT_FOCUS ? Options::FPS : Options::FPSInactive;
 			Uint32 nominalFrameTime = Options::FPS > 0 ? 1000.0f / nominalFPS : 1;
 			idleTime = elapsedFrameTime > nominalFrameTime ? 0 : nominalFrameTime - elapsedFrameTime;
 			idleTime = idleTime > 100 ? 100 : idleTime;
