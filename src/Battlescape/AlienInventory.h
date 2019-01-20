@@ -38,7 +38,7 @@ private:
 	BattleUnit *_selUnit;
 	int _dynamicOffset;
 	/// Gets the slot in the specified position.
-	RuleInventory *getSlotInPosition(int *x, int *y) const;
+	const RuleInventory *getSlotInPosition(int *x, int *y) const;
 public:
 	static const int ALIEN_INVENTORY_STATIC_OFFSET = 80;
 	/// Creates a new inventory view at the specified position and size.

@@ -17,8 +17,11 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Armor.h"
+#include "../Engine/Collections.h"
+#include "../Engine/Exception.h"
 #include "../Engine/ScriptBind.h"
 #include "Mod.h"
+#include <algorithm>
 
 namespace OpenXcom
 {
@@ -69,7 +72,8 @@ Armor::Armor(const std::string &type) :
 	_overKill(0.5f), _meleeDodgeBackPenalty(0),
 	_allowsRunning(defTriBool), _allowsStrafing(defTriBool), _allowsKneeling(defTriBool), _allowsMoving(1),
 	_instantWoundRecovery(false),
-	_standHeight(-1), _kneelHeight(-1), _floatHeight(-1)
+	_standHeight(-1), _kneelHeight(-1), _floatHeight(-1),
+	_slotBeltName("STR_BELT"), _slotBackpackName("STR_BACK_PACK"), _inventoryOverlapsPaperdoll(false)
 {
 	for (int i=0; i < DAMAGE_TYPES; i++)
 		_damageModifier[i] = 1.0f;
@@ -245,6 +249,99 @@ void Armor::load(const YAML::Node &node, const ModScript &parsers, Mod *mod)
 	_standHeight = node["standHeight"].as<int>(_standHeight);
 	_kneelHeight = node["kneelHeight"].as<int>(_kneelHeight);
 	_floatHeight = node["floatHeight"].as<int>(_floatHeight);
+	_inventorySlotsName = node["inventorySlots"].as< std::vector<std::string> >(_inventorySlotsName);
+	_slotBeltName = node["slotBelt"].as<std::string>(_slotBeltName);
+	_slotBackpackName = node["slotBackpack"].as<std::string>(_slotBackpackName);
+}
+
+/**
+ * Cross link with other rules.
+ */
+void Armor::afterLoad(const Mod* mod)
+{
+	_slotBelt = mod->getInventory(_slotBeltName, true);
+	_slotBackpack = mod->getInventory(_slotBackpackName, true);
+
+	if (_inventorySlotsName.empty())
+	{
+		// backwards-compatibility (just add all global inventory slots)
+		_inventorySlots.reserve(mod->getInventories()->size());
+		for (auto& item : *mod->getInventories())
+		{
+			_inventorySlots.push_back(item.second);
+		}
+	}
+	else
+	{
+		_inventorySlots.reserve(_inventorySlotsName.size());
+		for (auto& slotName : _inventorySlotsName)
+		{
+			auto slot = mod->getInventory(slotName, true);
+			_inventorySlots.push_back(slot);
+		}
+
+		{
+			auto checkAndPush = [&](const RuleInventory *slot, bool front)
+			{
+				if (std::find(_inventorySlots.begin(), _inventorySlots.end(), slot) == _inventorySlots.end())
+				{
+					if (front)
+					{
+						_inventorySlots.insert(_inventorySlots.begin(), slot);
+					}
+					else
+					{
+						_inventorySlots.push_back(slot);
+					}
+				}
+			};
+
+			// check if all required slots are present or redirected
+			// for backwards-compatibility (e.g. autoequip), the vector should begin with (in this order):
+			// STR_GROUND, STR_RIGHT_HAND, STR_LEFT_HAND, STR_BELT
+			checkAndPush(_slotBelt, true);
+			checkAndPush(mod->getSlotLeftHand(), true);
+			checkAndPush(mod->getSlotRightHand(), true);
+			checkAndPush(mod->getSlotGround(), true);
+			// ... and end with (in this order):
+			// STR_BACK_PACK
+			checkAndPush(_slotBackpack, false);
+		}
+	}
+
+	// find out if paperdoll overlaps with inventory slots
+	int x1 = RuleInventory::PAPERDOLL_X;
+	int y1 = RuleInventory::PAPERDOLL_Y;
+	int w1 = RuleInventory::PAPERDOLL_W;
+	int h1 = RuleInventory::PAPERDOLL_H;
+	for (auto& invCategory : _inventorySlots)
+	{
+		for (auto invSlot : *invCategory->getSlots())
+		{
+			int x2 = invCategory->getX() + (invSlot.x * RuleInventory::SLOT_W);
+			int y2 = invCategory->getY() + (invSlot.y * RuleInventory::SLOT_H);
+			int w2 = RuleInventory::SLOT_W;
+			int h2 = RuleInventory::SLOT_H;
+			if (x1 + w1 < x2 || x2 + w2 < x1 || y1 + h1 < y2 || y2 + h2 < y1)
+			{
+				// intersection is empty
+			}
+			else
+			{
+				_inventoryOverlapsPaperdoll = true;
+			}
+		}
+	}
+
+	// inventory slots map by match ID
+	_invsByMatchId.clear();
+	for (auto& slot : _inventorySlots)
+	{
+		_invsByMatchId[slot->getLayoutMatchId()] = slot;
+	}
+
+	//remove not needed data
+	Collections::deleteAll(_inventorySlotsName);
 }
 
 /**
@@ -999,6 +1096,39 @@ int Armor::getKneelHeight() const
 int Armor::getFloatHeight() const
 {
 	return _floatHeight;
+}
+
+/**
+ * Does the armor contain a given inventory slot?
+ * @return True if the armor contains the given inventory slot.
+ */
+bool Armor::containsInventorySlot(const RuleInventory *slot) const
+{
+	for (auto& s : _inventorySlots)
+	{
+		if (s == slot)
+			return true;
+	}
+	return false;
+}
+
+/**
+ * Returns the rules for a specific inventory slot (based on match ID!).
+ * @param matchId Inventory match ID.
+ * @return Inventory ruleset.
+ */
+const RuleInventory *Armor::getInventorySlotByMatchId(const std::string &matchId) const
+{
+	if (matchId.empty())
+	{
+		return nullptr;
+	}
+	auto i = _invsByMatchId.find(matchId);
+	if (i != _invsByMatchId.end())
+	{
+		return i->second;
+	}
+	return nullptr;
 }
 
 }

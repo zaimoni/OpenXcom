@@ -19,9 +19,11 @@
  */
 #include <string>
 #include <vector>
+#include <map>
 #include <yaml-cpp/yaml.h>
 #include "MapData.h"
 #include "Unit.h"
+#include "RuleInventory.h"
 #include "RuleStatBonus.h"
 #include "RuleDamageType.h"
 #include "ModScript.h"
@@ -83,6 +85,13 @@ private:
 	Sint8 _allowsRunning, _allowsStrafing, _allowsKneeling, _allowsMoving;
 	bool _instantWoundRecovery;
 	int _standHeight, _kneelHeight, _floatHeight;
+	std::vector<std::string> _inventorySlotsName;
+	std::vector<const RuleInventory*> _inventorySlots;
+	std::map<std::string, const RuleInventory*> _invsByMatchId;
+	std::string _slotBeltName, _slotBackpackName;
+	const RuleInventory *_slotBelt;
+	const RuleInventory *_slotBackpack;
+	bool _inventoryOverlapsPaperdoll;
 public:
 	/// Creates a blank armor ruleset.
 	Armor(const std::string &type);
@@ -90,6 +99,8 @@ public:
 	~Armor();
 	/// Loads the armor data from YAML.
 	void load(const YAML::Node& node, const ModScript& parsers, Mod *mod);
+	/// Cross link with other rules.
+	void afterLoad(const Mod* mod);
 	/// Gets the armor's type.
 	std::string getType() const;
 	/// Gets the unit's sprite sheet.
@@ -258,6 +269,18 @@ public:
 	int getKneelHeight() const;
 	/// Gets a unit's float elevation while wearing this armor.
 	int getFloatHeight() const;
+	/// Gets the armor's inventory slots.
+	const std::vector<const RuleInventory*> &getInventorySlots() const { return _inventorySlots; }
+	/// Does the armor contain a given inventory slot?
+	bool containsInventorySlot(const RuleInventory *slot) const;
+	/// Gets the ruleset for a specific inventory slot (based on match ID!).
+	const RuleInventory *getInventorySlotByMatchId(const std::string &matchId) const;
+	/// Gets the belt slot.
+	const RuleInventory* getSlotBelt() const { return _slotBelt; }
+	/// Gets the backpack slot.
+	const RuleInventory* getSlotBackpack() const { return _slotBackpack; }
+	/// Does the inventory overlap the paperdoll?
+	bool inventoryOverlapsPaperdoll() const { return _inventoryOverlapsPaperdoll; }
 };
 
 }

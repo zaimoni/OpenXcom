@@ -47,7 +47,7 @@ EquipmentLayoutItem::EquipmentLayoutItem(const YAML::Node &node)
  */
 EquipmentLayoutItem::EquipmentLayoutItem(const BattleItem* item) :
 	_itemType(item->getRules()->getType()),
-	_slot(item->getSlot()->getId()),
+	_slotMatchId(item->getSlot()->getLayoutMatchId()),
 	_slotX(item->getSlotX()), _slotY(item->getSlotY()),
 	_ammoItem{}, _fuseTimer(item->getFuseTimer())
 {
@@ -82,11 +82,11 @@ const std::string& EquipmentLayoutItem::getItemType() const
 
 /**
  * Returns the slot to be occupied.
- * @return slot name.
+ * @return slot match ID.
  */
-const std::string& EquipmentLayoutItem::getSlot() const
+const std::string& EquipmentLayoutItem::getSlotMatchId() const
 {
-	return _slot;
+	return _slotMatchId;
 }
 
 /**
@@ -132,7 +132,7 @@ int EquipmentLayoutItem::getFuseTimer() const
 void EquipmentLayoutItem::load(const YAML::Node &node)
 {
 	_itemType = node["itemType"].as<std::string>(_itemType);
-	_slot = node["slot"].as<std::string>(_slot);
+	_slotMatchId = node["slot"].as<std::string>(_slotMatchId);
 	_slotX = node["slotX"].as<int>(0);
 	_slotY = node["slotY"].as<int>(0);
 	_ammoItem[0] = node["ammoItem"].as<std::string>(_ammoItem[0]);
@@ -154,7 +154,7 @@ YAML::Node EquipmentLayoutItem::save() const
 {
 	YAML::Node node;
 	node["itemType"] = _itemType;
-	node["slot"] = _slot;
+	node["slot"] = _slotMatchId;
 	// only save this info if it's needed, reduce clutter in saves
 	if (_slotX != 0)
 	{

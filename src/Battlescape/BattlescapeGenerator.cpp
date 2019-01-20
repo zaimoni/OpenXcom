@@ -77,7 +77,7 @@ BattlescapeGenerator::BattlescapeGenerator(Game *game) :
 	_baseInventory(false), _generateFuel(true), _craftDeployed(false), _ufoDeployed(false), _craftZ(0), _blocksToDo(0), _dummy(0)
 {
 	_allowAutoLoadout = !Options::disableAutoEquip;
-	_inventorySlotGround = _game->getMod()->getInventory("STR_GROUND", true);
+	_inventorySlotGround = _game->getMod()->getSlotGround();
 }
 
 /**
@@ -482,7 +482,7 @@ void BattlescapeGenerator::nextStage()
 	{
 		_save->selectNextPlayerUnit();
 	}
-	RuleInventory *ground = _game->getMod()->getInventory("STR_GROUND", true);
+	const RuleInventory *ground = _game->getMod()->getSlotGround();
 
 	for (std::vector<BattleItem*>::iterator i = takeToNextStage.begin(); i != takeToNextStage.end(); ++i)
 	{
@@ -664,7 +664,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 {
 	_save->setStartingCondition(startingCondition);
 
-	RuleInventory *ground = _game->getMod()->getInventory("STR_GROUND", true);
+	const RuleInventory *ground = _game->getMod()->getSlotGround();
 
 	if (_craft != 0)
 		_base = _craft->getBase();
@@ -894,7 +894,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 }
 
 void BattlescapeGenerator::autoEquip(std::vector<BattleUnit*> units, Mod *mod, std::vector<BattleItem*> *craftInv,
-		RuleInventory *groundRuleInv, int worldShade, bool allowAutoLoadout, bool overrideEquipmentLayout)
+		const RuleInventory *groundRuleInv, int worldShade, bool allowAutoLoadout, bool overrideEquipmentLayout)
 {
 	for (int pass = 0; pass < 4; ++pass)
 	{
@@ -1330,7 +1330,12 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
 			{
 				if (itemType != layoutItem->getItemType()) continue;
 
-				auto inventorySlot = _game->getMod()->getInventory(layoutItem->getSlot(), true);
+				auto inventorySlot = unit->getArmor()->getInventorySlotByMatchId(layoutItem->getSlotMatchId());
+
+				if (!inventorySlot)
+				{
+					continue;
+				}
 
 				if (unit->getItem(inventorySlot, layoutItem->getSlotX(), layoutItem->getSlotY())) continue;
 
@@ -1548,7 +1553,7 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 
 				BattleItem *item = new BattleItem(rule, _save->getCurrentItemId());
 				_save->getItems()->push_back(item);
-				_save->getTile(i->position + Position(xoff, yoff, zoff))->addItem(item, _game->getMod()->getInventory("STR_GROUND"));
+				_save->getTile(i->position + Position(xoff, yoff, zoff))->addItem(item, _game->getMod()->getSlotGround());
 			}
 		}
 	}

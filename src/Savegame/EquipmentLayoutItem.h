@@ -34,7 +34,7 @@ class EquipmentLayoutItem
 {
 private:
 	std::string _itemType;
-	std::string _slot;
+	std::string _slotMatchId;
 	int _slotX, _slotY;
 	std::string _ammoItem[RuleItem::AmmoSlotMax];
 	int _fuseTimer;
@@ -48,7 +48,7 @@ public:
 	/// Gets the item's type which has to be in a slot
 	const std::string& getItemType() const;
 	/// Gets the slot to be occupied
-	const std::string& getSlot() const;
+	const std::string& getSlotMatchId() const;
 	/// Gets the slotX to be occupied
 	int getSlotX() const;
 	/// Gets the slotY to be occupied

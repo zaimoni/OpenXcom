@@ -129,7 +129,6 @@ private:
 	std::map<std::string, Armor*> _armors;
 	std::map<std::string, ArticleDefinition*> _ufopaediaArticles;
 	std::map<std::string, RuleInventory*> _invs;
-	bool _inventoryOverlapsPaperdoll;
 	std::map<std::string, RuleResearch *> _research;
 	std::map<std::string, RuleManufacture *> _manufacture;
 	std::map<std::string, RuleSoldierTransformation *> _soldierTransformation;
@@ -149,6 +148,10 @@ private:
 	std::vector<StatString*> _statStrings;
 	std::vector<RuleDamageType*> _damageTypes;
 	std::map<std::string, RuleMusic *> _musicDefs;
+
+	const RuleInventory *_slotGround;
+	const RuleInventory *_slotRightHand;
+	const RuleInventory *_slotLeftHand;
 
 	RuleGlobe *_globe;
 	RuleConverter *_converter;
@@ -412,11 +415,9 @@ public:
 	/// Gets the available article categories.
 	const std::vector<std::string> &getUfopaediaCategoryList() const;
 	/// Gets the inventory list.
-	std::map<std::string, RuleInventory*> *getInventories();
+	const std::map<std::string, RuleInventory*> *getInventories() const;
 	/// Gets the ruleset for a specific inventory.
-	RuleInventory *getInventory(const std::string &id, bool error = false) const;
-	/// Gets whether or not the inventory slots overlap with the paperdoll button
-	bool getInventoryOverlapsPaperdoll() const { return _inventoryOverlapsPaperdoll; }
+	const RuleInventory *getInventory(const std::string &id, bool error = false) const;
 	/// Gets max view distance in BattleScape.
 	int getMaxViewDistance() const { return _maxViewDistance; }
 	/// Gets threshold of darkness for LoS calculation.
@@ -649,6 +650,12 @@ public:
 	StatAdjustment *getStatAdjustment(int difficulty);
 	int getDefeatScore() const;
 	int getDefeatFunds() const;
+	/// Gets the ground slot.
+	const RuleInventory* getSlotGround() const { return _slotGround; }
+	/// Gets the right hand slot.
+	const RuleInventory* getSlotRightHand() const { return _slotRightHand; }
+	/// Gets the left hand slot.
+	const RuleInventory* getSlotLeftHand() const { return _slotLeftHand; }
 };
 
 }

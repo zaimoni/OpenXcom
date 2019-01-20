@@ -53,7 +53,7 @@ namespace OpenXcom
  * type of inventory section.
  * @param id String defining the id.
  */
-RuleInventory::RuleInventory(const std::string &id): _id(id), _x(0), _y(0), _type(INV_SLOT), _listOrder(0), _hand(0)
+RuleInventory::RuleInventory(const std::string &id): _id(id), _layoutMatchId(id), _x(0), _y(0), _type(INV_SLOT), _listOrder(0), _hand(0)
 {
 }
 
@@ -73,6 +73,7 @@ void RuleInventory::load(const YAML::Node &node, int listOrder)
 		load(parent, listOrder);
 	}
 	_id = node["id"].as<std::string>(_id);
+	_layoutMatchId = node["layoutMatchId"].as<std::string>(_layoutMatchId);
 	_x = node["x"].as<int>(_x);
 	_y = node["y"].as<int>(_y);
 	_type = (InventoryType)node["type"].as<int>(_type);
@@ -101,6 +102,15 @@ void RuleInventory::load(const YAML::Node &node, int listOrder)
 std::string RuleInventory::getId() const
 {
 	return _id;
+}
+
+/**
+ * Gets the inventory's ID used for equipment layout matching.
+ * @return The layout match ID.
+ */
+const std::string &RuleInventory::getLayoutMatchId() const
+{
+	return _layoutMatchId;
 }
 
 /**
@@ -155,7 +165,7 @@ bool RuleInventory::isLeftHand() const
  * Gets all the slots in the inventory section.
  * @return The list of slots.
  */
-std::vector<struct RuleSlot> *RuleInventory::getSlots()
+const std::vector<struct RuleSlot> *RuleInventory::getSlots() const
 {
 	return &_slots;
 }
@@ -262,7 +272,7 @@ bool RuleInventory::fitItemInSlot(const RuleItem *item, int x, int y) const
  * @param slot The new section id.
  * @return The time unit cost.
  */
-int RuleInventory::getCost(RuleInventory* slot) const
+int RuleInventory::getCost(const RuleInventory* slot) const
 {
 	if (slot == this)
 		return 0;

@@ -86,7 +86,7 @@ private:
 	SavedBattleGame *_save;
 	std::vector<Uint16> *_voxelData;
 	std::vector<VisibilityBlockCache> _blockVisibility;
-	RuleInventory *_inventorySlotGround;
+	const RuleInventory *_inventorySlotGround;
 	static const int heightFromCenter[11];
 	bool _personalLighting;
 	Tile *_cacheTile;
@@ -218,7 +218,7 @@ public:
 	/// Drop all unit items on ground.
 	void itemDropInventory(Tile *t, BattleUnit *unit, bool unprimeItems = false, bool deleteFixedItems = false);
 	/// Move item to other place in inventory or ground.
-	void itemMoveInventory(Tile *t, BattleUnit *unit, BattleItem *item, RuleInventory *slot, int x, int y);
+	void itemMoveInventory(Tile *t, BattleUnit *unit, BattleItem *item, const RuleInventory *slot, int x, int y);
 
 	/// Add moving unit.
 	void addMovingUnit(BattleUnit* unit);

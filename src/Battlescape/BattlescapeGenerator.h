@@ -55,7 +55,7 @@ private:
 	Game *_game;
 	SavedBattleGame *_save;
 	Mod *_mod;
-	RuleInventory *_inventorySlotGround = nullptr;
+	const RuleInventory *_inventorySlotGround = nullptr;
 	Craft *_craft;
 	const RuleCraft *_craftRules;
 	Ufo *_ufo;
@@ -193,7 +193,7 @@ public:
 	void setupObjectives(const AlienDeployment *ruleDeploy);
 	// Autoequip a set of units
 	static void autoEquip(std::vector<BattleUnit*> units, Mod *mod, std::vector<BattleItem*> *craftInv,
-		RuleInventory *groundRuleInv, int worldShade, bool allowAutoLoadout, bool overrideEquipmentLayout);
+		const RuleInventory *groundRuleInv, int worldShade, bool allowAutoLoadout, bool overrideEquipmentLayout);
 };
 
 }

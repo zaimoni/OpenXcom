@@ -2234,7 +2234,7 @@ std::vector<BattleItem*> *BattleUnit::getInventory()
  * @param item Item to fit.
  * @return True if succeded, false otherwise.
  */
-bool BattleUnit::fitItemToInventory(RuleInventory *slot, BattleItem *item)
+bool BattleUnit::fitItemToInventory(const RuleInventory *slot, BattleItem *item)
 {
 	auto rule = item->getRules();
 	if (slot->getType() == INV_HAND)
@@ -2275,8 +2275,8 @@ bool BattleUnit::fitItemToInventory(RuleInventory *slot, BattleItem *item)
  */
 bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip, bool allowAutoLoadout, bool allowUnloadedWeapons)
 {
-	RuleInventory *rightHand = mod->getInventory("STR_RIGHT_HAND");
-	RuleInventory *leftHand = mod->getInventory("STR_LEFT_HAND");
+	const RuleInventory *rightHand = mod->getSlotRightHand();
+	const RuleInventory *leftHand = mod->getSlotLeftHand();
 	bool placed = false;
 	bool loaded = false;
 	const RuleItem *rule = item->getRules();
@@ -2320,17 +2320,20 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 		// either in the default slot provided in the ruleset
 		if (!rule->getDefaultInventorySlot().empty())
 		{
-			RuleInventory *defaultSlot = mod->getInventory(rule->getDefaultInventorySlot());
-			BattleItem *defaultSlotWeapon = getItem(rule->getDefaultInventorySlot());
-			if (!defaultSlotWeapon)
+			const RuleInventory *defaultSlot = _armor->getInventorySlotByMatchId(rule->getDefaultInventorySlot());
+			if (defaultSlot)
 			{
-				item->moveToOwner(this);
-				item->setSlot(defaultSlot);
-				placed = true;
-				item->setXCOMProperty(getFaction() == FACTION_PLAYER);
-				if (item->getRules()->getTurretType() > -1)
+				BattleItem *defaultSlotWeapon = getItem(defaultSlot->getId());
+				if (!defaultSlotWeapon)
 				{
-					setTurretType(item->getRules()->getTurretType());
+					item->moveToOwner(this);
+					item->setSlot(defaultSlot);
+					placed = true;
+					item->setXCOMProperty(getFaction() == FACTION_PLAYER);
+					if (item->getRules()->getTurretType() > -1)
+					{
+						setTurretType(item->getRules()->getTurretType());
+					}
 				}
 			}
 		}
@@ -2430,9 +2433,8 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 		{
 			if (getBaseStats()->strength >= weight) // weight is always considered 0 for aliens
 			{
-				for (const std::string &s : mod->getInvsList())
+				for (auto& slot : _armor->getInventorySlots())
 				{
-					RuleInventory *slot = mod->getInventory(s);
 					if (slot->getType() == INV_SLOT)
 					{
 						placed = fitItemToInventory(slot, item);
@@ -2608,7 +2610,7 @@ Tile *BattleUnit::getTile() const
  * @param y Y position in slot.
  * @return Item in the slot, or NULL if none.
  */
-BattleItem *BattleUnit::getItem(RuleInventory *slot, int x, int y) const
+BattleItem *BattleUnit::getItem(const RuleInventory *slot, int x, int y) const
 {
 	// Soldier items
 	if (slot->getType() != INV_GROUND)

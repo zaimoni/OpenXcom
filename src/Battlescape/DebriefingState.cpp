@@ -1497,7 +1497,7 @@ void DebriefingState::prepareDebriefing()
 					{
 						if (!(*k)->getRules()->isFixed())
 						{
-							(*j)->getTile()->addItem(*k, _game->getMod()->getInventory("STR_GROUND"));
+							(*j)->getTile()->addItem(*k, _game->getMod()->getSlotGround());
 						}
 					}
 				}

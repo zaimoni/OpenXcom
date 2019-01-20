@@ -108,24 +108,27 @@ void AlienInventory::draw()
  */
 void AlienInventory::drawGrid()
 {
+	if (!_selUnit)
+		return;
+
 	_grid->clear();
 	RuleInterface *rule = _game->getMod()->getInterface("inventory");
 	Uint8 color = rule->getElement("grid")->color;
 
-	for (std::map<std::string, RuleInventory*>::iterator i = _game->getMod()->getInventories()->begin(); i != _game->getMod()->getInventories()->end(); ++i)
+	for (auto& ruleI : _selUnit->getArmor()->getInventorySlots())
 	{
-		if (i->second->getType() == INV_HAND)
+		if (ruleI->getType() == INV_HAND)
 		{
 			SDL_Rect r;
-			r.x = i->second->getX();
+			r.x = ruleI->getX();
 			r.x += ALIEN_INVENTORY_STATIC_OFFSET;
 
-			if (i->second->getId() == "STR_RIGHT_HAND")
+			if (ruleI->isRightHand())
 				r.x -= _dynamicOffset;
-			else if (i->second->getId() == "STR_LEFT_HAND")
+			else if (ruleI->isLeftHand())
 				r.x += _dynamicOffset;
 
-			r.y = i->second->getY();
+			r.y = ruleI->getY();
 			r.w = RuleInventory::HAND_W * RuleInventory::SLOT_W;
 			r.h = RuleInventory::HAND_H * RuleInventory::SLOT_H;
 			_grid->drawRect(&r, color);
@@ -159,9 +162,9 @@ void AlienInventory::drawItems()
 				int x = (*i)->getSlot()->getX() + (*i)->getRules()->getHandSpriteOffX();
 				x += ALIEN_INVENTORY_STATIC_OFFSET;
 
-				if ((*i)->getSlot()->getId() == "STR_RIGHT_HAND")
+				if ((*i)->getSlot()->isRightHand())
 					x -= _dynamicOffset;
-				else if ((*i)->getSlot()->getId() == "STR_LEFT_HAND")
+				else if ((*i)->getSlot()->isLeftHand())
 					x += _dynamicOffset;
 
 				frame->blitNShade(_items, x, (*i)->getSlot()->getY() + (*i)->getRules()->getHandSpriteOffY());
@@ -180,13 +183,16 @@ void AlienInventory::drawItems()
  * @param y Mouse Y position. Returns the slot's Y position.
  * @return Slot rules, or NULL if none.
  */
-RuleInventory *AlienInventory::getSlotInPosition(int *x, int *y) const
+const RuleInventory *AlienInventory::getSlotInPosition(int *x, int *y) const
 {
-	for (std::map<std::string, RuleInventory*>::iterator i = _game->getMod()->getInventories()->begin(); i != _game->getMod()->getInventories()->end(); ++i)
+	if (!_selUnit)
+		return 0;
+
+	for (auto& ruleI : _selUnit->getArmor()->getInventorySlots())
 	{
-		if (i->second->checkSlotInPosition(x, y))
+		if (ruleI->checkSlotInPosition(x, y))
 		{
-			return i->second;
+			return ruleI;
 		}
 	}
 	return 0;
@@ -234,7 +240,7 @@ void AlienInventory::mouseClick(Action *action, State *state)
 
 		x -= ALIEN_INVENTORY_STATIC_OFFSET;
 
-		RuleInventory *slot = getSlotInPosition(&x, &y);
+		const RuleInventory *slot = getSlotInPosition(&x, &y);
 		if (slot != 0)
 		{
 			if (slot->getType() == INV_HAND)

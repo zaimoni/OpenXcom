@@ -357,7 +357,7 @@ public:
 	/// Get the list of items in the inventory.
 	std::vector<BattleItem*> *getInventory();
 	/// Fit item into inventory slot.
-	bool fitItemToInventory(RuleInventory *slot, BattleItem *item);
+	bool fitItemToInventory(const RuleInventory *slot, BattleItem *item);
 	/// Add item to unit.
 	bool addItem(BattleItem *item, const Mod *mod, bool allowSecondClip = false, bool allowAutoLoadout = false, bool allowUnloadedWeapons = false);
 
@@ -378,7 +378,7 @@ public:
 	/// Gets the unit's tile.
 	Tile *getTile() const;
 	/// Gets the item in the specified slot.
-	BattleItem *getItem(RuleInventory *slot, int x = 0, int y = 0) const;
+	BattleItem *getItem(const RuleInventory *slot, int x = 0, int y = 0) const;
 	/// Gets the item in the specified slot.
 	BattleItem *getItem(const std::string &slot, int x = 0, int y = 0) const;
 	/// Gets the item in the main hand.

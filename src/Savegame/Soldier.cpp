@@ -141,14 +141,7 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 		for (YAML::const_iterator i = layout.begin(); i != layout.end(); ++i)
 		{
 			EquipmentLayoutItem *layoutItem = new EquipmentLayoutItem(*i);
-			if (mod->getInventory(layoutItem->getSlot()))
-			{
-				_equipmentLayout.push_back(layoutItem);
-			}
-			else
-			{
-				delete layoutItem;
-			}
+			_equipmentLayout.push_back(layoutItem);
 		}
 	}
 	if (node["death"])

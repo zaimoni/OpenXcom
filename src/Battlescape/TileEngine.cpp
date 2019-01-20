@@ -225,7 +225,7 @@ constexpr Position TileEngine::voxelTileCenter;
  * @param maxDarknessToSeeUnits Threshold of darkness for LoS calculation.
  */
 TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
-	_save(save), _voxelData(mod->getVoxelData()), _inventorySlotGround(mod->getInventory("STR_GROUND", true)), _personalLighting(true), _cacheTile(0), _cacheTileBelow(0),
+	_save(save), _voxelData(mod->getVoxelData()), _inventorySlotGround(mod->getSlotGround()), _personalLighting(true), _cacheTile(0), _cacheTileBelow(0),
 	_maxViewDistance(mod->getMaxViewDistance()), _maxViewDistanceSq(_maxViewDistance * _maxViewDistance),
 	_maxVoxelViewDistance(_maxViewDistance * 16), _maxDarknessToSeeUnits(mod->getMaxDarknessToSeeUnits()),
 	_maxStaticLightDistance(mod->getMaxStaticLightDistance()), _maxDynamicLightDistance(mod->getMaxDynamicLightDistance()),
@@ -4172,7 +4172,7 @@ void TileEngine::itemDropInventory(Tile *t, BattleUnit *unit, bool unprimeItems,
 /**
  * Move item to other place in inventory or ground.
  */
-void TileEngine::itemMoveInventory(Tile *t, BattleUnit *unit, BattleItem *item, RuleInventory *slot, int x, int y)
+void TileEngine::itemMoveInventory(Tile *t, BattleUnit *unit, BattleItem *item, const RuleInventory *slot, int x, int y)
 {
 	// Handle dropping from/to ground.
 	if (slot != item->getSlot())

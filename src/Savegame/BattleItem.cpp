@@ -110,7 +110,7 @@ void BattleItem::load(const YAML::Node &node, Mod *mod, const ScriptGlobal *shar
 		}
 		else
 		{
-			_inventorySlot = mod->getInventory("STR_GROUND");
+			_inventorySlot = mod->getSlotGround();
 		}
 	}
 	_inventoryX = node["inventoryX"].as<int>(_inventoryX);
@@ -505,7 +505,7 @@ void BattleItem::moveToOwner(BattleUnit *owner)
  * Gets the item's inventory slot.
  * @return The slot id.
  */
-RuleInventory *BattleItem::getSlot() const
+const RuleInventory *BattleItem::getSlot() const
 {
 	return _inventorySlot;
 }
@@ -514,7 +514,7 @@ RuleInventory *BattleItem::getSlot() const
  * Sets the item's inventory slot.
  * @param slot The slot id.
  */
-void BattleItem::setSlot(RuleInventory *slot)
+void BattleItem::setSlot(const RuleInventory *slot)
 {
 	_inventorySlot = slot;
 }

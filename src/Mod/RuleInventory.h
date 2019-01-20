@@ -43,6 +43,7 @@ class RuleInventory
 {
 private:
 	std::string _id;
+	std::string _layoutMatchId;
 	int _x, _y;
 	InventoryType _type;
 	std::vector<RuleSlot> _slots;
@@ -66,6 +67,8 @@ public:
 	void load(const YAML::Node& node, int listOrder);
 	/// Gets the inventory's id.
 	std::string getId() const;
+	/// Gets the inventory's ID used for equipment layout matching.
+	const std::string &getLayoutMatchId() const;
 	/// Gets the X position of the inventory.
 	int getX() const;
 	/// Gets the Y position of the inventory.
@@ -77,13 +80,13 @@ public:
 	/// Gets if this slot is left hand;
 	bool isLeftHand() const;
 	/// Gets all the slots in the inventory.
-	std::vector<struct RuleSlot> *getSlots();
+	const std::vector<struct RuleSlot> *getSlots() const;
 	/// Checks for a slot in a certain position.
 	bool checkSlotInPosition(int *x, int *y) const;
 	/// Checks if an item fits in a slot.
 	bool fitItemInSlot(const RuleItem *item, int x, int y) const;
 	/// Gets a certain cost in the inventory.
-	int getCost(RuleInventory *slot) const;
+	int getCost(const RuleInventory *slot) const;
 	int getListOrder() const;
 };
 

@@ -218,7 +218,6 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	_btnRank->onMouseIn((ActionHandler)&InventoryState::txtTooltipIn);
 	_btnRank->onMouseOut((ActionHandler)&InventoryState::txtTooltipOut);
 
-	if (!_game->getMod()->getInventoryOverlapsPaperdoll())
 	{
 		_btnArmor->onMouseClick((ActionHandler)&InventoryState::btnArmorClick);
 		_btnArmor->onMouseClick((ActionHandler)&InventoryState::btnArmorClickRight, SDL_BUTTON_RIGHT);
@@ -259,7 +258,6 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 		updateTemplateButtons(true);
 	}
 
-	_inv->draw();
 	_inv->setTuMode(_tu);
 	_inv->setSelectedUnit(_game->getSavedGame()->getSavedBattle()->getSelectedUnit());
 	_inv->onMouseClick((ActionHandler)&InventoryState::invClick, 0);
@@ -347,6 +345,15 @@ void InventoryState::init()
 		{
 			unit = _battleGame->getSelectedUnit();
 		}
+	}
+
+	if (unit && !unit->getArmor()->inventoryOverlapsPaperdoll())
+	{
+		_btnArmor->setVisible(true);
+	}
+	else
+	{
+		_btnArmor->setVisible(false);
 	}
 
 	_soldier->clear();
@@ -458,6 +465,7 @@ void InventoryState::init()
 		_inv->arrangeGround();
 	}
 
+	_inv->draw();
 	updateStats();
 	refreshMouse();
 }
@@ -965,6 +973,12 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 	std::vector<EquipmentLayoutItem*>::iterator templateIt;
 	for (templateIt = inventoryTemplate.begin(); templateIt != inventoryTemplate.end(); ++templateIt)
 	{
+		const RuleInventory *ruleI = unit->getArmor()->getInventorySlotByMatchId((*templateIt)->getSlotMatchId());
+		if (!ruleI)
+		{
+			continue;
+		}
+
 		// search for template item in ground inventory
 		bool found = false;
 
@@ -1069,13 +1083,13 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 		if (matchedWeapon && !_inv->overlapItems(
 			unit,
 			matchedWeapon,
-			_game->getMod()->getInventory((*templateIt)->getSlot(), true),
+			ruleI,
 			(*templateIt)->getSlotX(),
 			(*templateIt)->getSlotY()))
 		{
 			// move matched item from ground to the appropriate inv slot
 			matchedWeapon->moveToOwner(unit);
-			matchedWeapon->setSlot(_game->getMod()->getInventory((*templateIt)->getSlot()));
+			matchedWeapon->setSlot(ruleI);
 			matchedWeapon->setSlotX((*templateIt)->getSlotX());
 			matchedWeapon->setSlotY((*templateIt)->getSlotY());
 			matchedWeapon->setFuseTimer((*templateIt)->getFuseTimer());
@@ -1163,7 +1177,7 @@ void InventoryState::onAutoequip(Action *)
 	Tile                     *groundTile    = unit->getTile();
 	std::vector<BattleItem*>  groundInv     = *groundTile->getInventory();
 	Mod                      *mod           = _game->getMod();
-	RuleInventory            *groundRuleInv = mod->getInventory("STR_GROUND", true);
+	const RuleInventory      *groundRuleInv = mod->getSlotGround();
 	int                       worldShade    = _battleGame->getGlobalShade();
 
 	std::vector<BattleUnit*> units;

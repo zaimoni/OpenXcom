@@ -662,8 +662,6 @@ void SavedGame::load(const std::string &filename, Mod *mod)
 
 				// check if everything still exists (in case of mod upgrades)
 				bool error = false;
-				if (!mod->getInventory(layoutItem->getSlot()))
-					error = true;
 				if (!mod->getItem(layoutItem->getItemType()))
 					error = true;
 				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
