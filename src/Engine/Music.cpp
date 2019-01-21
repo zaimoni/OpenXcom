@@ -32,7 +32,7 @@ namespace OpenXcom
 /**
  * Initializes a new music track.
  */
-Music::Music() : _music(0), _rwops(0)
+Music::Music() : _music(0), _rwops(0), _filename()
 {
 }
 
@@ -55,6 +55,7 @@ Music::~Music()
 void Music::load(const std::string &filename)
 {
 #ifndef __NO_MUSIC
+	_filename = filename;
 	load(FileMap::getRWops(filename));
 	Log(LOG_VERBOSE)<<"Music::load('" << filename << "')";
 #endif
@@ -73,7 +74,7 @@ void Music::load(SDL_RWops *rwops)
 
 	if (_music == 0)
 	{
-		Log(LOG_ERROR) << "Music::load() :" << Mix_GetError();
+		Log(LOG_ERROR) << "Music::load('"<<_filename<<"') :" << Mix_GetError();
 	}
 #endif
 }
