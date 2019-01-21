@@ -229,10 +229,6 @@ void OptionsBaseState::btnOkClick(Action *)
 	dY = Options::baseYResolution - dY;
 	recenter(dX, dY);
 	Options::save();
-	if (Options::reload && _origin == OPT_MENU)
-	{
-		Options::mapResources();
-	}
 	_game->loadLanguages();
 	SDL_SetWindowGrab(_game->getScreen()->getWindow(), (Options::captureMouse)?SDL_TRUE:SDL_FALSE); //Breaks stuff. Hard.
 	CrossPlatform::setSystemUI();

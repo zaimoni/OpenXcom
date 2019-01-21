@@ -205,15 +205,11 @@ void OptionsSystemState::btnLogClick(Action *action)
 	InteractiveSurface *sender = action->getSender();
 	if (sender == _btnLogFile)
 	{
-		// Make sure there's a file to write to.
-		std::string s = Options::getUserFolder();
-		s += "openxcom.log";
-		Logger::logFile() = s;
-		Logger::logToFile() = Options::logToFile = _btnLogFile->getPressed();
+		Options::logToFile = _btnLogFile->getPressed();
 	}
 	if (sender == _btnLogSystem)
 	{
-		Logger::logToSystem() = Options::logToSystem = _btnLogSystem->getPressed();
+		Options::logToSystem = _btnLogSystem->getPressed();
 	}
 }
 

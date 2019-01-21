@@ -182,7 +182,7 @@ void StartState::think()
 		addLine("");
 		addLine("ERROR: " + error);
 		addLine("");
-		addLine("More details here: " + Logger::logFile());
+		addLine("More details here: " + CrossPlatform::getLogFileName());
 		addLine("Make sure OpenXcom and any mods are installed correctly.");
 		addLine("");
 #ifdef __ANDROID__

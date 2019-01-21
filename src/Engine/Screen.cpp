@@ -535,6 +535,7 @@ void Screen::resetDisplay(bool resetVideo)
 	outRect.w = getWidth() - _leftBlackBand - _rightBlackBand;
 	outRect.h = getHeight() - _topBlackBand - _bottomBlackBand;
 	_renderer->setOutputRect(&outRect);
+
 }
 
 /**
