@@ -4033,27 +4033,29 @@ Tile *TileEngine::applyGravity(Tile *t)
 
 	if (occupant)
 	{
-		Position unitpos = occupant->getPosition();
-		while (unitpos.z >= 0)
+		occupant->updateTileFloorState(_save);
+		if (occupant->haveNoFloorBelow())
 		{
-			bool canFall = true;
-			for (int y = 0; y < occupant->getArmor()->getSize() && canFall; ++y)
+			// we already know that we can fall, skip first check because `updateTileFloorState` did it already
+			Position unitpos = occupant->getPosition() - Position(0, 0, 1);
+			while (unitpos.z > 0)
 			{
-				for (int x = 0; x < occupant->getArmor()->getSize() && canFall; ++x)
+				bool canFall = true;
+				for (int y = 0; y < occupant->getArmor()->getSize() && canFall; ++y)
 				{
-					auto rt = _save->getTile(Position(unitpos.x+x, unitpos.y+y, unitpos.z));
-					if (!rt->hasNoFloor(_save))
+					for (int x = 0; x < occupant->getArmor()->getSize() && canFall; ++x)
 					{
-						canFall = false;
+						auto rt = _save->getTile(Position(unitpos.x+x, unitpos.y+y, unitpos.z));
+						if (!rt->hasNoFloor(_save))
+						{
+							canFall = false;
+						}
 					}
 				}
+				if (!canFall)
+					break;
+				unitpos.z--;
 			}
-			if (!canFall)
-				break;
-			unitpos.z--;
-		}
-		if (unitpos != occupant->getPosition())
-		{
 			if (!occupant->isOutThresholdExceed())
 			{
 				if (occupant->getMovementType() == MT_FLY)
@@ -4701,7 +4703,7 @@ bool TileEngine::isPositionValidForUnit(Position &position, BattleUnit *unit, bo
 			_save->getPathfinding()->setUnit(unit);
 			for (int dir = 2; dir <= 4; ++dir)
 			{
-				if (_save->getPathfinding()->isBlocked(_save->getTile(*i), 0, dir, 0))
+				if (_save->getPathfinding()->isBlockedDirection(_save->getTile(*i), dir, 0))
 				{
 					passedCheck = false;
 				}
