@@ -125,9 +125,9 @@ public:
 	~BattlescapeState();
 	void resetPalettes();
 	/// Initializes the battlescapestate.
-	void init();
+	void init() override;
 	/// Runs the timers and handles popups.
-	void think();
+	void think() override;
 	/// Handler for moving mouse over the map.
 	void mapOver(Action *action);
 	/// Handler for pressing the map.
@@ -224,7 +224,7 @@ public:
 	/// Gets melee damage preview.
 	std::string getMeleeDamagePreview(BattleUnit *actor, BattleItem *weapon) const;
 	/// Handles keypresses.
-	void handle(Action *action);
+	void handle(Action *action) override;
 	/// Displays a popup window.
 	void popup(State *state);
 	/// Finishes a battle.
@@ -277,7 +277,7 @@ public:
 	/// Handler for hiding tooltip.
 	void txtTooltipOut(Action *action);
 	/// Update the resolution settings, we just resized the window.
-	void resize(int &dX, int &dY);
+	void resize(int &dX, int &dY) override;
 	
 	bool hasScrolled() const;
 	/// Move the mouse back to where it started after we finish drag scrolling.

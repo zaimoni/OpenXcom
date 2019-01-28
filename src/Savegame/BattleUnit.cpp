@@ -428,6 +428,7 @@ void BattleUnit::load(const YAML::Node &node, const ScriptGlobal *shared)
 	_exp.psiSkill = node["expPsiSkill"].as<int>(_exp.psiSkill);
 	_exp.psiStrength = node["expPsiStrength"].as<int>(_exp.psiStrength);
 	_exp.melee = node["expMelee"].as<int>(_exp.melee);
+	_stats = node["currStats"].as<UnitStats>(_stats);
 	_turretType = node["turretType"].as<int>(_turretType);
 	_visible = node["visible"].as<bool>(_visible);
 	_turnsSinceSpotted = node["turnsSinceSpotted"].as<int>(_turnsSinceSpotted);
@@ -445,7 +446,7 @@ void BattleUnit::load(const YAML::Node &node, const ScriptGlobal *shared)
 	_activeHand = node["activeHand"].as<std::string>(_activeHand);
 	if (node["tempUnitStatistics"])
 	{
-	_statistics->load(node["tempUnitStatistics"]);
+		_statistics->load(node["tempUnitStatistics"]);
 	}
 	_murdererId = node["murdererId"].as<int>(_murdererId);
 	_fatalShotSide = (UnitSide)node["fatalShotSide"].as<int>(_fatalShotSide);
@@ -501,6 +502,7 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	node["expPsiSkill"] = _exp.psiSkill;
 	node["expPsiStrength"] = _exp.psiStrength;
 	node["expMelee"] = _exp.melee;
+	node["currStats"] = _stats;
 	node["turretType"] = _turretType;
 	node["visible"] = _visible;
 	node["turnsSinceSpotted"] = _turnsSinceSpotted;
@@ -4917,6 +4919,18 @@ ModScript::SelectUnitParser::SelectUnitParser(ScriptGlobal* shared, const std::s
 	commonImpl(b, mod);
 
 	setDefault("add sprite_index sprite_offset; return sprite_index;");
+}
+
+/**
+ * Constructor of select sound script parser.
+ */
+ModScript::SelectMoveSoundUnitParser::SelectMoveSoundUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"sound_index",
+	"unit", "walking_phase", "unit_sound_index", "tile_sound_index", "base_tile_sound_index", "base_tile_sound_offset", "base_fly_sound_index", }
+{
+	BindBase b { this };
+
+	commonImpl(b, mod);
 }
 
 /**

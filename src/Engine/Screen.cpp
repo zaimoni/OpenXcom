@@ -206,7 +206,7 @@ void Screen::clear()
  * @param ncolors Amount of colors to replace.
  * @param immediately Apply palette changes immediately, otherwise wait for next blit.
  */
-void Screen::setPalette(SDL_Color* colors, int firstcolor, int ncolors, bool immediately)
+void Screen::setPalette(const SDL_Color* colors, int firstcolor, int ncolors, bool immediately)
 {
 	if (_numColors && (_numColors != ncolors) && (_firstColor != firstcolor))
 	{
@@ -227,7 +227,7 @@ void Screen::setPalette(SDL_Color* colors, int firstcolor, int ncolors, bool imm
 
 #if 0
 	// defer actual update of screen until SDL_Flip()
-	if (immediately && _screen->format->BitsPerPixel == 8 && SDL_SetColors(_screen, colors, firstcolor, ncolors) == 0)
+	if (immediately && _screen->format->BitsPerPixel == 8 && SDL_SetColors(_screen, const_cast<SDL_Color *>(colors), firstcolor, ncolors) == 0)
 	{
 		Log(LOG_DEBUG) << "Display palette doesn't match requested palette";
 	}
@@ -607,14 +607,16 @@ void Screen::screenshot(const std::string &filename) const
 	{
 		SDL_BlitSurface(_screen, 0, screenshot, 0);
 	}
-
-	unsigned error = lodepng::encode(filename, (const unsigned char *)(screenshot->pixels), getWidth() - getWidth()%4, getHeight(), LCT_RGB);
+    std::vector<unsigned char> out;
+	unsigned error = lodepng::encode(out, (const unsigned char *)(screenshot->pixels), getWidth() - getWidth()%4, getHeight(), LCT_RGB);
 	if (error)
 	{
 		Log(LOG_ERROR) << "Saving to PNG failed: " << lodepng_error_text(error);
 	}
 
 	SDL_FreeSurface(screenshot);
+
+	CrossPlatform::writeFile(filename, out);
 #endif
 }
 
