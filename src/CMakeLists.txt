@@ -390,7 +390,8 @@ endif ()
 if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
   if ( "${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ENABLE_WARNING )
     # Enable more GCC warnings if requested or we are doing a Debug build.
-    add_definitions ( -Wall
+    add_definitions ( -Wall -Wextra
+      -Wsuggest-override
       -Winit-self
       -Wmissing-include-dirs
       -Wunknown-pragmas
@@ -401,10 +402,11 @@ if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES 
       -Wempty-body
       -Wuninitialized
       -Wignored-qualifiers
+      -Wno-unused-parameter
+      -Winline
+      -Wshadow
 # These warning options actually generate way too many warnings. Should be enabled later.
 #      -Weffc++
-#      -Winline
-#      -Wshadow
       )
     if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" )
       # add warning flags recognized by g++ but not by clang
@@ -415,22 +417,6 @@ if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES 
     if ( FATAL_WARNING )
       add_definitions ( -Werror )
     endif ()
-  endif ()
-
-# These warnings aren't worth polluting the code for
-  add_definitions (
-    -Wno-unused-function              # cross-platform functions
-    )
-  if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" )
-    # add warning flags recognized by g++ but not by clang
-    add_definitions (
-      -Wno-missing-field-initializers # xbrz
-      )
-  elseif ( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
-    # add warning flags recognized by clang but not by g++
-    add_definitions (
-      -Wno-overloaded-virtual         # overloads with different parameters
-      )
   endif ()
 endif ()
 
@@ -458,7 +444,9 @@ if ( DUMP_CORE )
   set_source_files_properties ( main.cpp PROPERTIES COMPILE_FLAGS -DDUMP_CORE )
 endif ()
 
+remove_definitions( ../libs/miniz/miniz.c -Wsuggest-override )
 set_source_files_properties ( ../libs/miniz/miniz.c PROPERTIES COMPILE_FLAGS -DMINIZ_NO_STDIO )
+set_source_files_properties ( Engine/Scalers/xbrz.cpp PROPERTIES COMPILE_FLAGS -Wno-unused )
 
 if ( WIN32 )
   set ( application_type WIN32 )

@@ -589,11 +589,11 @@ void TileEngine::addLight(GraphSubset gs, Position center, int power, LightLayer
 					return false;
 				}
 				auto dir = -1;
-				auto diff = point - lastPoint;
+				auto difference = point - lastPoint;
 				auto result = false;
 				auto& cache = _blockVisibility[_save->getTileIndex(lastPoint)];
-				Pathfinding::vectorToDirection(diff, dir);
-				if (diff.z > 0)
+				Pathfinding::vectorToDirection(difference, dir);
+				if (difference.z > 0)
 				{
 					if (dir != -1)
 					{
@@ -604,7 +604,7 @@ void TileEngine::addLight(GraphSubset gs, Position center, int power, LightLayer
 						result = cache.blockUp;
 					}
 				}
-				else if (diff.z == 0)
+				else if (difference.z == 0)
 				{
 					result = cache.blockDir & (1 << dir);
 
@@ -616,7 +616,7 @@ void TileEngine::addLight(GraphSubset gs, Position center, int power, LightLayer
 						}
 					}
 				}
-				else if (diff.z < 0)
+				else if (difference.z < 0)
 				{
 					if (dir != -1)
 					{

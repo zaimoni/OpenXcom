@@ -411,11 +411,11 @@ void ScriptWorkerBlit::executeBlit(Surface* src, Surface* dest, int x, int y, in
 		if (_events)
 		{
 			ShaderDrawFunc(
-				[&](Uint8& dest, const Uint8& src)
+				[&](Uint8& destStuff, const Uint8& srcStuff)
 				{
 					if (src)
 					{
-						ScriptWorkerBlit::Output arg = { src, dest };
+						ScriptWorkerBlit::Output arg = { destStuff, srcStuff };
 						set(arg);
 						auto ptr = _events;
 						while (*ptr)
@@ -438,7 +438,7 @@ void ScriptWorkerBlit::executeBlit(Surface* src, Surface* dest, int x, int y, in
 						++ptr;
 
 						get(arg);
-						if (arg.getFirst()) dest = arg.getFirst();
+						if (arg.getFirst()) destStuff = arg.getFirst();
 					}
 				},
 				destShader,
@@ -448,15 +448,15 @@ void ScriptWorkerBlit::executeBlit(Surface* src, Surface* dest, int x, int y, in
 		else
 		{
 			ShaderDrawFunc(
-				[&](Uint8& dest, const Uint8& src)
+				[&](Uint8& destStuff, const Uint8& srcStuff)
 				{
-					if (src)
+					if (srcStuff)
 					{
-						ScriptWorkerBlit::Output arg = { src, dest };
+						ScriptWorkerBlit::Output arg = { srcStuff, destStuff };
 						set(arg);
 						scriptExe(*this, _proc);
 						get(arg);
-						if (arg.getFirst()) dest = arg.getFirst();
+						if (arg.getFirst()) destStuff = arg.getFirst();
 					}
 				},
 				destShader,
@@ -1516,6 +1516,7 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 			//start of number
 			case digitSign:
 				--off; //skipping +- sign
+				[[gnu::fallthrough]];
 			case digit:
 				hex = c == '0'; //expecting hex number
 				type = TokenNumber;
@@ -1536,8 +1537,10 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 			case charRest:
 				if (off != 1) break;
 				if (c != 'x' && c != 'X') break; //X in "0x1"
+				[[gnu::fallthrough]];
 			case charHex:
 				if (!hex) break;
+				[[gnu::fallthrough]];
 			case digit:
 				if (off == 0) hex = c == '0'; //expecting hex number
 				continue;
@@ -2470,8 +2473,8 @@ void ScriptParserBase::logScriptMetadata(bool haveEvents) const
 		}
 		else
 		{
-			auto temp = _procList;
-			std::sort(temp.begin(), temp.end(),
+			auto tmp = _procList;
+			std::sort(tmp.begin(), tmp.end(),
 				[](const ScriptProcData& a, const ScriptProcData& b)
 				{
 					return std::lexicographical_compare(a.name.begin(), a.name.end(), b.name.begin(), b.name.end());
@@ -2480,7 +2483,7 @@ void ScriptParserBase::logScriptMetadata(bool haveEvents) const
 
 			refLog.get(LOG_DEBUG) << "\n";
 			refLog.get(LOG_DEBUG) << "Script operations:\n";
-			for (auto& p : temp)
+			for (const auto& p : tmp)
 			{
 				if (p.parserArg != nullptr && p.overloadArg && p.description.size() != 0)
 				{
@@ -2883,11 +2886,11 @@ void ScriptGlobal::load(const YAML::Node& node)
 					auto name = i.first.as<std::string>();
 					auto invalidType = _tagValueTypes.size();
 					auto valueType = invalidType;
-					for (size_t t = 0; t < invalidType; ++t)
+					for (size_t typei = 0; typei < invalidType; ++typei)
 					{
-						if (ScriptRef::tempFrom(type) == _tagValueTypes[t].name)
+						if (ScriptRef::tempFrom(type) == _tagValueTypes[typei].name)
 						{
-							valueType = t;
+							valueType = typei;
 							break;
 						}
 					}
