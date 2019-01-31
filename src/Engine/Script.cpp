@@ -413,9 +413,9 @@ void ScriptWorkerBlit::executeBlit(Surface* src, Surface* dest, int x, int y, in
 			ShaderDrawFunc(
 				[&](Uint8& destStuff, const Uint8& srcStuff)
 				{
-					if (src)
+					if (srcStuff)
 					{
-						ScriptWorkerBlit::Output arg = { destStuff, srcStuff };
+						ScriptWorkerBlit::Output arg = { srcStuff, destStuff };
 						set(arg);
 						auto ptr = _events;
 						while (*ptr)
