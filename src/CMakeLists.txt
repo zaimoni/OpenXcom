@@ -137,7 +137,6 @@ set ( engine_src
   Engine/LocalizedText.cpp
   Engine/ModInfo.cpp
   Engine/Music.cpp
-  Engine/OpenGLRenderer.cpp
   Engine/OptionInfo.cpp
   Engine/Options.cpp
   Engine/Palette.cpp

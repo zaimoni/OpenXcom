@@ -37,7 +37,6 @@
 #include <algorithm>
 #include "Renderer.h"
 #include "SDLRenderer.h"
-//#include "OpenGLRenderer.h"
 
 namespace OpenXcom
 {
@@ -409,19 +408,7 @@ void Screen::resetDisplay(bool resetVideo)
 
 		if (!_renderer)
 		{
-#ifndef __NO_OPENGL
-			if (Options::useOpenGL)
-			{
-				_renderer = new OpenGLRenderer(_window);
-			}
-			else
-			{
-				_renderer = new SDLRenderer(_window, -1, SDL_RENDERER_ACCELERATED);
-			}
-#else
 			_renderer = new SDLRenderer(_window, -1, SDL_RENDERER_ACCELERATED);
-#endif
-			//_renderer = new OpenGLRenderer(_window/*, -1, SDL_RENDERER_ACCELERATED */);
 			_renderer->setPixelFormat(_surface->format->format);
 		}
 		SDL_Rect baseRect;

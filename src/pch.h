@@ -161,7 +161,6 @@
 #include "./Engine/Logger.h"
 #include "./Engine/ModInfo.h"
 #include "./Engine/Music.h"
-#include "./Engine/OpenGLRenderer.h"
 #include "./Engine/OptionInfo.h"
 #include "./Engine/Options.h"
 #include "./Engine/Palette.h"
