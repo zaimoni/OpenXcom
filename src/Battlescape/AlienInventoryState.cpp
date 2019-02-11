@@ -65,7 +65,11 @@ AlienInventoryState::AlienInventoryState(BattleUnit *unit)
 	centerAllSurfaces();
 
 	// Set up objects
-	Surface *tmp = _game->getMod()->getSurface("AlienInventory", false);
+	Surface *tmp = _game->getMod()->getSurface("AlienInventory2", false);
+	if (!tmp || !unit->getGeoscapeSoldier())
+	{
+		tmp = _game->getMod()->getSurface("AlienInventory", false);
+	}
 	if (tmp)
 	{
 		tmp->blitNShade(_bg, 0, 0);
@@ -173,6 +177,13 @@ AlienInventoryState::AlienInventoryState(BattleUnit *unit)
 	if (tmp && unit->getFatalWounds() > 0)
 	{
 		tmp->blitNShade(_soldier, 32, 32);
+	}
+
+	// Burning indicator
+	tmp = _game->getMod()->getSurface("BigBurnIndicator", false);
+	if (tmp && unit->getFire() > 0)
+	{
+		tmp->blitNShade(_soldier, 112, 32);
 	}
 }
 

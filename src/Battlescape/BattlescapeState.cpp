@@ -532,14 +532,39 @@ BattlescapeState::BattlescapeState() : _reserve(0), _firstInit(true), _paletteRe
 	_btnStats->onKeyboardPress((ActionHandler)&BattlescapeState::btnSelectMusicTrackClick, Options::keySelectMusicTrack);
 	_btnStats->onKeyboardPress((ActionHandler)&BattlescapeState::btnPersonalLightingClick, Options::keyBattlePersonalLighting);
 	_btnStats->onKeyboardPress((ActionHandler)&BattlescapeState::btnNightVisionClick, Options::keyNightVisionToggle);
-	if (Options::autoNightVision)
+
+	// automatic night vision
 	{
-		// during the night
-		if (_save->getGlobalShade() > _game->getMod()->getMaxDarknessToSeeUnits())
+		bool completeDarkness = true;
+		for (auto& unit : *_save->getUnits())
 		{
-			// turn personal lighting off
-			_save->getTileEngine()->togglePersonalLighting();
-			// turn night vision on
+			if (unit->getOriginalFaction() == FACTION_PLAYER && !unit->isOut())
+			{
+				if (unit->getTile() && unit->getTile()->getShade() < 12)
+				{
+					completeDarkness = false;
+					break;
+				}
+			}
+		}
+		if (!completeDarkness && _save->getGlobalShade() >= 12)
+		{
+			bool noPersonalLights = true;
+			for (auto& unit : *_save->getUnits())
+			{
+				if (unit->getOriginalFaction() == FACTION_PLAYER && !unit->isOut())
+				{
+					if (unit->getArmor()->getPersonalLight() > 5)
+					{
+						noPersonalLights = false;
+						break;
+					}
+				}
+			}
+			completeDarkness = noPersonalLights;
+		}
+		if (completeDarkness)
+		{
 			_map->toggleNightVision();
 		}
 	}
@@ -602,7 +627,7 @@ BattlescapeState::BattlescapeState() : _reserve(0), _firstInit(true), _paletteRe
 	_btnReserveAuto->setGroup(&_reserve);
 
 	// Set music
-	if (!Options::playBriefingMusicDuringEquipment)
+	if (!Options::oxcePlayBriefingMusicDuringEquipment)
 	{
 		if (_save->getMusic().empty())
 		{
@@ -720,7 +745,7 @@ void BattlescapeState::init()
 	if (_firstInit)
 	{
 		// Set music
-		if (Options::playBriefingMusicDuringEquipment)
+		if (Options::oxcePlayBriefingMusicDuringEquipment)
 		{
 			if (_save->getMusic() == "")
 			{
@@ -1804,11 +1829,8 @@ void BattlescapeState::drawItem(BattleItem* item, Surface* hand, std::vector<Num
 				}
 			}
 		}
-		if (Options::twoHandedIndicator)
-		{
-			twoHandedText->setVisible(rule->isTwoHanded());
-			twoHandedText->setColor(rule->isBlockingBothHands() ? _twoHandedRed : _twoHandedGreen);
-		}
+		twoHandedText->setVisible(rule->isTwoHanded());
+		twoHandedText->setColor(rule->isBlockingBothHands() ? _twoHandedRed : _twoHandedGreen);
 		if (rule->getBattleType() == BT_MEDIKIT)
 		{
 			medikitText[0]->setVisible(true);
@@ -2081,7 +2103,6 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 	// remember where green indicators turn blue
 	_numberOfEnemiesTotal = j;
 
-	if (Options::bleedingIndicator)
 	{
 		// go through all wounded units under player's control (incl. unconscious)
 		for (std::vector<BattleUnit*>::iterator i = _battleGame->getSave()->getUnits()->begin(); i != _battleGame->getSave()->getUnits()->end() && j < VISIBLE_MAX; ++i)
@@ -2100,7 +2121,6 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 	// remember where blue indicators turn purple
 	_numberOfEnemiesTotalPlusWounded = j;
 
-	if (Options::knockOutIndicator)
 	{
 		// go through all units under player's control (excl. unconscious)
 		for (std::vector<BattleUnit*>::iterator i = _battleGame->getSave()->getUnits()->begin(); i != _battleGame->getSave()->getUnits()->end() && j < VISIBLE_MAX; ++i)

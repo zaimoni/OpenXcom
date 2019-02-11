@@ -486,10 +486,10 @@ int Base::insideRadarRange(Target *target) const
  * Returns the amount of soldiers contained
  * in the base without any assignments.
  * @param checkCombatReadiness does what it says on the tin.
- * @param everyoneFightsNobodyQuits even wounded soldiers can fight in the base defense, if respective option is turned on.
+ * @param includeWounded even wounded soldiers can fight in the base defense, if they have enough HP (user option).
  * @return Number of soldiers.
  */
-int Base::getAvailableSoldiers(bool checkCombatReadiness, bool everyoneFightsNobodyQuits) const
+int Base::getAvailableSoldiers(bool checkCombatReadiness, bool includeWounded) const
 {
 	int total = 0;
 	for (std::vector<Soldier*>::const_iterator i = _soldiers.begin(); i != _soldiers.end(); ++i)
@@ -499,7 +499,7 @@ int Base::getAvailableSoldiers(bool checkCombatReadiness, bool everyoneFightsNob
 			total++;
 		}
 		else if (checkCombatReadiness && (((*i)->getCraft() != 0 && (*i)->getCraft()->getStatus() != "STR_OUT") ||
-			((*i)->getCraft() == 0 && ((*i)->hasFullHealth() || everyoneFightsNobodyQuits))))
+			((*i)->getCraft() == 0 && ((*i)->hasFullHealth() || (includeWounded && (*i)->canDefendBase())))))
 		{
 			total++;
 		}
@@ -1329,6 +1329,17 @@ int Base::getUsedPsiLabs() const
 		if ((*s)->isInPsiTraining())
 		{
 			total ++;
+		}
+	}
+	// Only soldiers returning home after being shot down by a HK can ever be in psi training while in transfer
+	for (std::vector<Transfer*>::const_iterator i = _transfers.begin(); i != _transfers.end(); ++i)
+	{
+		if ((*i)->getType() == TRANSFER_SOLDIER)
+		{
+			if ((*i)->getSoldier()->isInPsiTraining())
+			{
+				total++;
+			}
 		}
 	}
 	return total;

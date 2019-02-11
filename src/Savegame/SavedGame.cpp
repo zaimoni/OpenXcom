@@ -568,7 +568,6 @@ void SavedGame::load(const std::string &filename, Mod *mod)
 	}
 
 	// Finish loading crafts after bases (more specifically after all crafts) are loaded, because of references between crafts (i.e. friendly escorts)
-	if (Options::friendlyCraftEscort)
 	{
 		for (YAML::const_iterator i = doc["bases"].begin(); i != doc["bases"].end(); ++i)
 		{
@@ -2681,7 +2680,7 @@ void SavedGame::setAutosell(const RuleItem *itype, const bool enabled)
  */
 bool SavedGame::getAutosell(const RuleItem *itype) const
 {
-	if (!Options::autoSell)
+	if (!Options::oxceAutoSell)
 	{
 		return false;
 	}

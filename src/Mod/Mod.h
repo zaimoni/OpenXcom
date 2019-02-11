@@ -160,6 +160,7 @@ private:
 	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayMelee, _aiUseDelayPsionic;
 	int _aiFireChoiceIntelCoeff, _aiFireChoiceAggroCoeff;
 	bool _aiExtendedFireModeChoice, _aiRespectMaxRange, _aiDestroyBaseFacilities;
+	bool _aiPickUpWeaponsMoreActively;
 	int _maxLookVariant, _tooMuchSmokeThreshold, _customTrainingFactor, _minReactionAccuracy;
 	int _chanceToStopRetaliation;
 	bool _allowCountriesToCancelAlienPact;
@@ -170,7 +171,7 @@ private:
 	int _bughuntMinTurn, _bughuntMaxEnemies, _bughuntRank, _bughuntLowMorale, _bughuntTimeUnitsLeft;
 	int _ufoGlancingHitThreshold, _ufoBeamWidthParameter;
 	int _ufoTractorBeamSizeModifiers[5];
-	int _escortRange;
+	int _escortRange, _drawEnemyRadarCircles;
 	bool _escortsJoinFightAgainstHK, _hunterKillerFastRetarget;
 	int _crewEmergencyEvacuationSurvivalChance, _pilotsEmergencyEvacuationSurvivalChance;
 	int _soldiersPerSergeant, _soldiersPerCaptain, _soldiersPerColonel, _soldiersPerCommander;
@@ -179,7 +180,7 @@ private:
 	int _performanceBonusFactor;
 	bool _useCustomCategories, _showDogfightDistanceInKm, _showFullNameInAlienInventory;
 	bool _hidePediaInfoButton, _extraNerdyPediaInfo, _showAllCommendations;
-	bool _giveScoreAlsoForResearchedArtifacts;
+	bool _giveScoreAlsoForResearchedArtifacts, _statisticalBulletConservation;
 	int _theMostUselessOptionEver, _theBiggestRipOffEver;
 	int _shortRadarRange;
 	int _defeatScore, _defeatFunds;
@@ -461,6 +462,8 @@ public:
 	bool getAIRespectMaxRange() const {return _aiRespectMaxRange;}
 	/// Gets whether or not the AI should be allowed to continue destroying base facilities after first encountering XCom
 	bool getAIDestroyBaseFacilities() const { return _aiDestroyBaseFacilities; }
+	/// Gets whether or not the AI should pick up weapons more actively.
+	bool getAIPickUpWeaponsMoreActively() const { return _aiPickUpWeaponsMoreActively; }
 	/// Gets maximum supported lookVariant (0-15)
 	int getMaxLookVariant() const  {return abs(_maxLookVariant) % 16;}
 	/// Gets the threshold for too much smoke (vanilla default = 10).
@@ -507,6 +510,8 @@ public:
 	int getUfoTractorBeamSizeModifier(int ufoSize) const { return _ufoTractorBeamSizeModifiers[ufoSize]; }
 	/// Gets the escort range
 	double getEscortRange() const;
+	/// Gets the setting for drawing alien base/UFO radar circles.
+	int getDrawEnemyRadarCircles() const { return _drawEnemyRadarCircles; }
 	/// Should escorts join the fight against HK (automatically)? Or is only fighting one-on-one allowed?
 	bool getEscortsJoinFightAgainstHK() const { return _escortsJoinFightAgainstHK; }
 	/// Should hunter-killers be able to retarget every 5 seconds on slow game timers (5Sec / 1Min)?
@@ -553,6 +558,8 @@ public:
 	bool getShowAllCommendations() const { return _showAllCommendations; }
 	/// In debriefing, give score also for already researched alien artifacts?
 	bool getGiveScoreAlsoForResearchedArtifacts() const { return _giveScoreAlsoForResearchedArtifacts; }
+	/// When recovering ammo, should partially spent clip have a chance to recover as full?
+	bool getStatisticalBulletConservation() const { return _statisticalBulletConservation; }
 	/// Self-explanatory
 	int getTheMostUselessOptionEver() const { return _theMostUselessOptionEver; }
 	/// Shame on you!

@@ -342,7 +342,7 @@ void Inventory::drawItems()
 			work.executeBlit(frame, _items, x, y, 0);
 
 			// two-handed indicator
-			if (Options::twoHandedIndicatorInventory && (*i)->getSlot()->getType() == INV_HAND)
+			if ((*i)->getSlot()->getType() == INV_HAND)
 			{
 				if ((*i)->getRules()->isTwoHanded() || (*i)->getRules()->isBlockingBothHands())
 				{
@@ -1138,21 +1138,13 @@ bool Inventory::unload()
 	{
 		if ((*i)->getSlot()->getType() == INV_HAND && (*i) != _selItem)
 		{
-			if (!Options::oneHandedUnloading)
+			if ((*i)->getSlot() == SecondFreeHand)
 			{
-				_warning->showMessage(_game->getLanguage()->getString("STR_BOTH_HANDS_MUST_BE_EMPTY"));
-				return false;
+				SecondFreeHand = nullptr;
 			}
-			else
+			if ((*i)->getSlot() == FirstFreeHand)
 			{
-				if ((*i)->getSlot() == SecondFreeHand)
-				{
-					SecondFreeHand = nullptr;
-				}
-				if ((*i)->getSlot() == FirstFreeHand)
-				{
-					FirstFreeHand = nullptr;
-				}
+				FirstFreeHand = nullptr;
 			}
 		}
 	}

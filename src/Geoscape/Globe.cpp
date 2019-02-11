@@ -708,7 +708,6 @@ bool Globe::targetNear(Target* target, int x, int y) const
 std::vector<Target*> Globe::getTargets(int x, int y, bool craft, Craft *currentCraft) const
 {
 	std::vector<Target*> v;
-	if (!craft || Options::friendlyCraftEscort)
 	{
 		for (std::vector<Base*>::iterator i = _game->getSavedGame()->getBases()->begin(); i != _game->getSavedGame()->getBases()->end(); ++i)
 		{
@@ -1153,13 +1152,17 @@ void Globe::drawRadars()
 		}
 	}
 
-	if (Options::drawEnemyRadarCircles)
+	if (_game->getMod()->getDrawEnemyRadarCircles() > 0)
 	{
 		// Draw radars around UFO hunter-killers
 		for (std::vector<Ufo*>::iterator u = _game->getSavedGame()->getUfos()->begin(); u != _game->getSavedGame()->getUfos()->end(); ++u)
 		{
 			if ((*u)->isHunterKiller() && (*u)->getDetected())
 			{
+				if (_game->getMod()->getDrawEnemyRadarCircles() == 1 && !(*u)->getHyperDetected())
+				{
+					continue;
+				}
 				lat = (*u)->getLatitude();
 				lon = (*u)->getLongitude();
 				range = Nautical((*u)->getCraftStats().radarRange);

@@ -68,7 +68,7 @@ private:
 	int _lookVariant;
 	int _missions, _kills;
 	float _recovery; // amount of HP missing until full recovery... used to calculate recovery time
-	bool _recentlyPromoted, _psiTraining, _training;
+	bool _recentlyPromoted, _psiTraining, _training, _returnToTrainingWhenHealed;
 	Armor *_armor;
 	Armor *_replacedArmor;
 	Armor *_transformedArmor;
@@ -164,6 +164,8 @@ public:
 	bool isWounded() const;
 	/// Is the soldier wounded or not?.
 	bool hasFullHealth() const;
+	/// Is the soldier capable of defending a base?.
+	bool canDefendBase() const;
 	/// Gets the soldier's wound recovery time.
 	int getWoundRecoveryInt() const;
 	int getWoundRecovery(float absBonus, float relBonus) const;
@@ -203,6 +205,10 @@ public:
 	bool isInTraining();
 	/// set the training status
 	void setTraining(bool training);
+	/// Should the soldier return to martial training automatically when fully healed?
+	bool getReturnToTrainingWhenHealed() const;
+	/// Sets whether the soldier should return to martial training automatically when fully healed.
+	void setReturnToTrainingWhenHealed(bool returnToTrainingWhenHealed);
 	/// Sets whether the soldier's body was recovered from a battle
 	void setCorpseRecovered(bool corpseRecovered);
 	/// Gets the previous transformations performed on this soldier

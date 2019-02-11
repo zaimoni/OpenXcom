@@ -109,6 +109,7 @@ BattleUnit::BattleUnit(Soldier *soldier, int depth, int maxViewDistance) :
 	}
 	_stats += *_armor->getStats();	// armors may modify effective stats
 	_maxViewDistanceAtDark = _armor->getVisibilityAtDark() ? _armor->getVisibilityAtDark() : 9;
+	_maxViewDistanceAtDarkSquared = _maxViewDistanceAtDark * _maxViewDistanceAtDark;
 	_maxViewDistanceAtDay = _armor->getVisibilityAtDay() ? _armor->getVisibilityAtDay() : maxViewDistance;
 	_loftempsSet = _armor->getLoftempsSet();
 	_gender = soldier->getGender();
@@ -138,20 +139,12 @@ BattleUnit::BattleUnit(Soldier *soldier, int depth, int maxViewDistance) :
 	_energy = _stats.stamina;
 	_health = _stats.health;
 	_morale = 100;
-	if (Options::everyoneFightsNobodyQuits)
+	// wounded soldiers (defending the base) start with lowered morale
 	{
-		// wounded soldiers start with half the energy and lowered morale
 		if (soldier->isWounded())
 		{
-			_energy = _stats.stamina / 2;
 			_morale = 75;
-		}
-		// statistically worse than average
-		_health = _health - ((soldier->getWoundRecovery(0.0f, 0.0f) * 3) / 2);
-		if (_health < 1)
-		{
-			// this is actually a punishment, strategically it is better to leave them behind :)
-			_health = 1;
+			_health = std::max(1, _health - soldier->getWoundRecoveryInt());
 		}
 	}
 	_stunlevel = 0;
@@ -209,6 +202,7 @@ void BattleUnit::updateArmorFromSoldier(Soldier *soldier, Armor *ruleArmor, int 
 
 	_stats += *_armor->getStats();	// armors may modify effective stats
 	_maxViewDistanceAtDark = _armor->getVisibilityAtDark() ? _armor->getVisibilityAtDark() : 9;
+	_maxViewDistanceAtDarkSquared = _maxViewDistanceAtDark * _maxViewDistanceAtDark;
 	_maxViewDistanceAtDay = _armor->getVisibilityAtDay() ? _armor->getVisibilityAtDay() : maxViewDistance;
 	_loftempsSet = _armor->getLoftempsSet();
 
@@ -307,6 +301,7 @@ BattleUnit::BattleUnit(Unit *unit, UnitFaction faction, int id, const RuleStarti
 
 	_stats += *_armor->getStats();	// armors may modify effective stats
 	_maxViewDistanceAtDark = _armor->getVisibilityAtDark() ? _armor->getVisibilityAtDark() : faction==FACTION_HOSTILE ? maxViewDistance : 9;
+	_maxViewDistanceAtDarkSquared = _maxViewDistanceAtDark * _maxViewDistanceAtDark;
 	_maxViewDistanceAtDay = _armor->getVisibilityAtDay() ? _armor->getVisibilityAtDay() : maxViewDistance;
 
 	_breathFrame = -1; // most aliens don't breathe per-se, that's exclusive to humanoids
@@ -3094,14 +3089,17 @@ bool BattleUnit::postMissionProcedures(SavedGame *geoscape, SavedBattleGame *bat
 
 	s->setWoundRecovery(recovery);
 
-	if (s->getWoundRecoveryInt() > 0)
+	if (s->isWounded())
 	{
 		// remove from craft
 		s->setCraft(nullptr);
 
-		// remove from training
-		if (Options::removeWoundedFromTraining)
+		// remove from training, but remember to return to training when healed
 		{
+			if (s->isInTraining())
+			{
+				s->setReturnToTrainingWhenHealed(true);
+			}
 			s->setTraining(false);
 		}
 	}
@@ -3459,6 +3457,11 @@ int BattleUnit::getMaxViewDistanceAtDark(const Armor *otherUnitArmor) const
 	{
 		return _maxViewDistanceAtDark;
 	}
+}
+
+int BattleUnit::getMaxViewDistanceAtDarkSquared() const
+{
+	return _maxViewDistanceAtDarkSquared;
 }
 
 int BattleUnit::getMaxViewDistanceAtDay(const Armor *otherUnitArmor) const
@@ -4899,6 +4902,13 @@ void battleActionImpl(BindBase& b)
 	b.addCustomConst("battle_action_throw", BA_THROW);
 }
 
+void moveTypesImpl(BindBase& b)
+{
+	b.addCustomConst("move_normal", BAM_NORMAL);
+	b.addCustomConst("move_run", BAM_RUN);
+	b.addCustomConst("move_strafe", BAM_STRAFE);
+}
+
 }
 
 /**
@@ -4937,17 +4947,25 @@ ModScript::SelectUnitParser::SelectUnitParser(ScriptGlobal* shared, const std::s
  */
 ModScript::SelectMoveSoundUnitParser::SelectMoveSoundUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
 	"sound_index",
-	"unit", "walking_phase", "unit_sound_index", "tile_sound_index", "base_tile_sound_index", "base_tile_sound_offset", "base_fly_sound_index", }
+	"unit", "walking_phase", "unit_sound_index", "tile_sound_index",
+	"base_tile_sound_index", "base_tile_sound_offset", "base_fly_sound_index",
+	"move", }
 {
 	BindBase b { this };
 
 	commonImpl(b, mod);
+
+	moveTypesImpl(b);
 }
 
 /**
  * Constructor of reaction chance script parser.
  */
-ModScript::ReactionUnitParser::ReactionUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name, "reaction_chance", "distance", "action_unit", "reaction_unit", "weapon", "battle_action", "action_target", "move" }
+ModScript::ReactionUnitParser::ReactionUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"reaction_chance",
+	"distance",
+	"action_unit", "reaction_unit", "weapon", "battle_action", "action_target",
+	"move", }
 {
 	BindBase b { this };
 
@@ -4955,9 +4973,7 @@ ModScript::ReactionUnitParser::ReactionUnitParser(ScriptGlobal* shared, const st
 
 	battleActionImpl(b);
 
-	b.addCustomConst("move_normal", BAM_NORMAL);
-	b.addCustomConst("move_run", BAM_RUN);
-	b.addCustomConst("move_strafe", BAM_STRAFE);
+	moveTypesImpl(b);
 }
 
 /**

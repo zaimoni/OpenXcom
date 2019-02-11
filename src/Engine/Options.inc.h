@@ -24,7 +24,7 @@ OPT SDL_Keycode keyOk, keyCancel, keyScreenshot, keyFps, keyQuickLoad, keyQuickS
 
 // Geoscape options
 OPT int geoClockSpeed, dogfightSpeed, geoScrollSpeed, geoDragScrollButton, geoscapeScale;
-OPT bool includePrimeStateInSavedLayout, anytimePsiTraining, anytimeMartialTraining, weaponSelfDestruction, retainCorpses, craftLaunchAlways, globeSeasons, globeDetail, globeRadarLines, globeFlightPaths, globeAllRadarsOnBaseBuild,
+OPT bool includePrimeStateInSavedLayout, anytimePsiTraining, weaponSelfDestruction, retainCorpses, craftLaunchAlways, globeSeasons, globeDetail, globeRadarLines, globeFlightPaths, globeAllRadarsOnBaseBuild,
 	storageLimitsEnforced, canSellLiveAliens, canTransferCraftsWhileAirborne, customInitialBase, aggressiveRetaliation, geoDragScrollInvert,
 	allowBuildingQueue, showFundsOnGeoscape, psiStrengthEval, allowPsiStrengthImprovement, fieldPromotions, meetingPoint;
 // Added for Android
@@ -46,7 +46,7 @@ keyBattleReserveKneel, keyBattleReload, keyBattlePersonalLighting, keyBattleRese
 keyBattleCenterEnemy1, keyBattleCenterEnemy2, keyBattleCenterEnemy3, keyBattleCenterEnemy4, keyBattleCenterEnemy5, keyBattleCenterEnemy6, keyBattleCenterEnemy7, keyBattleCenterEnemy8,
 keyBattleCenterEnemy9, keyBattleCenterEnemy10, keyBattleVoxelView, keyBattleZeroTUs, keyInvCreateTemplate, keyInvApplyTemplate, keyInvClear, keyInvAutoEquip;
 
-// Extra hotkeys (Meridian's build)
+// Extra hotkeys (OXCE)
 OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch,
 	keyGraphsZoomIn, keyGraphsZoomOut,
 	keyToggleQuickSearch,
@@ -57,23 +57,13 @@ OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch,
 	keyBattleActionItem1, keyBattleActionItem2, keyBattleActionItem3, keyBattleActionItem4, keyBattleActionItem5,
 	keyNightVisionToggle, keyNightVisionHold, keySelectMusicTrack;
 
-// Extra options (Meridian's build)
-OPT int startTextMode;
-OPT bool twoHandedIndicator, twoHandedIndicatorInventory, minimapBorderIndicator, everyoneFightsNobodyQuits;
-OPT bool bleedingIndicator, knockOutIndicator, statisticalBulletConservation;
-
-OPT bool showItemNameAndWeightInInventory;
-OPT bool removeWoundedFromTraining;
-OPT bool fullNightVision;
-OPT int nightVisionColor;
-OPT bool autoNightVision;
-OPT bool autoSell;
-OPT bool techTreeViewerSpoilerProtection;
-OPT bool playBriefingMusicDuringEquipment;
-OPT bool ufoLandingAlert;
-OPT bool friendlyCraftEscort;
-OPT bool drawEnemyRadarCircles;
-OPT bool oneHandedUnloading;
+// Extra options (OXCE)
+OPT int oxceStartUpTextMode;
+OPT bool oxceUfoLandingAlert;
+OPT int oxceWoundedDefendBaseIf;
+OPT bool oxcePlayBriefingMusicDuringEquipment;
+OPT int oxceNightVisionColor;
+OPT bool oxceAutoSell;
 
 // System-specific options
 OPT bool swipeToTurn, holdToTurn;

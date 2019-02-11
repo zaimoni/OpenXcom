@@ -1637,25 +1637,20 @@ int Map::reShade(Tile *tile)
 		return tile->getShade();
 	}
 
-	// full night vision
-	if (Options::fullNightVision)
-	{
-		return tile->getShade() > _fadeShade ? _fadeShade : tile->getShade();
-	}
-
-	// local night vision
+	// hybrid night vision (local)
 	for (std::vector<BattleUnit*>::iterator i = _save->getUnits()->begin(); i != _save->getUnits()->end(); ++i)
 	{
 		if ((*i)->getFaction() == FACTION_PLAYER && !(*i)->isOut())
 		{
-			if (_save->getTileEngine()->distanceSq(tile->getPosition(), (*i)->getPosition(), false) <= (*i)->getMaxViewDistanceAtDark(0) * (*i)->getMaxViewDistanceAtDark(0))
+			if (_save->getTileEngine()->distanceSq(tile->getPosition(), (*i)->getPosition(), false) <= (*i)->getMaxViewDistanceAtDarkSquared())
 			{
 				return tile->getShade() > _fadeShade ? _fadeShade : tile->getShade();
 			}
 		}
 	}
 
-	return tile->getShade();
+	// hybrid night vision (global)
+	return std::min(NIGHT_VISION_MAX_SHADE, tile->getShade());
 }
 
 /**
@@ -1981,7 +1976,7 @@ void Map::fadeShade()
 	bool hold = SDL_GetKeyboardState(NULL)[SDL_GetScancodeFromKey(Options::keyNightVisionHold)];
 	if ((_nightVisionOn && !hold) || (!_nightVisionOn && hold))
 	{
-		_nvColor = Options::nightVisionColor;
+		_nvColor = Options::oxceNightVisionColor;
 		if (_fadeShade > NIGHT_VISION_SHADE) // 0 = max brightness
 		{
 			--_fadeShade;

@@ -54,7 +54,7 @@ namespace OpenXcom
 SoldiersState::SoldiersState(Base *base) : _base(base), _origSoldierOrder(*_base->getSoldiers()), _dynGetter(NULL)
 {
 	bool isPsiBtnVisible = Options::anytimePsiTraining && _base->getAvailablePsiLabs() > 0;
-	bool isTrnBtnVisible = Options::anytimeMartialTraining && _base->getAvailableTraining() > 0;
+	bool isTrnBtnVisible = _base->getAvailableTraining() > 0;
 	std::vector<RuleSoldierTransformation* > availableTransformations;
 	_game->getSavedGame()->getAvailableTransformations(availableTransformations, _game->getMod(), _base);
 	bool isTransformationAvailable = availableTransformations.size() > 0;
@@ -570,7 +570,7 @@ void SoldiersState::cbxScreenActionsChange(Action *action)
 */
 void SoldiersState::btnInventoryClick(Action *)
 {
-	if (_base->getAvailableSoldiers(true, Options::everyoneFightsNobodyQuits) > 0)
+	if (_base->getAvailableSoldiers(true, true) > 0)
 	{
 		SavedBattleGame *bgame = new SavedBattleGame(_game->getMod());
 		_game->getSavedGame()->setBattleGame(bgame);

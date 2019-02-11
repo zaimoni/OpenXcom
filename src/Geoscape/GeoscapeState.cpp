@@ -906,7 +906,7 @@ void GeoscapeState::time5Seconds()
 				AlienMission *mission = (*i)->getMission();
 				bool detected = (*i)->getDetected();
 				mission->ufoReachedWaypoint(**i, *_game, *_globe);
-				if (Options::ufoLandingAlert && (*i)->getStatus() == Ufo::LANDED && (*i)->getDetected() && (*i)->getLandId() != 0)
+				if (Options::oxceUfoLandingAlert && (*i)->getStatus() == Ufo::LANDED && (*i)->getDetected() && (*i)->getLandId() != 0)
 				{
 					std::string msg = tr("STR_UFO_HAS_LANDED").arg((*i)->getName(_game->getLanguage()));
 					popup(new CraftErrorState(this, msg));
@@ -1385,7 +1385,6 @@ void GeoscapeState::time10Minutes()
 			if ((*j)->getStatus() == "STR_OUT")
 			{
 				int escortSpeed = 0;
-				if (Options::friendlyCraftEscort)
 				{
 					Craft *escortee = dynamic_cast<Craft*>((*j)->getDestination());
 					if (escortee != 0)
@@ -2346,6 +2345,18 @@ void GeoscapeState::time1Day()
 					trainingFinishedList.push_back(*j);
 				}
 			}
+			else
+			{
+				if ((*j)->getReturnToTrainingWhenHealed() && !(*j)->isWounded())
+				{
+					if (!(*j)->isFullyTrained() && base->getFreeTrainingSpace() > 0)
+					{
+						(*j)->setTraining(true);
+					}
+					// only ever try to return once
+					(*j)->setReturnToTrainingWhenHealed(false);
+				}
+			}
 		}
 		if (!trainingFinishedList.empty())
 		{
@@ -3018,7 +3029,7 @@ void GeoscapeState::handleBaseDefense(Base *base, Ufo *ufo)
 			popup(new BaseDestroyedState(base, true, true));
 		}
 	}
-	else if (base->getAvailableSoldiers(true, Options::everyoneFightsNobodyQuits) > 0 || !base->getVehicles()->empty())
+	else if (base->getAvailableSoldiers(true, true) > 0 || !base->getVehicles()->empty())
 	{
 		SavedBattleGame *bgame = new SavedBattleGame(_game->getMod());
 		_game->getSavedGame()->setBattleGame(bgame);
