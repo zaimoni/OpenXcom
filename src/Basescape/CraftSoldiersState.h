@@ -94,7 +94,7 @@ public:
 	void lstSoldiersMouseOver(Action *action);
 #ifdef __MOBILE__
 	/// Pokes the timer
-	void think();
+	void think() override;
 	/// Handler for mouse releases
 	void lstSoldiersMouseRelease(Action *action);
 	/// Handler for long presses

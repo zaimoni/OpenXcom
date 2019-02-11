@@ -138,9 +138,9 @@ public:
 	int getAnimFrame() const { return _animFrame; }
 #ifdef __MOBILE__
 	/// Start long press timer
-	void mousePress(Action *action, State *state);
+	void mousePress(Action *action, State *state) override;
 	/// Stop long press timer
-	void mouseRelease(Action *action, State *state);
+	void mouseRelease(Action *action, State *state) override;
 	/// Handle long press on grenade
 	void longPressAction();
 #endif

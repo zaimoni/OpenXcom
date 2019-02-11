@@ -100,7 +100,7 @@ public:
 	void handleKeyPress(Action *action);
 #ifdef __MOBILE__
 	/// Pokes timer now and again
-	void think();
+	void think() override;
 	/// Handler for base view presses (starts _longPressTimer)
 	void viewPress(Action *action);
 	/// Handler for base view releases (stops _longPressTimer)
