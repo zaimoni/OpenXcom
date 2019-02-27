@@ -135,6 +135,13 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 	_psiTraining = node["psiTraining"].as<bool>(_psiTraining);
 	_training = node["training"].as<bool>(_training);
 	_returnToTrainingWhenHealed = node["returnToTrainingWhenHealed"].as<bool>(_returnToTrainingWhenHealed);
+
+	// This is here just to fix older saves, can be removed in year 2020 :)
+	if (isWounded())
+		_training = false;
+	else
+		_returnToTrainingWhenHealed = false;
+
 	_improvement = node["improvement"].as<int>(_improvement);
 	_psiStrImprovement = node["psiStrImprovement"].as<int>(_psiStrImprovement);
 	if (const YAML::Node &layout = node["equipmentLayout"])
@@ -925,6 +932,14 @@ void Soldier::die(SoldierDeath *death)
 	_returnToTrainingWhenHealed = false;
 	_recentlyPromoted = false;
 	_recovery = 0.0f;
+	clearEquipmentLayout();
+}
+
+/**
+ * Clears the equipment layout.
+ */
+void Soldier::clearEquipmentLayout()
+{
 	for (std::vector<EquipmentLayoutItem*>::iterator i = _equipmentLayout.begin(); i != _equipmentLayout.end(); ++i)
 	{
 		delete *i;

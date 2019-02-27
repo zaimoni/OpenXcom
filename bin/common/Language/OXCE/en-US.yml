@@ -72,8 +72,8 @@ en-US:
   STR_FILTER_DEFAULT_NO_SUPPLIES: "Default (no supplies)"
   STR_FILTER_FACILITY_REQUIRED: "Facility Missing"
   STR_FILTER_HIDDEN: "Hidden"
-#PlaceFacilityState.cpp
-  STR_CANNOT_BUILD_MORE_OF_THIS_FACILITY_TYPE_AT_BASE: "The maximum allowed number of facilities of this type in this base has been reached!"
+#PurchaseState.cpp
+  STR_NOT_ENOUGH_PRISON_SPACE: "NOT ENOUGH ALIEN CONTAINMENT!{SMALLLINE}Build new alien containment or transfer aliens to other bases."
 #SoldierArmorState.cpp
   STR_NOT_ENOUGH_CRAFT_SPACE: "Not enough space onboard!"
 #SoldierAvatarState.cpp
@@ -212,6 +212,7 @@ en-US:
   STR_PHYSICAL_TRAINING: "Martial Training"
   STR_REMAINING_TRAINING_FACILITY_CAPACITY: "REMAINING TRAINING CAPACITY> {ALT}{0}"
   STR_NO_WOUNDED: "-"
+  STR_NO_QUEUED: "+"
   STR_NO_DONE: "DONE"
 #BaseDefenseState.cpp
   STR_START_FIRING: "Fire!"

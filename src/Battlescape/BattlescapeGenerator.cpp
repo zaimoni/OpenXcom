@@ -77,6 +77,10 @@ BattlescapeGenerator::BattlescapeGenerator(Game *game) :
 	_baseInventory(false), _generateFuel(true), _craftDeployed(false), _ufoDeployed(false), _craftZ(0), _blocksToDo(0), _dummy(0)
 {
 	_allowAutoLoadout = !Options::disableAutoEquip;
+	if (_game->getSavedGame()->getDisableSoldierEquipment())
+	{
+		_allowAutoLoadout = false;
+	}
 	_inventorySlotGround = _game->getMod()->getInventory("STR_GROUND", true);
 }
 
@@ -787,14 +791,13 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 		}
 	}
 
-	// add soldiers that are in the craft or base
-	for (std::vector<Soldier*>::iterator i = _base->getSoldiers()->begin(); i != _base->getSoldiers()->end(); ++i)
+	// starting conditions - armor transformation or replacement
+	if (startingCondition != 0)
 	{
-		if ((_craft != 0 && (*i)->getCraft() == _craft) ||
-			(_craft == 0 && ((*i)->hasFullHealth() || (*i)->canDefendBase()) && ((*i)->getCraft() == 0 || (*i)->getCraft()->getStatus() != "STR_OUT")))
+		for (std::vector<Soldier*>::iterator i = _base->getSoldiers()->begin(); i != _base->getSoldiers()->end(); ++i)
 		{
-			// starting conditions - armor transformation or replacement
-			if (startingCondition != 0)
+			if ((_craft != 0 && (*i)->getCraft() == _craft) ||
+				(_craft == 0 && ((*i)->hasFullHealth() || (*i)->canDefendBase()) && ((*i)->getCraft() == 0 || (*i)->getCraft()->getStatus() != "STR_OUT")))
 			{
 				auto transformedArmor = startingCondition->getArmorTransformation((*i)->getArmor());
 				if (transformedArmor)
@@ -812,11 +815,35 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 					}
 				}
 			}
-			BattleUnit *unit = addXCOMUnit(new BattleUnit(*i, _save->getDepth(), _game->getMod()->getMaxViewDistance()));
-			if (unit && !_save->getSelectedUnit())
-				_save->setSelectedUnit(unit);
 		}
 	}
+
+	// add soldiers that are in the craft or base (all 2x2 soldiers first, only then 1x1 soldiers)
+	for (int armorSize = 2; armorSize > 0; --armorSize)
+	{
+		for (std::vector<Soldier*>::iterator i = _base->getSoldiers()->begin(); i != _base->getSoldiers()->end(); ++i)
+		{
+			if ((*i)->getArmor()->getSize() != armorSize)
+			{
+				continue;
+			}
+			if ((_craft != 0 && (*i)->getCraft() == _craft) ||
+				(_craft == 0 && ((*i)->hasFullHealth() || (*i)->canDefendBase()) && ((*i)->getCraft() == 0 || (*i)->getCraft()->getStatus() != "STR_OUT")))
+			{
+				// clear the soldier's equipment layout, we want to start fresh
+				if (_game->getSavedGame()->getDisableSoldierEquipment())
+				{
+					(*i)->clearEquipmentLayout();
+				}
+				BattleUnit *unit = addXCOMUnit(new BattleUnit(*i, _save->getDepth(), _game->getMod()->getMaxViewDistance()));
+				if (unit && !_save->getSelectedUnit())
+					_save->setSelectedUnit(unit);
+			}
+		}
+	}
+
+	// job's done
+	_game->getSavedGame()->setDisableSoldierEquipment(false);
 
 	if (_save->getUnits()->empty())
 	{
@@ -1272,7 +1299,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
 		unit->setRankInt(alienRank);
 		int dir = _save->getTileEngine()->faceWindow(node->getPosition());
 		Position craft = _game->getSavedGame()->getSavedBattle()->getUnits()->at(0)->getPosition();
-		if (_save->getTileEngine()->distance(node->getPosition(), craft) <= 20 && RNG::percent(20 * difficulty))
+		if (Position::distance2d(node->getPosition(), craft) <= 20 && RNG::percent(20 * difficulty))
 			dir = unit->directionTo(craft);
 		if (dir != -1)
 			unit->setDirection(dir);
@@ -1293,7 +1320,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
 			unit->setRankInt(alienRank);
 			int dir = _save->getTileEngine()->faceWindow(unit->getPosition());
 			Position craft = _game->getSavedGame()->getSavedBattle()->getUnits()->at(0)->getPosition();
-			if (_save->getTileEngine()->distance(unit->getPosition(), craft) <= 20 && RNG::percent(20 * difficulty))
+			if (Position::distance2d(unit->getPosition(), craft) <= 20 && RNG::percent(20 * difficulty))
 				dir = unit->directionTo(craft);
 			if (dir != -1)
 				unit->setDirection(dir);
@@ -3197,7 +3224,7 @@ void BattlescapeGenerator::attachNodeLinks()
 		for (std::map<int, std::vector<int> >::iterator j = neighbourDirections.begin(); j != neighbourDirections.end(); j++)
 		{
 			std::vector<int>::iterator linkDirection;
-			linkDirection = find(node->getNodeLinks()->begin(), node->getNodeLinks()->end(), (*j).first);
+			linkDirection = std::find(node->getNodeLinks()->begin(), node->getNodeLinks()->end(), (*j).first);
 			if (linkDirection != node->getNodeLinks()->end() || (*j).first == -1 || (*j).first == -6)
 			{
 				for (std::vector<Node*>::iterator k = _save->getNodes()->begin(); k != _save->getNodes()->end(); ++k)
@@ -3231,7 +3258,7 @@ void BattlescapeGenerator::attachNodeLinks()
 							int yDistance = abs(node->getPosition().y - (*k)->getPosition().y);
 							int xyDistance = xDistance + yDistance;
 							std::vector<int>::iterator l;
-							l = find((*k)->getNodeLinks()->begin(), (*k)->getNodeLinks()->end(), node->getID());
+							l = std::find((*k)->getNodeLinks()->begin(), (*k)->getNodeLinks()->end(), node->getID());
 							if (xyDistance <= 3 && l == (*k)->getNodeLinks()->end())
 							{
 								(*k)->getNodeLinks()->push_back(node->getID());

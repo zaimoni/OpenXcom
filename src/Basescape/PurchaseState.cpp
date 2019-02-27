@@ -805,6 +805,14 @@ void PurchaseState::increaseByValue(int change)
 			{
 				errorMessage = tr("STR_NOT_ENOUGH_STORE_SPACE");
 			}
+			else if (rule->isAlien())
+			{
+				int p = rule->getPrisonType();
+				if (_iPrisonQty[p] + 1 > _base->getAvailableContainment(p) - _base->getUsedContainment(p))
+				{
+					errorMessage = trAlt("STR_NOT_ENOUGH_PRISON_SPACE", p);
+				}
+			}
 			break;
 		}
 	}
@@ -833,18 +841,31 @@ void PurchaseState::increaseByValue(int change)
 			}
 			break;
 		case TRANSFER_ITEM:
-		{
-			RuleItem *rule = (RuleItem*)getRow().rule;
-			double storesNeededPerItem = rule->getSize();
-			double freeStores = _base->getAvailableStores() - _base->getUsedStores() - _iQty;
-			double maxByStores = (double)(INT_MAX);
-			if (!AreSame(storesNeededPerItem, 0.0) && storesNeededPerItem > 0.0)
 			{
-				maxByStores = (freeStores + 0.05) / storesNeededPerItem;
+				RuleItem *rule = (RuleItem*)getRow().rule;
+				int p = rule->getPrisonType();
+				if (rule->isAlien())
+				{
+					int maxByPrisons = _base->getAvailableContainment(p) - _base->getUsedContainment(p) - _iPrisonQty[p];
+					change = std::min(maxByPrisons, change);
+				}
+				// both aliens and items
+				{
+					double storesNeededPerItem = rule->getSize();
+					double freeStores = _base->getAvailableStores() - _base->getUsedStores() - _iQty;
+					double maxByStores = (double)(INT_MAX);
+					if (!AreSame(storesNeededPerItem, 0.0) && storesNeededPerItem > 0.0)
+					{
+						maxByStores = (freeStores + 0.05) / storesNeededPerItem;
+					}
+					change = std::min((int)maxByStores, change);
+					_iQty += change * storesNeededPerItem;
+				}
+				if (rule->isAlien())
+				{
+					_iPrisonQty[p] += change;
+				}
 			}
-			change = std::min((int)maxByStores, change);
-			_iQty += change * storesNeededPerItem;
-		}
 			break;
 		}
 		getRow().amount += change;
@@ -892,6 +913,10 @@ void PurchaseState::decreaseByValue(int change)
 	case TRANSFER_ITEM:
 		rule = (RuleItem*)getRow().rule;
 		_iQty -= rule->getSize() * change;
+		if (rule->isAlien())
+		{
+			_iPrisonQty[rule->getPrisonType()] -= change;
+		}
 		break;
 	}
 	getRow().amount -= change;
