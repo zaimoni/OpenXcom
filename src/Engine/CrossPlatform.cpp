@@ -1074,6 +1074,55 @@ std::unique_ptr<std::istream> readFile(const std::string& filename) {
 		throw Exception(err);
 	}
 	std::string datastr(data, size);
+	SDL_free(data);
+	return std::unique_ptr<std::istream>(new std::istringstream(datastr));
+}
+
+/**
+ * Gets an istream to a file's bytes at least up to and including first "\n---" sequence.
+ * To be used only for savegames.
+ * @param filename - what to read
+ * @return the istream
+ */
+std::unique_ptr<std::istream> getYamlSaveHeader(const std::string& filename) {
+	SDL_RWops *rwops = SDL_RWFromFile(filename.c_str(), "r");
+	if (!rwops) {
+		std::string err = "Failed to read " + filename + ": " + SDL_GetError();
+		Log(LOG_ERROR) << err;
+		throw Exception(err);
+	}
+	const size_t chunksize = 4096;
+	size_t size = 0;
+	size_t offs = 0;
+	char *data = (char *)SDL_malloc(chunksize + 1);
+	if (data == NULL) {
+		std::string err(SDL_GetError());
+		Log(LOG_ERROR) << err;
+		throw Exception(err);
+	}
+	while(true) {
+		auto actually_read = SDL_RWread(rwops, data + offs, 1, chunksize);
+		if (actually_read == 0 || actually_read == -1) {
+			break;
+		}
+		size += actually_read;
+		data[size] = 0;
+		size_t search_from = offs > 4 ? offs - 4 : 0;
+		if (NULL != strstr(data+search_from, "\n---")) {
+			break;
+		}
+		char *newdata = (char *)SDL_realloc(data, size+chunksize+1);
+		if (newdata == NULL) {
+			std::string err(SDL_GetError());
+			Log(LOG_ERROR) << err;
+			throw Exception(err);
+		}
+		data = newdata;
+		offs = size;
+	}
+	std::string datastr(data, size);
+	SDL_free(data);
+	SDL_RWclose(rwops);
 	return std::unique_ptr<std::istream>(new std::istringstream(datastr));
 }
 

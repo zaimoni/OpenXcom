@@ -169,7 +169,6 @@ void create()
 	_info.push_back(OptionInfo("touchEnabled", &touchEnabled, false));
 #endif
 	_info.push_back(OptionInfo("rootWindowedMode", &rootWindowedMode, false));
-	_info.push_back(OptionInfo("lazyLoadResources", &lazyLoadResources, true));
 	// SDL2 scaler options
 	_info.push_back(OptionInfo("useNearestScaler", &useNearestScaler, false));
 	_info.push_back(OptionInfo("useLinearScaler", &useLinearScaler, true));
@@ -180,6 +179,7 @@ void create()
 	_info.push_back(OptionInfo("autosave", &autosave, true, "STR_AUTOSAVE", "STR_GENERAL"));
 	_info.push_back(OptionInfo("autosaveFrequency", &autosaveFrequency, 5, "STR_AUTOSAVE_FREQUENCY", "STR_GENERAL"));
 	_info.push_back(OptionInfo("newSeedOnLoad", &newSeedOnLoad, false, "STR_NEWSEEDONLOAD", "STR_GENERAL"));
+	_info.push_back(OptionInfo("lazyLoadResources", &lazyLoadResources, true, "STR_LAZY_LOADING", "STR_GENERAL"));
 	_info.push_back(OptionInfo("mousewheelSpeed", &mousewheelSpeed, 3, "STR_MOUSEWHEEL_SPEED", "STR_GENERAL"));
 	_info.push_back(OptionInfo("changeValueByMouseWheel", &changeValueByMouseWheel, 0, "STR_CHANGEVALUEBYMOUSEWHEEL", "STR_GENERAL"));
 	_info.push_back(OptionInfo("soldierDiaries", &soldierDiaries, true));
@@ -776,6 +776,15 @@ void updateMods()
 	updateReservedSpace();
 	FileMap::setup(getActiveMods());
 	userSplitMasters();
+
+	// report active mods that don't meet the minimum OXCE requirements
+	for (auto& modInf : getActiveMods())
+	{
+		if (!modInf->isVersionOk())
+		{
+			Log(LOG_ERROR) << "Mod '" << modInf->getName() << "' requires at least OXCE v" << modInf->getRequiredExtendedVersion();
+		}
+	}
 }
 
 /**
