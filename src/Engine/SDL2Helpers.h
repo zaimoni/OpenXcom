@@ -7,15 +7,14 @@
  * Implementations are in FileMap.cpp
  * To be removed with transition to SDL2
  */
-#if SDL_MAJOR_VERSION == 1
+# if !SDL_VERSION_ATLEAST(2,0,0)
 extern "C"
 {
-// helpers that are already present in SDL2
 Uint8 SDL_ReadU8(SDL_RWops *src);
 Sint64 SDL_RWsize(SDL_RWops *src);
 }
-#endif
-#if 1 // our SDL2 does not have it
+# endif
+#if !SDL_VERSION_ATLEAST(2,0,6)
 extern "C"
 {
 void *SDL_LoadFile_RW(SDL_RWops *src, size_t *datasize, int freesrc);
