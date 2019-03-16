@@ -23,6 +23,7 @@
 #include "../Engine/Timer.h"
 #include "../Engine/Options.h"
 #include "../Engine/Language.h"
+#include "../fallthrough.h"
 
 namespace OpenXcom
 {
@@ -602,7 +603,7 @@ void TextEdit::keyboardPress(Action *action, State *state)
 				_value = Unicode::convUtf8ToUtf32("");
 				_caretPos = 0;
 			}
-			[[gnu::fallthrough]];
+			FALLTHROUGH;
 			// no break; do the ENTER action too
 		case SDLK_RETURN:
 		case SDLK_KP_ENTER:

@@ -288,7 +288,7 @@ int Screen::getHeight() const
  * as they don't automatically take effect.
  * @param resetVideo Reset display surface.
  */
-void Screen::resetDisplay(bool resetVideo)
+void Screen::resetDisplay(bool resetVideo, bool noShaders)
 {
 	int width = Options::displayWidth;
 	int height = Options::displayHeight;
