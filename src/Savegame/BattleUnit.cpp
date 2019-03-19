@@ -1647,12 +1647,11 @@ void BattleUnit::spendCost(const RuleItemUseCost& cost)
 }
 
 /**
- * Set a specific number of timeunits.
- * @param tu
+ * Clear number of timeunits.
  */
-void BattleUnit::setTimeUnits(int tu)
+void BattleUnit::clearTimeUnits()
 {
-	_tu = tu;
+	_tu = 0;
 }
 
 /**
@@ -1970,14 +1969,20 @@ double BattleUnit::getReactionScore() const
  */
 void BattleUnit::prepareTimeUnits(int tu)
 {
-	float encumbrance = (float)getBaseStats()->strength / (float)getCarriedWeight();
-	if (encumbrance < 1)
+	if (!isOut())
 	{
-	  tu = int(encumbrance * tu);
+		// Add to prev turn TU, if regen is less than normal unit need couple of turns to regen full bar
+		setValueMax(_tu, tu, 0, getBaseStats()->tu);
+
+		// Apply reductions, if new TU == 0 then it could make not spend TU decay
+		float encumbrance = (float)getBaseStats()->strength / (float)getCarriedWeight();
+		if (encumbrance < 1)
+		{
+		  _tu = int(encumbrance * _tu);
+		}
+		// Each fatal wound to the left or right leg reduces the soldier's TUs by 10%.
+		_tu -= (_tu * ((_fatalWounds[BODYPART_LEFTLEG]+_fatalWounds[BODYPART_RIGHTLEG]) * 10))/100;
 	}
-	// Each fatal wound to the left or right leg reduces the soldier's TUs by 10%.
-	tu -= (tu * ((_fatalWounds[BODYPART_LEFTLEG]+_fatalWounds[BODYPART_RIGHTLEG]) * 10))/100;
-	setTimeUnits(tu);
 }
 
 /**
@@ -1990,11 +1995,8 @@ void BattleUnit::prepareEnergy(int energy)
 	{
 		// Each fatal wound to the body reduces the soldier's energy recovery by 10%.
 		energy -= (_energy * (_fatalWounds[BODYPART_TORSO] * 10))/100;
-		_energy += energy;
-		if (_energy > getBaseStats()->stamina)
-			_energy = getBaseStats()->stamina;
-		else if (_energy < 0)
-			_energy = 0;
+
+		setValueMax(_energy, energy, 0, getBaseStats()->stamina);
 	}
 }
 

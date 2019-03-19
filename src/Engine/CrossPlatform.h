@@ -133,6 +133,8 @@ extern "C" {
 	/// The log file name
 	void setLogFileName(const std::string &path);
 	const std::string& getLogFileName();
+	/// Get an SDL_RWops to an embedded asset. NULL if not there.
+	SDL_RWops *getEmbeddedAsset(const std::string& assetName);
 }
 
 }

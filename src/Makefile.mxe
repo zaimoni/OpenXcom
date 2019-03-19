@@ -56,8 +56,8 @@ else
 	LD_LTO = -flto -O3
 endif
 
-OBJRES = ../obj/OpenXcom_res.o
-OBJS = $(OBJRES) $(patsubst %.cpp, $(OBJDIR)%.o, $(notdir $(SRCS))) ../obj/miniz.o
+OBJRES = $(OBJDIR)OpenXcom_res.o
+OBJS = $(OBJRES) $(patsubst %.cpp, $(OBJDIR)%.o, $(notdir $(SRCS))) $(OBJDIR)miniz.o
 RES = ../src/OpenXcomEx.rc ../src/resource.h ../src/version.h ../res/windows/openxcomex.ico
 
 # Arch-specific settings
@@ -123,8 +123,8 @@ $(OBJDIR)%.o:: $(YAML_DIR)/src/%.cpp
 $(OBJDIR)%.o:: $(YAML_DIR)/src/contrib/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-../obj/miniz.o: ../libs/miniz/miniz.c
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+$(OBJDIR)miniz.o: ../libs/miniz/miniz.c
+	$(CXX) $(CXXFLAGS) -DMINIZ_NO_STDIO -c -o $@ $<
 
 $(OBJRES):$(RES)
 	$(RC) -o $@ $<
