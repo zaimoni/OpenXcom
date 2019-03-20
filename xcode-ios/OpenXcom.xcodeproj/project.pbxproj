@@ -115,7 +115,6 @@
 		B28344BB201F6D9E00BAEC9D /* xbrz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834292201F6D9C00BAEC9D /* xbrz.cpp */; };
 		B28344BC201F6D9E00BAEC9D /* State.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834294201F6D9C00BAEC9D /* State.cpp */; };
 		B28344BD201F6D9E00BAEC9D /* Font.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834295201F6D9C00BAEC9D /* Font.cpp */; };
-		B28344BE201F6D9E00BAEC9D /* OpenGLRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834296201F6D9C00BAEC9D /* OpenGLRenderer.cpp */; };
 		B28344BF201F6D9E00BAEC9D /* Language.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834297201F6D9C00BAEC9D /* Language.cpp */; };
 		B28344C0201F6D9E00BAEC9D /* SoundSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834299201F6D9C00BAEC9D /* SoundSet.cpp */; };
 		B28344C1201F6D9E00BAEC9D /* Options.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B283429A201F6D9C00BAEC9D /* Options.cpp */; };
@@ -604,7 +603,6 @@
 		B283426A201F6D9C00BAEC9D /* CrossPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CrossPlatform.h; sourceTree = "<group>"; };
 		B283426B201F6D9C00BAEC9D /* DosFont.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DosFont.h; sourceTree = "<group>"; };
 		B283426C201F6D9C00BAEC9D /* SurfaceSet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SurfaceSet.cpp; sourceTree = "<group>"; };
-		B283426D201F6D9C00BAEC9D /* OpenGLRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpenGLRenderer.h; sourceTree = "<group>"; };
 		B283426E201F6D9C00BAEC9D /* ModInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ModInfo.cpp; sourceTree = "<group>"; };
 		B283426F201F6D9C00BAEC9D /* ShaderDraw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ShaderDraw.h; sourceTree = "<group>"; };
 		B2834270201F6D9C00BAEC9D /* Options.inc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Options.inc.h; sourceTree = "<group>"; };
@@ -641,7 +639,6 @@
 		B2834293201F6D9C00BAEC9D /* Renderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Renderer.h; sourceTree = "<group>"; };
 		B2834294201F6D9C00BAEC9D /* State.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = State.cpp; sourceTree = "<group>"; };
 		B2834295201F6D9C00BAEC9D /* Font.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Font.cpp; sourceTree = "<group>"; };
-		B2834296201F6D9C00BAEC9D /* OpenGLRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OpenGLRenderer.cpp; sourceTree = "<group>"; };
 		B2834297201F6D9C00BAEC9D /* Language.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Language.cpp; sourceTree = "<group>"; };
 		B2834298201F6D9C00BAEC9D /* GraphSubset.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GraphSubset.h; sourceTree = "<group>"; };
 		B2834299201F6D9C00BAEC9D /* SoundSet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoundSet.cpp; sourceTree = "<group>"; };
@@ -1404,7 +1401,6 @@
 				B283426A201F6D9C00BAEC9D /* CrossPlatform.h */,
 				B283426B201F6D9C00BAEC9D /* DosFont.h */,
 				B283426C201F6D9C00BAEC9D /* SurfaceSet.cpp */,
-				B283426D201F6D9C00BAEC9D /* OpenGLRenderer.h */,
 				B283426E201F6D9C00BAEC9D /* ModInfo.cpp */,
 				B283426F201F6D9C00BAEC9D /* ShaderDraw.h */,
 				B2834270201F6D9C00BAEC9D /* Options.inc.h */,
@@ -1424,7 +1420,6 @@
 				B2834293201F6D9C00BAEC9D /* Renderer.h */,
 				B2834294201F6D9C00BAEC9D /* State.cpp */,
 				B2834295201F6D9C00BAEC9D /* Font.cpp */,
-				B2834296201F6D9C00BAEC9D /* OpenGLRenderer.cpp */,
 				B2834297201F6D9C00BAEC9D /* Language.cpp */,
 				B2834298201F6D9C00BAEC9D /* GraphSubset.h */,
 				B2834299201F6D9C00BAEC9D /* SoundSet.cpp */,
@@ -2143,7 +2138,6 @@
 				B283456D201F6D9E00BAEC9D /* SackSoldierState.cpp in Sources */,
 				B2834598201F6D9E00BAEC9D /* RuleCommendations.cpp in Sources */,
 				B2834470201F6D9D00BAEC9D /* OptionsVideoState.cpp in Sources */,
-				B28344BE201F6D9E00BAEC9D /* OpenGLRenderer.cpp in Sources */,
 				B2834531201F6D9E00BAEC9D /* ArticleStateTFTDFacility.cpp in Sources */,
 				B283450C201F6D9E00BAEC9D /* InfoboxOKState.cpp in Sources */,
 				B28344B7201F6D9E00BAEC9D /* hq2x.cpp in Sources */,
