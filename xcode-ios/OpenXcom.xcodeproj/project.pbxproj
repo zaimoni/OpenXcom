@@ -104,7 +104,6 @@
 		B28344AF201F6D9E00BAEC9D /* AdlibMusic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B283427C201F6D9C00BAEC9D /* AdlibMusic.cpp */; };
 		B28344B0201F6D9E00BAEC9D /* RNG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B283427D201F6D9C00BAEC9D /* RNG.cpp */; };
 		B28344B1201F6D9E00BAEC9D /* Screen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B283427E201F6D9C00BAEC9D /* Screen.cpp */; };
-		B28344B2201F6D9E00BAEC9D /* UIBuilder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B283427F201F6D9C00BAEC9D /* UIBuilder.cpp */; };
 		B28344B3201F6D9E00BAEC9D /* Timer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834282201F6D9C00BAEC9D /* Timer.cpp */; };
 		B28344B4201F6D9E00BAEC9D /* scale2x.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834284201F6D9C00BAEC9D /* scale2x.cpp */; };
 		B28344B5201F6D9E00BAEC9D /* scalebit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834286201F6D9C00BAEC9D /* scalebit.cpp */; };
@@ -215,7 +214,6 @@
 		B283451E201F6D9E00BAEC9D /* Pathfinding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B283435E201F6D9C00BAEC9D /* Pathfinding.cpp */; };
 		B283451F201F6D9E00BAEC9D /* UnitTurnBState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B283435F201F6D9C00BAEC9D /* UnitTurnBState.cpp */; };
 		B2834520201F6D9E00BAEC9D /* BattlescapeGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834360201F6D9C00BAEC9D /* BattlescapeGenerator.cpp */; };
-		B2834521201F6D9E00BAEC9D /* BattlescapeState.h.rej in Resources */ = {isa = PBXBuildFile; fileRef = B2834361201F6D9C00BAEC9D /* BattlescapeState.h.rej */; };
 		B2834522201F6D9E00BAEC9D /* InfoboxState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834362201F6D9C00BAEC9D /* InfoboxState.cpp */; };
 		B2834523201F6D9E00BAEC9D /* UnitFallBState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834363201F6D9C00BAEC9D /* UnitFallBState.cpp */; };
 		B2834524201F6D9E00BAEC9D /* Inventory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2834366201F6D9C00BAEC9D /* Inventory.cpp */; };
@@ -611,7 +609,6 @@
 		B283426F201F6D9C00BAEC9D /* ShaderDraw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ShaderDraw.h; sourceTree = "<group>"; };
 		B2834270201F6D9C00BAEC9D /* Options.inc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Options.inc.h; sourceTree = "<group>"; };
 		B2834271201F6D9C00BAEC9D /* AdlibMusic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdlibMusic.h; sourceTree = "<group>"; };
-		B2834272201F6D9C00BAEC9D /* UIBuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UIBuilder.h; sourceTree = "<group>"; };
 		B2834273201F6D9C00BAEC9D /* SurfaceSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SurfaceSet.h; sourceTree = "<group>"; };
 		B2834274201F6D9C00BAEC9D /* Surface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Surface.h; sourceTree = "<group>"; };
 		B2834275201F6D9C00BAEC9D /* SDLRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDLRenderer.h; sourceTree = "<group>"; };
@@ -623,7 +620,6 @@
 		B283427C201F6D9C00BAEC9D /* AdlibMusic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdlibMusic.cpp; sourceTree = "<group>"; };
 		B283427D201F6D9C00BAEC9D /* RNG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RNG.cpp; sourceTree = "<group>"; };
 		B283427E201F6D9C00BAEC9D /* Screen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Screen.cpp; sourceTree = "<group>"; };
-		B283427F201F6D9C00BAEC9D /* UIBuilder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UIBuilder.cpp; sourceTree = "<group>"; };
 		B2834280201F6D9C00BAEC9D /* Language.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Language.h; sourceTree = "<group>"; };
 		B2834281201F6D9C00BAEC9D /* ShaderDrawHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ShaderDrawHelper.h; sourceTree = "<group>"; };
 		B2834282201F6D9C00BAEC9D /* Timer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Timer.cpp; sourceTree = "<group>"; };
@@ -846,7 +842,6 @@
 		B283435E201F6D9C00BAEC9D /* Pathfinding.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Pathfinding.cpp; sourceTree = "<group>"; };
 		B283435F201F6D9C00BAEC9D /* UnitTurnBState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UnitTurnBState.cpp; sourceTree = "<group>"; };
 		B2834360201F6D9C00BAEC9D /* BattlescapeGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BattlescapeGenerator.cpp; sourceTree = "<group>"; };
-		B2834361201F6D9C00BAEC9D /* BattlescapeState.h.rej */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = BattlescapeState.h.rej; sourceTree = "<group>"; };
 		B2834362201F6D9C00BAEC9D /* InfoboxState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InfoboxState.cpp; sourceTree = "<group>"; };
 		B2834363201F6D9C00BAEC9D /* UnitFallBState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UnitFallBState.cpp; sourceTree = "<group>"; };
 		B2834364201F6D9C00BAEC9D /* MedikitState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MedikitState.h; sourceTree = "<group>"; };
@@ -1414,7 +1409,6 @@
 				B283426F201F6D9C00BAEC9D /* ShaderDraw.h */,
 				B2834270201F6D9C00BAEC9D /* Options.inc.h */,
 				B2834271201F6D9C00BAEC9D /* AdlibMusic.h */,
-				B2834272201F6D9C00BAEC9D /* UIBuilder.h */,
 				B2834273201F6D9C00BAEC9D /* SurfaceSet.h */,
 				B2834274201F6D9C00BAEC9D /* Surface.h */,
 				B2834275201F6D9C00BAEC9D /* SDLRenderer.h */,
@@ -1423,7 +1417,6 @@
 				B283427C201F6D9C00BAEC9D /* AdlibMusic.cpp */,
 				B283427D201F6D9C00BAEC9D /* RNG.cpp */,
 				B283427E201F6D9C00BAEC9D /* Screen.cpp */,
-				B283427F201F6D9C00BAEC9D /* UIBuilder.cpp */,
 				B2834280201F6D9C00BAEC9D /* Language.h */,
 				B2834281201F6D9C00BAEC9D /* ShaderDrawHelper.h */,
 				B2834282201F6D9C00BAEC9D /* Timer.cpp */,
@@ -1679,7 +1672,6 @@
 				B283435E201F6D9C00BAEC9D /* Pathfinding.cpp */,
 				B283435F201F6D9C00BAEC9D /* UnitTurnBState.cpp */,
 				B2834360201F6D9C00BAEC9D /* BattlescapeGenerator.cpp */,
-				B2834361201F6D9C00BAEC9D /* BattlescapeState.h.rej */,
 				B2834362201F6D9C00BAEC9D /* InfoboxState.cpp */,
 				B2834363201F6D9C00BAEC9D /* UnitFallBState.cpp */,
 				B2834364201F6D9C00BAEC9D /* MedikitState.h */,
@@ -2127,7 +2119,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2834521201F6D9E00BAEC9D /* BattlescapeState.h.rej in Resources */,
 				B242423D201E2BAB00EB6722 /* bin in Resources */,
 				B235EF4A201C4DF200FF7AC3 /* iOS Launch Screen.storyboard in Resources */,
 				B235EF61201C4F2A00FF7AC3 /* xcom-main-image.png in Resources */,
@@ -2245,7 +2236,6 @@
 				B283453D201F6D9E00BAEC9D /* Frame.cpp in Sources */,
 				B2834517201F6D9E00BAEC9D /* ExplosionBState.cpp in Sources */,
 				B283459F201F6D9E00BAEC9D /* SoundDefinition.cpp in Sources */,
-				B28344B2201F6D9E00BAEC9D /* UIBuilder.cpp in Sources */,
 				B283456C201F6D9E00BAEC9D /* StoresState.cpp in Sources */,
 				B28344EA201F6D9E00BAEC9D /* Craft.cpp in Sources */,
 				B2834494201F6D9D00BAEC9D /* Globe.cpp in Sources */,
