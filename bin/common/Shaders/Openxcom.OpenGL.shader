@@ -93,7 +93,7 @@ fragment: |
         //Initial Vertex: the first value of the texture coord's,//
         //which is used as a 'centre' for all the other values.  //
         ///////////////////////////////////////////////////////////
-        vec3 centre;
+        vec3 centre = texture2D(rubyTexture, gl_TexCoord[0].xy).xyz;
 
         ///////////////////////////////////////////////////////////////
         //Reference Vertex: used later when calculating dot-products.//
@@ -121,7 +121,6 @@ fragment: |
 
         void main()
         {
-              centre = texture2D(rubyTexture, gl_TexCoord[0].xy).xyz;
               /////////////////////////////////////////////////////////
               //Attaches the defined coordinates of gl_TextCoord     //
               //to sampler2D to allow for modification via filtering.//
