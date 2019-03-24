@@ -57,6 +57,7 @@ private:
 	/// Sets the _flags and _bpp variables based on game options; needed in more than one place now
 	void makeVideoFlags();
 	int _prevWidth, _prevHeight;
+	Renderer *createRenderer();
 
 public:
 	static const int ORIGINAL_WIDTH;
@@ -98,10 +99,6 @@ public:
 	int getCursorLeftBlackBand() const;
 	/// Takes a screenshot.
 	void screenshot(const std::string &filename) const;
-	/// Checks whether a 32bit scaler is requested and works for the selected resolution
-	static bool use32bitScaler();
-	/// Checks whether OpenGL output is requested
-	static bool useOpenGL();
 	/// update the game scale as required.
 	static void updateScale(int type, int &width, int &height, bool change);
 	/// Get the scale for action() scaling (Android specific)

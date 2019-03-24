@@ -50,7 +50,7 @@
 #include "Exception.h"
 
 #define MINIZ_NO_STDIO
-#include "../../libs/miniz/miniz.h"
+#include "miniz.h"
 
 extern "C"
 {

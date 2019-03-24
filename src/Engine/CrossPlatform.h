@@ -26,6 +26,13 @@
 #endif
 #include <memory>
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#if defined(TARGET_IPHONE_SIMULATOR) || defined(TARGET_OS_IPHONE)
+#define IPHONE
+#endif
+#endif
+
 namespace OpenXcom
 {
 

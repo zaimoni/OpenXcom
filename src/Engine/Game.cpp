@@ -228,16 +228,18 @@ void Game::run()
 					break;
 				/* Don't pause/resume twice, let Music handle the music */
 				case SDL_APP_WILLENTERBACKGROUND:
+                case SDL_APP_DIDENTERBACKGROUND:
 					Music::pause();
 					// Workaround for SDL2_mixer bug https://bugzilla.libsdl.org/show_bug.cgi?id=2480
-					SDL_LockAudio();
+					//SDL_LockAudio();
 					// Probably won't do a thing, but still
 					runningState = PAUSED;
 					break;
 				case SDL_APP_WILLENTERFOREGROUND:
+                case SDL_APP_DIDENTERFOREGROUND:
 					runningState = RUNNING;
 					// Workaround for SDL2_mixer bug https://bugzilla.libsdl.org/show_bug.cgi?id=2480
-					SDL_UnlockAudio();
+					//SDL_UnlockAudio();
 					Music::resume();
 					break;
 				/* Watch for these messages for debugging purposes */
@@ -414,8 +416,10 @@ void Game::run()
 							// Okay, if you got this event, this probably means that your window IS resizable.
 							//if (Options::allowResize)
 							{
-								Options::newDisplayWidth = Options::displayWidth = std::max(Screen::ORIGINAL_WIDTH, _event.window.data1);
-								Options::newDisplayHeight = Options::displayHeight = std::max(Screen::ORIGINAL_HEIGHT, _event.window.data2);
+								int newWidth, newHeight;
+								SDL_GetWindowSize(_screen->getWindow(), &newWidth, &newHeight);
+								Options::newDisplayWidth = Options::displayWidth = std::max(Screen::ORIGINAL_WIDTH, newWidth);
+								Options::newDisplayHeight = Options::displayHeight = std::max(Screen::ORIGINAL_HEIGHT, newHeight);
 								int dX = 0, dY = 0;
 								Screen::updateScale(Options::battlescapeScale, Options::baseXBattlescape, Options::baseYBattlescape, false);
 								Screen::updateScale(Options::geoscapeScale, Options::baseXGeoscape, Options::baseYGeoscape, false);
@@ -543,7 +547,7 @@ void Game::run()
 
 		// Calculate how long we are to sleep
 		Uint32 idleTime = 0;
-		if (Options::FPS > 0 && !(Options::useOpenGL && Options::vSyncForOpenGL))
+		if (Options::FPS > 0)
 		{
 			// Uint32 milliseconds do wrap around in about 49.7 days
 			Uint32 timeFrameEnded = SDL_GetTicks();

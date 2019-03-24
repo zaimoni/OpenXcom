@@ -33,7 +33,7 @@
 #include "../Mod/RuleVideo.h"
 #include "CutsceneState.h"
 #include "../Interface/Cursor.h"
-#include <algorithm>
+#include <memory.h>
 
 namespace OpenXcom
 {

@@ -31,6 +31,7 @@
 #include "../Interface/ComboBox.h"
 #include "../Engine/Game.h"
 #include "SetWindowedRootState.h"
+#include "../Engine/Renderer.h"
 
 namespace OpenXcom
 {
@@ -210,14 +211,20 @@ OptionsVideoState::OptionsVideoState(OptionsOrigin origin) : OptionsBaseState(or
 	_cbxLanguage->onMouseOut((ActionHandler)&OptionsVideoState::txtTooltipOut);
 
 	std::vector<std::string> filterNames;
-	filterNames.push_back(tr("STR_DISABLED"));
-	filterNames.push_back("Linear");
-	filterNames.push_back("Anisotropic (disabled)");
-	filterNames.push_back("xBRZ");
-	_filters.push_back("");
-	_filters.push_back("");
-	_filters.push_back("");
-	_filters.push_back("");
+	auto upscalers = getRegisteredUpscalers();
+	size_t selFilter = 0;
+	for(size_t i = 0; i < upscalers.size(); ++i)
+	{
+		const auto& upscaler = upscalers[i];
+		std::ostringstream wss;
+		wss << "(" << upscaler.first << ") " << upscaler.second;
+		filterNames.push_back(wss.str());
+		_filters.push_back(upscaler.second);
+		if (upscaler.first == Options::renderer && upscaler.second == Options::scalerName)
+		{
+			selFilter = i;
+		}
+	}
 
 #ifndef __NO_OPENGL
 	std::vector<std::string> filters;
@@ -232,34 +239,6 @@ OptionsVideoState::OptionsVideoState(OptionsOrigin origin) : OptionsBaseState(or
 		_filters.push_back(path);
 	}
 #endif
-
-	size_t selFilter = 0;
-	if (Screen::useOpenGL())
-	{
-#ifndef __NO_OPENGL
-		std::string path = Options::useOpenGLShader;
-		for (size_t i = 0; i < _filters.size(); ++i)
-		{
-			if (_filters[i] == path)
-			{
-				selFilter = i;
-				break;
-			}
-		}
-#endif
-	}
-	else if (Options::useLinearScaler)
-	{
-		selFilter = 1;
-	}
-	else if (Options::useAnisotropicScaler)
-	{
-		selFilter = 2;
-	}
-	else if (Options::useXBRZFilter)
-	{
-		selFilter = 3;
-	}
 
 	_txtFilter->setText(tr("STR_DISPLAY_FILTER"));
 
@@ -469,45 +448,10 @@ void OptionsVideoState::cbxLanguageChange(Action *)
  */
 void OptionsVideoState::cbxFilterChange(Action *)
 {
-	switch (_cbxFilter->getSelected())
-	{
-	case 0:
-		Options::newOpenGL = false;
-		Options::newNearestScaler = true;
-		Options::newLinearScaler = false;
-		Options::newAnisotropicScaler = false;
-        Options::newXBRZFilter = false;
-		break;
-	case 1:
-		Options::newOpenGL = false;
-		Options::newNearestScaler = false;
-		Options::newLinearScaler = true;
-		Options::newAnisotropicScaler = false;
-        Options::newXBRZFilter = false;
-		break;
-	case 2:
-		Options::newOpenGL = false;
-		Options::newNearestScaler = false;
-		Options::newLinearScaler = false;
-		Options::newAnisotropicScaler = true;
-        Options::newXBRZFilter = false;
-		break;
-    case 3:
-		Options::newOpenGL = false;
-		Options::newNearestScaler = true;
-		Options::newLinearScaler = false;
-		Options::newAnisotropicScaler = false;
-		Options::newXBRZFilter = true;
-		break;
-	default:
-		Options::newOpenGL = true;
-		Options::newNearestScaler = false;
-		Options::newLinearScaler = false;
-		Options::newAnisotropicScaler = false;
-		Options::newXBRZFilter = false;
-		Options::newOpenGLShader = _filters[_cbxFilter->getSelected()];
-		break;
-	}
+	const auto upscalers = getRegisteredUpscalers();
+	size_t selectedFilter = _cbxFilter->getSelected();
+	Options::newRenderer = upscalers[selectedFilter].first;
+	Options::newScalerName = upscalers[selectedFilter].second;
 }
 
 /**

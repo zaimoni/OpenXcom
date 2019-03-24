@@ -93,14 +93,6 @@ void create()
 	//_info.push_back(OptionInfo("baseYBattlescape", &baseYBattlescape, Screen::ORIGINAL_HEIGHT));
 	_info.push_back(OptionInfo("geoscapeScale", &geoscapeScale, 0));
 	_info.push_back(OptionInfo("battlescapeScale", &battlescapeScale, 0));
-	_info.push_back(OptionInfo("useScaleFilter", &useScaleFilter, false));
-	_info.push_back(OptionInfo("useHQXFilter", &useHQXFilter, false));
-	_info.push_back(OptionInfo("useXBRZFilter", &useXBRZFilter, false));
-	_info.push_back(OptionInfo("useOpenGL", &useOpenGL, false));
-	_info.push_back(OptionInfo("checkOpenGLErrors", &checkOpenGLErrors, false));
-	_info.push_back(OptionInfo("useOpenGLShader", &useOpenGLShader, "Shaders/Raw.OpenGL.shader"));
-	_info.push_back(OptionInfo("vSyncForOpenGL", &vSyncForOpenGL, true));
-	_info.push_back(OptionInfo("useOpenGLSmoothing", &useOpenGLSmoothing, true));
 	_info.push_back(OptionInfo("debug", &debug, false));
 	_info.push_back(OptionInfo("debugUi", &debugUi, false));
 	_info.push_back(OptionInfo("soundVolume", &soundVolume, 2*(MIX_MAX_VOLUME/3)));
@@ -171,9 +163,8 @@ void create()
 #endif
 	_info.push_back(OptionInfo("rootWindowedMode", &rootWindowedMode, false));
 	// SDL2 scaler options
-	_info.push_back(OptionInfo("useNearestScaler", &useNearestScaler, false));
-	_info.push_back(OptionInfo("useLinearScaler", &useLinearScaler, true));
-	_info.push_back(OptionInfo("useAnisotropicScaler", &useAnisotropicScaler, false));
+	_info.push_back(OptionInfo("renderer", &renderer, "SDL"));
+	_info.push_back(OptionInfo("scalerName", &scalerName, "nearest"));
 
 	// advanced option
 	_info.push_back(OptionInfo("playIntro", &playIntro, true, "STR_PLAYINTRO", "STR_GENERAL"));
@@ -1193,20 +1184,14 @@ void backupDisplay()
 	Options::newDisplayHeight = Options::displayHeight;
 	Options::newBattlescapeScale = Options::battlescapeScale;
 	Options::newGeoscapeScale = Options::geoscapeScale;
-	Options::newOpenGL = Options::useOpenGL;
-	Options::newScaleFilter = Options::useScaleFilter;
-	Options::newHQXFilter = Options::useHQXFilter;
-	Options::newOpenGLShader = Options::useOpenGLShader;
-	Options::newXBRZFilter = Options::useXBRZFilter;
 	Options::newRootWindowedMode = Options::rootWindowedMode;
 	Options::newWindowedModePositionX = Options::windowedModePositionX;
 	Options::newWindowedModePositionY = Options::windowedModePositionY;
 	Options::newFullscreen = Options::fullscreen;
 	Options::newAllowResize = Options::allowResize;
 	Options::newBorderless = Options::borderless;
-	Options::newNearestScaler = Options::useNearestScaler;
-	Options::newLinearScaler = Options::useLinearScaler;
-	Options::newAnisotropicScaler = Options::useAnisotropicScaler;
+	Options::newRenderer = Options::renderer;
+	Options::newScalerName = Options::scalerName;
 }
 
 /**
@@ -1217,22 +1202,16 @@ void switchDisplay()
 {
 	std::swap(displayWidth, newDisplayWidth);
 	std::swap(displayHeight, newDisplayHeight);
-	std::swap(useOpenGL, newOpenGL);
-	std::swap(useScaleFilter, newScaleFilter);
 	std::swap(battlescapeScale, newBattlescapeScale);
 	std::swap(geoscapeScale, newGeoscapeScale);
-	std::swap(useHQXFilter, newHQXFilter);
-	std::swap(useOpenGLShader, newOpenGLShader);
-	std::swap(useXBRZFilter, newXBRZFilter);
 	std::swap(rootWindowedMode, newRootWindowedMode);
 	std::swap(windowedModePositionX, newWindowedModePositionX);
 	std::swap(windowedModePositionY, newWindowedModePositionY);
 	std::swap(fullscreen, newFullscreen);
 	std::swap(allowResize, newAllowResize);
 	std::swap(borderless, newBorderless);
-	std::swap(useNearestScaler, newNearestScaler);
-	std::swap(useLinearScaler, newLinearScaler);
-	std::swap(useAnisotropicScaler, newAnisotropicScaler);
+	std::swap(renderer, newRenderer);
+	std::swap(scalerName, newScalerName);
 }
 
 void setUserFolder(const std::string &userFolder)

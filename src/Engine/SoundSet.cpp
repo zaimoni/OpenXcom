@@ -22,6 +22,7 @@
 #include "Exception.h"
 #include "Logger.h"
 #include "SDL2Helpers.h"
+#include <memory.h>
 
 namespace OpenXcom
 {

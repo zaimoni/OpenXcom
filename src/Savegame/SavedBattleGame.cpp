@@ -46,6 +46,7 @@
 #include "../Mod/RuleSoldier.h"
 #include "../Mod/RuleStartingCondition.h"
 #include "../fallthrough.h"
+#include <memory.h>
 
 namespace OpenXcom
 {
