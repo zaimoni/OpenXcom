@@ -38,6 +38,7 @@
 #include "SoldierInfoState.h"
 #include "../Mod/Armor.h"
 #include "../Mod/RuleInterface.h"
+#include "../Engine/Unicode.h"
 
 #include "../Engine/Timer.h"
 #include "../Engine/Logger.h"
@@ -115,7 +116,7 @@ CraftSoldiersState::CraftSoldiersState(Base *base, size_t craft)
 	_sortFunctors.push_back(new SortFunctor(_game, functor));
 
 	PUSH_IN("STR_ID", idStat);
-	PUSH_IN("STR_FIRST_LETTER", nameStat);
+	PUSH_IN("STR_NAME_UC", nameStat);
 	PUSH_IN("STR_SOLDIER_TYPE", typeStat);
 	PUSH_IN("STR_RANK", rankStat);
 	PUSH_IN("STR_MISSIONS2", missionsStat);
@@ -191,12 +192,30 @@ void CraftSoldiersState::cbxSortByChange(Action *)
 	}
 
 	SortFunctor *compFunc = _sortFunctors[selIdx];
+	_dynGetter = NULL;
 	if (compFunc)
 	{
+		if (selIdx != 2)
+		{
+			_dynGetter = compFunc->getGetter();
+		}
+
 		// if CTRL is pressed, we only want to show the dynamic column, without actual sorting
 		if (!ctrlPressed)
 		{
-			std::stable_sort(_base->getSoldiers()->begin(), _base->getSoldiers()->end(), *compFunc);
+			if (selIdx == 2)
+			{
+				std::stable_sort(_base->getSoldiers()->begin(), _base->getSoldiers()->end(),
+					[](const Soldier* a, const Soldier* b)
+					{
+						return Unicode::naturalCompare(a->getName(), b->getName());
+					}
+				);
+			}
+			else
+			{
+				std::stable_sort(_base->getSoldiers()->begin(), _base->getSoldiers()->end(), *compFunc);
+			}
 			bool shiftPressed = SDL_GetModState() & KMOD_SHIFT;
 			if (shiftPressed)
 			{
@@ -206,7 +225,6 @@ void CraftSoldiersState::cbxSortByChange(Action *)
 	}
 	else
 	{
-		_dynGetter = NULL;
 		// restore original ordering, ignoring (of course) those
 		// soldiers that have been sacked since this state started
 		for (std::vector<Soldier *>::const_iterator it = _origSoldierOrder.begin();
@@ -224,10 +242,6 @@ void CraftSoldiersState::cbxSortByChange(Action *)
 	}
 
 	size_t originalScrollPos = _lstSoldiers->getScroll();
-	if (compFunc)
-	{
-		_dynGetter = compFunc->getGetter();
-	}
 	initList(originalScrollPos);
 }
 

@@ -17,6 +17,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Game.h"
+#include "../resource.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -76,7 +77,7 @@ Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0
 	_screen = new Screen();
 
 	// Actually, you can create a window icon only after the screen is here
-	CrossPlatform::setWindowIcon(103, "openxcom.png", _screen->getWindow());
+	CrossPlatform::setWindowIcon(IDI_ICON1, "openxcom.png", _screen->getWindow());
 
 	// And only then you can think about grabbing the mouse
 	SDL_bool captureMouse = Options::captureMouse? SDL_TRUE : SDL_FALSE;

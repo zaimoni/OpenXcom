@@ -703,9 +703,43 @@ void Inventory::mouseClick(Action *action, State *state)
 					x += _groundOffset;
 				}
 				BattleItem *item = _selUnit->getItem(slot, x, y);
-				if (item != 0 && !item->getRules()->isFixed())
+				if (item != 0)
 				{
-					if ((SDL_GetModState() & KMOD_CTRL))
+					if ((SDL_GetModState() & KMOD_SHIFT))
+					{
+						bool quickUnload = false;
+						bool allowed = true;
+						// Quick-unload check
+						if (!_tu)
+						{
+							// Outside of the battlescape, quick-unload:
+							// - the weapon is never moved from its original slot
+							// - the ammo always drops on the ground
+							quickUnload = true;
+						}
+						else
+						{
+							if (item->getSlot()->getType() != INV_HAND)
+							{
+								// During the battle, only weapons held in hand can be shift-unloaded
+								allowed = false;
+							}
+						}
+						if (allowed)
+						{
+							_selItem = item; // don't worry, we'll unselect it later!
+							if (unload(quickUnload))
+							{
+								_game->getMod()->getSoundByDepth(_depth, Mod::ITEM_DROP)->play();
+							}
+							_selItem = 0; // see, I told you!
+						}
+					}
+					else if (item->getRules()->isFixed())
+					{
+						// do nothing!
+					}
+					else if ((SDL_GetModState() & KMOD_CTRL))
 					{
 						RuleInventory *newSlot = _inventorySlotGround;
 						std::string warning = "STR_NOT_ENOUGH_SPACE";
@@ -857,35 +891,57 @@ void Inventory::mouseClick(Action *action, State *state)
 					}
 					else
 					{
+						// 4. the cost of loading the weapon with the new ammo (from the offhand)
 						int tuCost = item->getRules()->getTULoad(slotAmmo);
 
 						if (_selItem->getSlot()->getType() != INV_HAND)
 						{
+							// 3. the cost of moving the new ammo from the current slot to the offhand
+							// Note: the cost for left/right hand might *NOT* be the same, but using the right hand "by definition"
 							tuCost += _selItem->getSlot()->getCost(_inventorySlotRightHand);
 						}
 
 						BattleItem *weaponRightHand = _selUnit->getRightHandWeapon();
 						BattleItem *weaponLeftHand = _selUnit->getLeftHandWeapon();
 
+						auto oldAmmoGoesTo = _inventorySlotGround;
+						if (!weaponRightHand || _selItem == weaponRightHand)
+						{
+							oldAmmoGoesTo = _inventorySlotRightHand;
+						}
+						else if (!weaponLeftHand || _selItem == weaponLeftHand)
+						{
+							oldAmmoGoesTo = _inventorySlotLeftHand;
+						}
+
 						auto canLoad = true;
 						if (item->getAmmoForSlot(slotAmmo) != 0)
 						{
 							auto tuUnload = item->getRules()->getTUUnload(slotAmmo);
-							if ((SDL_GetModState() & KMOD_SHIFT) && (!_tu || tuUnload) && (item == weaponRightHand || item == weaponLeftHand))
+							if ((SDL_GetModState() & KMOD_SHIFT) && (!_tu || tuUnload))
 							{
-								auto checkBoth = [&](BattleItem *i)
+								// Quick-swap check
+								if (!_tu)
 								{
-									return nullptr == i || item == i || _selItem == i;
-								};
-
-								if (checkBoth(weaponRightHand) && checkBoth(weaponLeftHand))
-								{
-									tuCost += tuUnload;
+									// Outside of the battlescape, the old ammo always drops on the ground
+									oldAmmoGoesTo = _inventorySlotGround;
 								}
 								else
 								{
-									canLoad = false;
-									_warning->showMessage(_game->getLanguage()->getString("STR_BOTH_HANDS_MUST_BE_EMPTY"));
+									// During the battle, only weapons held in hand can use ammo quick-swap
+									if (item->getSlot()->getType() != INV_HAND)
+									{
+										canLoad = false;
+									}
+								}
+
+								// 1. the cost of unloading the old ammo (to the offhand)
+								tuCost += tuUnload;
+								if (oldAmmoGoesTo == _inventorySlotGround)
+								{
+									// 2. the cost of dropping the old ammo on the ground (from the offhand)
+									// Note: the cost for left/right hand is (should be) the same, so just using the right hand
+									tuCost += _inventorySlotRightHand->getCost(_inventorySlotGround);
 								}
 							}
 							else
@@ -898,14 +954,19 @@ void Inventory::mouseClick(Action *action, State *state)
 						{
 							if (!_tu || _selUnit->spendTimeUnits(tuCost))
 							{
+								auto arrangeFloor = false;
 								auto oldAmmo = item->setAmmoForSlot(slotAmmo, _selItem);
 								if (oldAmmo)
 								{
-									moveItem(oldAmmo, (item == weaponRightHand ? _inventorySlotLeftHand : _inventorySlotRightHand), 0, 0);
+									moveItem(oldAmmo, oldAmmoGoesTo, 0, 0);
+									if (oldAmmoGoesTo == _inventorySlotGround)
+									{
+										arrangeFloor = true;
+									}
 								}
 								setSelectedItem(0);
 								_game->getMod()->getSoundByDepth(_depth, item->getRules()->getReloadSound())->play();
-								if (item->getSlot()->getType() == INV_GROUND)
+								if (arrangeFloor || item->getSlot()->getType() == INV_GROUND)
 								{
 									arrangeGround();
 								}
@@ -1040,9 +1101,10 @@ void Inventory::mouseClick(Action *action, State *state)
  * on the right hand and the ammo on the left hand.
  * Or if only one hand is free, the gun is placed
  * in the hand and the ammo is placed on the ground.
+ * @param quickUnload Quick unload using specific rules (the rules are different in and outside of the battlescape)
  * @return The success of the weapon being unloaded.
  */
-bool Inventory::unload()
+bool Inventory::unload(bool quickUnload)
 {
 	// Must be holding an item
 	if (_selItem == 0)
@@ -1095,19 +1157,11 @@ bool Inventory::unload()
 				return false;
 			}
 		};
-		if (!(SDL_GetModState() & KMOD_SHIFT))
+		// History lesson:
+		// The old shift-unload logic by Yankes (i.e. unload ammo slots in reverse order) was removed from here,
+		// because the new shift-unload logic by Fonzo/Ohartenstein now has a completely different meaning (i.e. quick-unload)
 		{
 			for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
-			{
-				if (checkSlot(slot))
-				{
-					break;
-				}
-			}
-		}
-		else
-		{
-			for (int slot = RuleItem::AmmoSlotMax - 1; slot >= 0; --slot)
 			{
 				if (checkSlot(slot))
 				{
@@ -1128,6 +1182,25 @@ bool Inventory::unload()
 	{
 		// not weapon or grenade, can't use unload button
 		return false;
+	}
+
+	// Simplified logic for quick-unload outside of the battlescape
+	if (quickUnload && !_tu)
+	{
+		// noop(); // 1. do not move the weapon at all!
+		if (grenade)
+		{
+			_selItem->setFuseTimer(-1);
+			_warning->showMessage(_game->getLanguage()->getString(_selItem->getRules()->getUnprimeActionMessage()));
+		}
+		else
+		{
+			auto oldAmmo = _selItem->setAmmoForSlot(slotForAmmoUnload, nullptr);
+			moveItem(oldAmmo, _inventorySlotGround, 0, 0); // 2. + 3. always drop the ammo on the ground
+			arrangeGround();
+		}
+		setSelectedItem(0);
+		return true;
 	}
 
 	// Check which hands are free.
@@ -1168,18 +1241,26 @@ bool Inventory::unload()
 	}
 	else
 	{
+		// 2. unload (= move the ammo to the second free hand)
 		cost.Time += toForAmmoUnload;
+
+		if (SecondFreeHand == nullptr)
+		{
+			// 3. drop the ammo on the ground (if the second hand is not free)
+			cost.Time += FirstFreeHand->getCost(_inventorySlotGround);
+		}
 	}
 
 	if (cost.haveTU() && _selItem->getSlot()->getType() != INV_HAND)
 	{
+		// 1. move the weapon to the first free hand
 		cost.Time += _selItem->getSlot()->getCost(FirstFreeHand);
 	}
 
 	std::string err;
 	if (!_tu || cost.spendTU(&err))
 	{
-		moveItem(_selItem, FirstFreeHand, 0, 0);
+		moveItem(_selItem, FirstFreeHand, 0, 0); // 1.
 		if (grenade)
 		{
 			_selItem->setFuseTimer(-1);
@@ -1190,11 +1271,11 @@ bool Inventory::unload()
 			auto oldAmmo = _selItem->setAmmoForSlot(slotForAmmoUnload, nullptr);
 			if (SecondFreeHand != nullptr)
 			{
-				moveItem(oldAmmo, SecondFreeHand, 0, 0);
+				moveItem(oldAmmo, SecondFreeHand, 0, 0); // 2.
 			}
 			else
 			{
-				moveItem(oldAmmo, _inventorySlotGround, 0, 0);
+				moveItem(oldAmmo, _inventorySlotGround, 0, 0); // 2. + 3.
 				arrangeGround();
 			}
 		}

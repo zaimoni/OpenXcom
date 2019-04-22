@@ -44,9 +44,13 @@ en-US:
   STR_VERY_BOLD: "Very bold (+100%)"
 #DismantleFacilityState.cpp
   STR_REFUND_VALUE: "Sales value> {ALT}{0}"
+#GlobalManufactureState.cpp
+  STR_PRODUCTION_OVERVIEW: "PRODUCTION OVERVIEW"
 #GlobalResearchState.cpp
   STR_RESEARCH_OVERVIEW: "RESEARCH OVERVIEW"
 #ManageAlienContainmentState.cpp
+  STR_KILL_SELECTED: "Kill"
+  STR_SELL_SELECTED: "Sell"
   STR_GO_TO_TRANSFERS: "Transfer..."
 #ManufactureDependenciesTreeState.cpp
   STR_TOPIC: "Topic>{ALT} {0}"
@@ -80,6 +84,8 @@ en-US:
   STR_NOT_ENOUGH_CRAFT_SPACE: "Not enough space onboard!"
 #SoldierAvatarState.cpp
   STR_SELECT_AVATAR_FOR: "SELECT AVATAR FOR{NEWLINE}{0}"
+#SoldierDiaryOverviewState.cpp
+  STR_KILLER_AND_WEAPON: "{0}, {1}"
 #SoldiersState.h
   STR_TRAINING: "Training"
   STR_SOLDIER_INFO: "Soldier Info"
@@ -189,7 +195,7 @@ en-US:
   STR_PLAY_BRIEFING_MUSIC_DURING_EQUIPMENT: "Play Briefing music longer"
   STR_PLAY_BRIEFING_MUSIC_DURING_EQUIPMENT_DESC: "Briefing music will continue playing during equipment phase until the Battlescape is displayed."
   STR_NIGHT_VISION_COLOR: "Select Night Vision color"
-  STR_NIGHT_VISION_COLOR_DESC: "Values from 1 to 15, each representing a different shade color. Default is 8."
+  STR_NIGHT_VISION_COLOR_DESC: "Values from 1 to 15, each representing a different shade color."
   STR_AUTO_SELL: "Auto-Sell Manager"
   STR_AUTO_SELL_DESC: "In the battle debriefing sell screen, any item types you sold in previous battles will be automatically marked for selling."
   STR_GRAPHS_ZOOM_IN: "Zoom In (Graphs)"
@@ -267,7 +273,7 @@ en-US:
 #TargetInfoState.cpp
   STR_INFO: "INFO"
 #TrainingFinishedState.cpp
-  STR_TRAINING_FINISHED: "Training Finished"
+  STR_TRAINING_FINISHED: "Training Finished{NEWLINE}at {0}"
 #UfoDetectedState.cpp
   STR_CANCEL_AND_IGNORE_UC: "CANCEL & IGNORE"
 #UfoTrackerState.cpp

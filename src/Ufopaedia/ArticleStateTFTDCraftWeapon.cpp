@@ -31,12 +31,13 @@
 namespace OpenXcom
 {
 
-	ArticleStateTFTDCraftWeapon::ArticleStateTFTDCraftWeapon(ArticleDefinitionTFTD *defs) : ArticleStateTFTD(defs)
+	ArticleStateTFTDCraftWeapon::ArticleStateTFTDCraftWeapon(ArticleDefinitionTFTD *defs, std::shared_ptr<ArticleCommonState> state) : ArticleStateTFTD(defs, std::move(state))
 	{
 		RuleCraftWeapon *weapon = _game->getMod()->getCraftWeapon(defs->id, true);
 
 		_lstInfo = new TextList(150, 50, 168, 126);
 		add(_lstInfo);
+		_lstInfo->setVisible(!weapon->getHidePediaInfo());
 
 		_lstInfo->setColor(_listColor1);
 		_lstInfo->setColumns(2, 100, 68); // deliberately making this wider than the original to account for finnish.
