@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5B8049FD226F8E12004E517F /* GlobalManufactureState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */; };
 		5BD0BAD62242E009008E6DFB /* TechTreeSelectState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BAC02242E005008E6DFB /* TechTreeSelectState.cpp */; };
 		5BD0BAD72242E009008E6DFB /* TechTreeViewerState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BAC12242E005008E6DFB /* TechTreeViewerState.cpp */; };
 		5BD0BAD82242E009008E6DFB /* CraftEquipmentLoadState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BAC42242E006008E6DFB /* CraftEquipmentLoadState.cpp */; };
@@ -485,6 +486,8 @@
 		1D30AB110D05D00D00671497 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		1D3623EB0D0F72F000981E51 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		1DF5F4DF0D08C38300B7A737 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GlobalManufactureState.cpp; sourceTree = "<group>"; };
+		5B8049FC226F8E12004E517F /* GlobalManufactureState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GlobalManufactureState.h; sourceTree = "<group>"; };
 		5BD0BAB42242E004008E6DFB /* CraftPilotSelectState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CraftPilotSelectState.h; sourceTree = "<group>"; };
 		5BD0BABF2242E005008E6DFB /* ChangeHeadquartersState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ChangeHeadquartersState.h; sourceTree = "<group>"; };
 		5BD0BAC02242E005008E6DFB /* TechTreeSelectState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TechTreeSelectState.cpp; sourceTree = "<group>"; };
@@ -1960,6 +1963,8 @@
 		B28343BD201F6D9D00BAEC9D /* Basescape */ = {
 			isa = PBXGroup;
 			children = (
+				5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */,
+				5B8049FC226F8E12004E517F /* GlobalManufactureState.h */,
 				5BD0BAD52242E008008E6DFB /* ChangeHeadquartersState.cpp */,
 				5BD0BABF2242E005008E6DFB /* ChangeHeadquartersState.h */,
 				5BD0BAC42242E006008E6DFB /* CraftEquipmentLoadState.cpp */,
@@ -2478,6 +2483,7 @@
 				B283449B201F6D9D00BAEC9D /* GraphsState.cpp in Sources */,
 				5BD0BAF42242E02A008E6DFB /* BriefingLightState.cpp in Sources */,
 				B283453F201F6D9E00BAEC9D /* NumberText.cpp in Sources */,
+				5B8049FD226F8E12004E517F /* GlobalManufactureState.cpp in Sources */,
 				B283449E201F6D9D00BAEC9D /* ConfirmNewBaseState.cpp in Sources */,
 				B28344D5201F6D9E00BAEC9D /* BaseFacility.cpp in Sources */,
 				B2834589201F6D9E00BAEC9D /* MapData.cpp in Sources */,
