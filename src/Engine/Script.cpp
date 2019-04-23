@@ -2500,9 +2500,9 @@ void ScriptParserBase::logScriptMetadata(bool haveEvents) const
 			refLog.get(LOG_DEBUG) << "Script operations:\n";
 			for (const auto& p : tmp)
 			{
-				if (p.parserArg != nullptr && p.overloadArg && p.description.size() != 0)
+				if (p.parserArg != nullptr && p.overloadArg && p.description != ScriptRef{ BindBase::functionInvisible })
 				{
-					refLog.get(LOG_DEBUG) << "Name: " << std::setw(40) << p.name.toString() << "Args: " << std::setw(50) << displayOverloadProc(this, p.overloadArg) << (p.description != ScriptRef{"-"} ? std::string("Desc: ") + p.description.toString() + "\n" : "\n");
+					refLog.get(LOG_DEBUG) << "Name: " << std::setw(40) << p.name.toString() << "Args: " << std::setw(50) << displayOverloadProc(this, p.overloadArg) << (p.description != ScriptRef{ BindBase::functionWithoutDescription } ? std::string("Desc: ") + p.description.toString() + "\n" : "\n");
 				}
 			}
 		}
@@ -2654,6 +2654,10 @@ void ScriptValuesBase::loadBase(const YAML::Node &node, const ScriptGlobal* shar
 					auto data = shared->getTagValueData(type, i);
 					shared->getTagValueTypeData(data.valueType).load(shared, temp, pair.second);
 					setBase(i, temp);
+				}
+				else
+				{
+					Log(LOG_ERROR) << "Error in tags: '" << pair.first << "' unknown tag name not defined in current file";
 				}
 			}
 		}

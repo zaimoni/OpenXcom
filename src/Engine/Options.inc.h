@@ -45,7 +45,7 @@ keyBattleCenterEnemy1, keyBattleCenterEnemy2, keyBattleCenterEnemy3, keyBattleCe
 keyBattleCenterEnemy9, keyBattleCenterEnemy10, keyBattleVoxelView, keyBattleZeroTUs, keyInvCreateTemplate, keyInvApplyTemplate, keyInvClear, keyInvAutoEquip;
 
 // Extra hotkeys (OXCE)
-OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch,
+OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch, keyGeoGlobalProduction,
 	keyGraphsZoomIn, keyGraphsZoomOut,
 	keyToggleQuickSearch,
 	keyCraftLoadoutSave, keyCraftLoadoutLoad,

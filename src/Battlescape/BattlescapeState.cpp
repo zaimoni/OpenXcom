@@ -535,35 +535,31 @@ BattlescapeState::BattlescapeState() : _reserve(0), _firstInit(true), _paletteRe
 
 	// automatic night vision
 	{
-		bool completeDarkness = true;
+		bool allPlayerUnitTilesVisible = true;
 		for (auto& unit : *_save->getUnits())
 		{
 			if (unit->getOriginalFaction() == FACTION_PLAYER && !unit->isOut())
 			{
-				if (unit->getTile() && unit->getTile()->getShade() < 12)
+				if (unit->getTile() && unit->getTile()->getShade() >= 12)
 				{
-					completeDarkness = false;
+					allPlayerUnitTilesVisible = false;
 					break;
 				}
 			}
 		}
-		if (!completeDarkness && _save->getGlobalShade() >= 12)
+		bool atLeastOneStrongPersonalLightAvailable = false;
+		for (auto& unit : *_save->getUnits())
 		{
-			bool noPersonalLights = true;
-			for (auto& unit : *_save->getUnits())
+			if (unit->getOriginalFaction() == FACTION_PLAYER && !unit->isOut())
 			{
-				if (unit->getOriginalFaction() == FACTION_PLAYER && !unit->isOut())
+				if (unit->getArmor()->getPersonalLight() > 5)
 				{
-					if (unit->getArmor()->getPersonalLight() > 5)
-					{
-						noPersonalLights = false;
-						break;
-					}
+					atLeastOneStrongPersonalLightAvailable = true;
+					break;
 				}
 			}
-			completeDarkness = noPersonalLights;
 		}
-		if (completeDarkness)
+		if (!allPlayerUnitTilesVisible && !atLeastOneStrongPersonalLightAvailable)
 		{
 			_map->toggleNightVision();
 		}
@@ -1315,13 +1311,15 @@ void BattlescapeState::btnKneelClick(Action *)
  */
 void BattlescapeState::btnInventoryClick(Action *)
 {
+#if 0
 	if (_save->getDebugMode())
 	{
 		for (std::vector<BattleUnit*>::iterator i = _save->getUnits()->begin(); i != _save->getUnits()->end(); ++i)
-			if ((*i)->getFaction() == _save->getSide())
+			if ((*i)->getOriginalFaction() == _save->getSide())
 				(*i)->prepareNewTurn();
 		updateSoldierInfo();
 	}
+#endif
 	if (playableUnitSelected()
 		&& (_save->getSelectedUnit()->hasInventory() || _save->getDebugMode()))
 	{
@@ -1336,7 +1334,7 @@ void BattlescapeState::btnInventoryClick(Action *)
 		_battleGame->getPathfinding()->removePreview();
 		_battleGame->cancelCurrentAction(true);
 
-		_game->pushState(new InventoryState(!_save->getDebugMode(), this, 0));
+		_game->pushState(new InventoryState(true, this, 0));
 	}
 }
 
@@ -2419,6 +2417,7 @@ inline void BattlescapeState::handle(Action *action)
 				SDL_Keycode key = action->getDetails()->key.keysym.sym;
 				bool ctrlPressed = (SDL_GetModState() & KMOD_CTRL) != 0;
 				bool shiftPressed = (SDL_GetModState() & KMOD_SHIFT) != 0;
+				bool altPressed = (SDL_GetModState() & KMOD_ALT) != 0;
 
 				// "ctrl-b" - reopen briefing
 				if (key == SDLK_b && ctrlPressed)
@@ -2537,20 +2536,24 @@ inline void BattlescapeState::handle(Action *action)
 					else if (_save->getDebugMode() && (key == SDLK_k || key == SDLK_j) && ctrlPressed)
 					{
 						bool stunOnly = (key == SDLK_j);
-						if (shiftPressed)
+						BattleUnit *unitUnderTheCursor = nullptr;
+						if (shiftPressed || altPressed)
 						{
-							// kill (ctrl-shift-k) or stun (ctrl-shift-j) just a single unit (under the cursor)
 							Position newPos;
 							_map->getSelectorPosition(&newPos);
 							Tile *tile = _save->getTile(newPos);
 							if (tile)
 							{
-								BattleUnit *unit = tile->getOverlappingUnit(_save);
-								if (unit && !unit->isOut())
-								{
-									debug("Bingo!");
-									unit->damage(Position(0, 0, 0), 1000, _game->getMod()->getDamageType(stunOnly ? DT_STUN : DT_AP), _save, {});
-								}
+								unitUnderTheCursor = tile->getOverlappingUnit(_save);
+							}
+						}
+						if (shiftPressed)
+						{
+							// kill (ctrl-shift-k) or stun (ctrl-shift-j) just a single unit (under the cursor)
+							if (unitUnderTheCursor && !unitUnderTheCursor->isOut())
+							{
+								debug("Bingo!");
+								unitUnderTheCursor->damage(Position(0, 0, 0), 1000, _game->getMod()->getDamageType(stunOnly ? DT_STUN : DT_AP), _save, {});
 							}
 						}
 						else
@@ -2567,6 +2570,11 @@ inline void BattlescapeState::handle(Action *action)
 							}
 							for (std::vector<BattleUnit*>::iterator i = _save->getUnits()->begin(); i != _save->getUnits()->end(); ++i)
 							{
+								if (unitUnderTheCursor && unitUnderTheCursor == (*i))
+								{
+									// kill (ctrl-alt-k) or stun (ctrl-alt-j) all aliens EXCEPT the one under the cursor
+									continue;
+								}
 								if ((*i)->getOriginalFaction() == FACTION_HOSTILE && !(*i)->isOut())
 								{
 									(*i)->damage(Position(0, 0, 0), 1000, _game->getMod()->getDamageType(stunOnly ? DT_STUN : DT_AP), _save, { });

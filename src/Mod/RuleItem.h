@@ -126,7 +126,12 @@ class RuleItem
 public:
 	/// Maximum number of ammo slots on weapon.
 	static const int AmmoSlotMax = 4;
+	/// Special ammo slot that represent usage of weapon itself as ammo.
+	static const int AmmoSlotSelfUse = -1;
 	static const int MedikitSlots = 3;
+
+	/// Load ammo slot with checking correct range.
+	static void loadAmmoSlotChecked(int& result, const YAML::Node& node, const std::string& parentName);
 
 private:
 	std::string _type, _name, _nameAsAmmo; // two types of objects can have the same name
@@ -160,6 +165,7 @@ private:
 	std::vector<int> _psiMissSound;
 	int _psiMissAnimation;
 	int _power;
+	bool _hidePower;
 	float _powerRangeReduction;
 	float _powerRangeThreshold;
 	std::vector<std::string> _compatibleAmmo[AmmoSlotMax];
@@ -186,7 +192,7 @@ private:
 	int _armor;
 	int _turretType;
 	int _aiUseDelay, _aiMeleeHitCount;
-	bool _recover, _recoverCorpse, _ignoreInBaseDefense, _liveAlien;
+	bool _recover, _recoverCorpse, _ignoreInBaseDefense, _ignoreInCraftEquip, _liveAlien;
 	int _liveAlienPrisonType;
 	int _attraction;
 	RuleItemUseCost _flatUse, _flatThrow, _flatPrime, _flatUnprime;
@@ -350,6 +356,8 @@ public:
 
 	/// Gets the item's power.
 	int getPower() const;
+	/// Should the item's power be displayed in Ufopedia or not?
+	bool getHidePower() const { return _hidePower; }
 	/// Get additional power from unit statistics
 	int getPowerBonus(const BattleUnit *unit) const;
 	const RuleStatBonus *getDamageBonusRaw() const { return &_damageBonus; }
@@ -523,12 +531,18 @@ public:
 	int getRecoveryPoints() const;
 	/// Gets the item's armor.
 	int getArmor() const;
+	/// Check if item is normal inventory item.
+	bool isInventoryItem() const;
+	/// Checks if item have some use in battlescape.
+	bool isUsefulBattlescapeItem() const;
 	/// Gets the item's recoverability.
 	bool isRecoverable() const;
 	/// Gets the corpse item's recoverability.
 	bool isCorpseRecoverable() const;
 	/// Checks if the item can be equipped in base defense mission.
 	bool canBeEquippedBeforeBaseDefense() const;
+	/// Checks if the item can be equipped to craft inventrory.
+	bool canBeEquippedToCraftInventory() const;
 	/// Gets the item's turret type.
 	int getTurretType() const;
 	/// Gets first turn when AI can use item.

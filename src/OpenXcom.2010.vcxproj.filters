@@ -1070,6 +1070,9 @@
       <Filter>Menu</Filter>
     </ClCompile>
     <ClCompile Include="..\libs\miniz\miniz.c" />
+    <ClCompile Include="Basescape\GlobalManufactureState.cpp">
+      <Filter>Basescape</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -2183,6 +2186,9 @@
       <Filter>Menu</Filter>
     </ClInclude>
     <ClInclude Include="..\libs\miniz\miniz.h" />
+    <ClInclude Include="Basescape\GlobalManufactureState.h">
+      <Filter>Basescape</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Geoscape">

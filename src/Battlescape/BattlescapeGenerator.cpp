@@ -431,7 +431,7 @@ void BattlescapeGenerator::nextStage()
 	{
 		startingCondition = temp;
 	}
-	_save->setStartingCondition(startingCondition);
+	_save->applyStartingCondition(startingCondition);
 
 	// starting conditions - armor transformation (no armor replacement! that is done only before the 1st stage)
 	if (startingCondition != 0)
@@ -707,7 +707,7 @@ void BattlescapeGenerator::run()
  */
 void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondition)
 {
-	_save->setStartingCondition(startingCondition);
+	_save->applyStartingCondition(startingCondition);
 
 	RuleInventory *ground = _game->getMod()->getInventory("STR_GROUND", true);
 
@@ -888,9 +888,17 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 			// add items that are in the base
 			for (std::map<std::string, int>::iterator i = _base->getStorageItems()->getContents()->begin(); i != _base->getStorageItems()->getContents()->end();)
 			{
-				// only put items in the battlescape that make sense (when the item got a sprite, it's probably ok)
 				RuleItem *rule = _game->getMod()->getItem(i->first, true);
-				if (rule->canBeEquippedBeforeBaseDefense() && rule->getBigSprite() > -1 && rule->getBattleType() != BT_NONE && rule->getBattleType() != BT_CORPSE && !rule->isFixed() && _game->getSavedGame()->isResearched(rule->getRequirements()))
+				if (
+					// is item allowed in base defense?
+					rule->canBeEquippedBeforeBaseDefense() &&
+					// only put items in the battlescape that make sense (when the item got a sprite, it's probably ok)
+					rule->isInventoryItem() &&
+					// if item can be equip to craft then you should be able to use it in base defense
+					// in some cases we forbid some items from craft but still allow them in base defense if normaly they were avaiable.
+					(rule->isUsefulBattlescapeItem() || rule->canBeEquippedToCraftInventory()) &&
+					// we know how to use this item
+					_game->getSavedGame()->isResearched(rule->getRequirements()))
 				{
 					for (int count = 0; count < i->second; count++)
 					{
@@ -1185,9 +1193,10 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
 void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
 {
 	// race defined by deployment if there is one.
-	if (!deployment->getRace().empty() && _game->getSavedGame()->getMonthsPassed() > -1)
+	auto tmpRace = deployment->getRace();
+	if (!tmpRace.empty() && _game->getSavedGame()->getMonthsPassed() > -1)
 	{
-		_alienRace = deployment->getRace();
+		_alienRace = tmpRace;
 	}
 
 	if (_save->getDepth() > 0 && _alienRace.find("_UNDERWATER") == std::string::npos)
@@ -1252,6 +1261,17 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
 					for (std::vector<std::string>::const_iterator it = (*d).itemSets.at(itemLevel).items.begin(); it != (*d).itemSets.at(itemLevel).items.end(); ++it)
 					{
 						RuleItem *ruleItem = _game->getMod()->getItem(*it);
+						if (ruleItem)
+						{
+							_save->createItemForUnit(ruleItem, unit);
+						}
+					}
+					for (auto& iset : (*d).extraRandomItems)
+					{
+						if (iset.items.empty())
+							continue;
+						auto pick = RNG::generate(0, iset.items.size() - 1);
+						RuleItem *ruleItem = _game->getMod()->getItem(iset.items[pick]);
 						if (ruleItem)
 						{
 							_save->createItemForUnit(ruleItem, unit);
@@ -1585,6 +1605,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 		RuleItem *rule = _game->getMod()->getItem((*i).first, true);
 		for (std::vector<Position>::const_iterator j = (*i).second.begin(); j != (*i).second.end(); ++j)
 		{
+			if ((*j).x >= mapblock->getSizeX() || (*j).y >= mapblock->getSizeY() || (*j).z >= mapblock->getSizeZ())
+			{
+				std::ostringstream ss;
+				ss << "Item " << rule->getName() << " is outside of map block " << mapblock->getName() << ", position: [";
+				ss << (*j).x << "," << (*j).y << "," << (*j).z << "], block size: [";
+				ss << mapblock->getSizeX() << "," << mapblock->getSizeY() << "," << mapblock->getSizeZ() << "]";
+				throw Exception(ss.str());
+			}
 			BattleItem *item = _save->createItemForTile(rule, _save->getTile((*j) + Position(xoff, yoff, zoff)));
 			if (prime != primeEnd)
 			{
@@ -1614,9 +1642,15 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 					rule = _game->getMod()->getItem(i->itemList[index]);
 				}
 
-				BattleItem *item = new BattleItem(rule, _save->getCurrentItemId());
-				_save->getItems()->push_back(item);
-				_save->getTile(i->position + Position(xoff, yoff, zoff))->addItem(item, _game->getMod()->getInventory("STR_GROUND"));
+				if (i->position.x >= mapblock->getSizeX() || i->position.y >= mapblock->getSizeY() || i->position.z >= mapblock->getSizeZ())
+				{
+					std::ostringstream ss;
+					ss << "Random item " << rule->getName() << " is outside of map block " << mapblock->getName() << ", position: [";
+					ss << i->position.x << "," << i->position.y << "," << i->position.z << "], block size: [";
+					ss << mapblock->getSizeX() << "," << mapblock->getSizeY() << "," << mapblock->getSizeZ() << "]";
+					throw Exception(ss.str());
+				}
+				_save->createItemForTile(rule, _save->getTile(i->position + Position(xoff, yoff, zoff)));
 			}
 		}
 	}

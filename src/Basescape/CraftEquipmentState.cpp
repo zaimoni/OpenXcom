@@ -149,9 +149,10 @@ CraftEquipmentState::CraftEquipmentState(Base *base, size_t craft) : _lstScroll(
 	for (std::vector<std::string>::const_iterator i = items.begin(); i != items.end(); ++i)
 	{
 		RuleItem *rule = _game->getMod()->getItem(*i);
-		int cQty = rule->getVehicleUnit() ? c->getVehicleCount(*i) : c->getItems()->getItem(*i);
+		auto isVehicle = rule->getVehicleUnit();
+		int cQty = isVehicle ? c->getVehicleCount(*i) : c->getItems()->getItem(*i);
 
-		if (rule->getBigSprite() > -1 && rule->getBattleType() != BT_NONE && rule->getBattleType() != BT_CORPSE &&
+		if ((isVehicle || rule->isInventoryItem()) && rule->canBeEquippedToCraftInventory() &&
 			_game->getSavedGame()->isResearched(rule->getRequirements()) &&
 			(_base->getStorageItems()->getItem(*i) > 0 || cQty > 0))
 		{
@@ -312,8 +313,9 @@ void CraftEquipmentState::initList()
 	{
 		RuleItem *rule = _game->getMod()->getItem(*i);
 
+		auto isVehicle = rule->getVehicleUnit();
 		int cQty = 0;
-		if (rule->getVehicleUnit())
+		if (isVehicle)
 		{
 			cQty = c->getVehicleCount(*i);
 		}
@@ -323,7 +325,7 @@ void CraftEquipmentState::initList()
 			_totalItems += cQty;
 		}
 
-		if (rule->getBigSprite() > -1 && rule->getBattleType() != BT_NONE && rule->getBattleType() != BT_CORPSE &&
+		if ((isVehicle || rule->isInventoryItem()) && rule->canBeEquippedToCraftInventory() &&
 			(_base->getStorageItems()->getItem(*i) > 0 || cQty > 0))
 		{
 			// check research requirements
@@ -921,7 +923,7 @@ void CraftEquipmentState::loadGlobalLoadout(int index)
 				return a.listOrder < b.listOrder;
 			}
 		);
-		_game->pushState(new CannotReequipState(_missingItems));
+		_game->pushState(new CannotReequipState(_missingItems, _base));
 		_reload = false;
 	}
 }

@@ -1,6 +1,6 @@
 #pragma once
 /*
- * Copyright 2010-2016 OpenXcom Developers.
+ * Copyright 2010-2019 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,8 +18,6 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "../Engine/State.h"
-#include "DebriefingState.h"
-#include <vector>
 
 namespace OpenXcom
 {
@@ -29,30 +27,37 @@ class Window;
 class Text;
 class TextList;
 class Base;
+class RuleManufacture;
 
 /**
- * Screen shown when there's not enough equipment
- * to re-equip a craft after a mission.
+ * Global Manufacture screen that provides overview
+ * of the ongoing manufacturing operations in all the bases.
  */
-class CannotReequipState : public State
+class GlobalManufactureState : public State
 {
 private:
-	Base *_base;
-	TextButton *_btnOk, *_btnManufacture, *_btnPurchase;
+	TextButton *_btnOk;
 	Window *_window;
-	Text *_txtTitle, *_txtItem, *_txtQuantity, *_txtCraft;
-	TextList *_lstItems;
+	Text *_txtTitle, *_txtAvailable, *_txtAllocated, *_txtSpace, *_txtFunds, *_txtItem, *_txtEngineers, *_txtProduced, *_txtCost, *_txtTimeLeft;
+	TextList *_lstManufacture;
+
+	std::vector<Base*> _bases;
+	std::vector<RuleManufacture*> _topics;
+	bool _openedFromBasescape;
 public:
-	/// Creates the Cannot Reequip state.
-	CannotReequipState(std::vector<ReequipStat> missingItems, Base *base);
-	/// Cleans up the Cannot Reequip state.
-	~CannotReequipState();
+	/// Creates the GlobalManufacture state.
+	GlobalManufactureState(bool openedFromBasescape);
+	/// Cleans up the GlobalManufacture state.
+	~GlobalManufactureState();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
-	/// Handler for clicking the Manufacture button.
-	void btnManufactureClick(Action *action);
-	/// Handler for clicking the Purchase/Hire button.
-	void btnPurchaseClick(Action *action);
+	/// Handler for clicking the Production list.
+	void onSelectBase(Action *action);
+	void onOpenTechTreeViewer(Action *action);
+	/// Updates the production list.
+	void init() override;
+	/// Fills the list with Productions from all bases.
+	void fillProductionList();
 };
 
 }

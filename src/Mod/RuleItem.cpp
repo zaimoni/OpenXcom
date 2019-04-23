@@ -47,7 +47,7 @@ RuleItem::RuleItem(const std::string &type) :
 	_hitAnimation(0), _hitMissAnimation(-1),
 	_meleeAnimation(0), _meleeMissAnimation(-1),
 	_psiAnimation(-1), _psiMissAnimation(-1),
-	_power(0), _powerRangeReduction(0), _powerRangeThreshold(0),
+	_power(0), _hidePower(false), _powerRangeReduction(0), _powerRangeThreshold(0),
 	_accuracyUse(0), _accuracyMind(0), _accuracyPanic(20), _accuracyThrow(100), _accuracyCloseQuarters(-1),
 	_noLOSAccuracyPenalty(-1),
 	_costUse(25), _costMind(-1, -1), _costPanic(-1, -1), _costThrow(25), _costPrime(50), _costUnprime(25),
@@ -57,7 +57,8 @@ RuleItem::RuleItem(const std::string &type) :
 	_waypoints(0), _invWidth(1), _invHeight(1),
 	_painKiller(0), _heal(0), _stimulant(0), _medikitType(BMT_NORMAL), _woundRecovery(0), _healthRecovery(0), _stunRecovery(0), _energyRecovery(0), _moraleRecovery(0), _painKillerRecovery(1.0f), _recoveryPoints(0), _armor(20), _turretType(-1),
 	_aiUseDelay(-1), _aiMeleeHitCount(25),
-	_recover(true), _recoverCorpse(true), _ignoreInBaseDefense(false), _liveAlien(false), _liveAlienPrisonType(0), _attraction(0), _flatUse(0, 1), _flatThrow(0, 1), _flatPrime(0, 1), _flatUnprime(0, 1), _arcingShot(false), _experienceTrainingMode(ETM_DEFAULT), _listOrder(0),
+	_recover(true), _recoverCorpse(true), _ignoreInBaseDefense(false), _ignoreInCraftEquip(true), _liveAlien(false),
+	_liveAlienPrisonType(0), _attraction(0), _flatUse(0, 1), _flatThrow(0, 1), _flatPrime(0, 1), _flatUnprime(0, 1), _arcingShot(false), _experienceTrainingMode(ETM_DEFAULT), _listOrder(0),
 	_maxRange(200), _minRange(0), _dropoff(2), _bulletSpeed(0), _explosionSpeed(0), _shotgunPellets(0), _shotgunBehaviorType(0), _shotgunSpread(100), _shotgunChoke(100),
 	_spawnUnitFaction(-1),
 	_LOSRequired(false), _underwaterOnly(false), _landOnly(false), _psiReqiured(false),
@@ -125,6 +126,28 @@ RuleItemUseCost RuleItem::getDefault(const RuleItemUseCost& a, const RuleItemUse
 	n.Health = a.Health >= 0 ? a.Health : b.Health;
 	n.Stun = a.Stun >= 0 ? a.Stun : b.Stun;
 	return n;
+}
+
+/**
+ * Load ammo slot with checking correct range.
+ * @param result
+ * @param node
+ * @param parentName
+ */
+void RuleItem::loadAmmoSlotChecked(int& result, const YAML::Node& node, const std::string& parentName)
+{
+	if (node)
+	{
+		auto s = node.as<int>(result);
+		if (s < AmmoSlotSelfUse || s >= AmmoSlotMax)
+		{
+			Log(LOG_ERROR) << "ammoSlot outside of allowed range in '" << parentName << "'";
+		}
+		else
+		{
+			result = s;
+		}
+	}
 }
 
 /**
@@ -235,18 +258,7 @@ void RuleItem::loadConfAction(RuleItemAction& a, const YAML::Node& node, const s
 	{
 		a.shots = conf["shots"].as<int>(a.shots);
 		a.name = conf["name"].as<std::string>(a.name);
-		if (const YAML::Node& slot = conf["ammoSlot"])
-		{
-			auto s = slot.as<int>(a.ammoSlot);
-			if (s < -1 || s >= AmmoSlotMax)
-			{
-				Log(LOG_ERROR) << "ammoSlot outside of allowed range for " << "conf" + name << " in '" << _name << "'";
-			}
-			else
-			{
-				a.ammoSlot = s;
-			}
-		}
+		loadAmmoSlotChecked(a.ammoSlot, conf["ammoSlot"], _name);
 		a.arcing = conf["arcing"].as<bool>(a.arcing);
 	}
 }
@@ -394,6 +406,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	if (node["battleType"])
 	{
 		_battleType = (BattleType)node["battleType"].as<int>(_battleType);
+		_ignoreInCraftEquip = !isUsefulBattlescapeItem();
 
 		if (_battleType == BT_PSIAMP)
 		{
@@ -426,7 +439,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 		}
 		else
 		{
-			_confMelee.ammoSlot = -1;
+			_confMelee.ammoSlot = RuleItem::AmmoSlotSelfUse;
 		}
 
 		if (_battleType == BT_CORPSE)
@@ -477,6 +490,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	}
 
 	_power = node["power"].as<int>(_power);
+	_hidePower = node["hidePower"].as<bool>(_hidePower);
 	_psiAttackName = node["psiAttackName"].as<std::string>(_psiAttackName);
 	_primeActionName = node["primeActionName"].as<std::string>(_primeActionName);
 	_primeActionMessage = node["primeActionMessage"].as<std::string>(_primeActionMessage);
@@ -549,7 +563,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	{
 		for (RuleItemAction* conf : { &_confAimed, &_confAuto, &_confSnap, &_confMelee, })
 		{
-			if (conf->ammoSlot != -1 && _compatibleAmmo[conf->ammoSlot].empty())
+			if (conf->ammoSlot != RuleItem::AmmoSlotSelfUse && _compatibleAmmo[conf->ammoSlot].empty())
 			{
 				throw Exception("Weapon " + _type + " has clip size 0 and no ammo defined. Please use 'clipSize: -1' for unlimited ammo, or allocate a compatibleAmmo item.");
 			}
@@ -594,6 +608,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_recover = node["recover"].as<bool>(_recover);
 	_recoverCorpse = node["recoverCorpse"].as<bool>(_recoverCorpse);
 	_ignoreInBaseDefense = node["ignoreInBaseDefense"].as<bool>(_ignoreInBaseDefense);
+	_ignoreInCraftEquip = node["ignoreInCraftEquip"].as<bool>(_ignoreInCraftEquip);
 	_liveAlien = node["liveAlien"].as<bool>(_liveAlien);
 	_liveAlienPrisonType = node["prisonType"].as<int>(_liveAlienPrisonType);
 	_attraction = node["attraction"].as<int>(_attraction);
@@ -1816,6 +1831,22 @@ int RuleItem::getArmor() const
 }
 
 /**
+ * Check if item is normal inventory item.
+ */
+bool RuleItem::isInventoryItem() const
+{
+	return getBigSprite() > -1 && isFixed() == false;
+}
+
+/**
+ * Checks if item have some use in battlescape.
+ */
+bool RuleItem::isUsefulBattlescapeItem() const
+{
+	return (_battleType != BT_CORPSE && _battleType != BT_NONE);
+}
+
+/**
  * Returns if the item should be recoverable
  * from the battlescape.
  * @return True if it is recoverable.
@@ -1849,6 +1880,14 @@ bool RuleItem::canBeEquippedBeforeBaseDefense() const
 	return !_ignoreInBaseDefense;
 }
 
+/**
+ * Check if the item can be equipped to craft invnetory.
+ * @return True if it can be equipped.
+ */
+bool RuleItem::canBeEquippedToCraftInventory() const
+{
+	return !_ignoreInCraftEquip;
+}
 
 /**
  * Returns the item's Turret Type.
