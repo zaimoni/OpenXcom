@@ -365,6 +365,7 @@ void Game::run()
 						Log(LOG_INFO) << " numFingers: " << _event.mgesture.numFingers << ", x: " << _event.mgesture.x << ", y: " << _event.mgesture.y;
 						Log(LOG_INFO) << " dDist: " << _event.mgesture.dDist << ", dTheta: " << _event.mgesture.dTheta;
 					}
+					[[gnu::fallthrough]];
 
 #if 0
 				// SDL2 handles things differently, so this is basically commented out for historical purposes.
@@ -403,8 +404,8 @@ void Game::run()
 							startupEvent = false;
 						}
 					}
-#endif
 					break;
+#endif
 				case SDL_WINDOWEVENT:
 					switch(_event.window.event)
 					{
@@ -446,7 +447,7 @@ void Game::run()
 						case SDL_WINDOWEVENT_RESTORED:
 							runningState = RUNNING;
 					}
-					break;
+					[[gnu::fallthrough]];
 				case SDL_MOUSEMOTION:
 					// With SDL2 we can have both events from a real mouse
 					// and events from a touch-emulated mouse.
