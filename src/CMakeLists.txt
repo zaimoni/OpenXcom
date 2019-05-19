@@ -2,6 +2,7 @@
 set ( root_src
   lodepng.cpp
   main.cpp
+  md5.cpp
 )
 set ( basescape_src
   Basescape/BaseInfoState.cpp
@@ -299,6 +300,7 @@ set ( mod_src
   Mod/RuleInventory.cpp
   Mod/RuleItem.cpp
   Mod/RuleDamageType.cpp
+  Mod/RuleEnviroEffects.cpp
   Mod/RuleManufacture.cpp
   Mod/RuleMissionScript.cpp
   Mod/RuleMusic.cpp

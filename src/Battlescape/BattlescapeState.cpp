@@ -75,10 +75,10 @@
 #include "../Savegame/BattleItem.h"
 #include "../Ufopaedia/Ufopaedia.h"
 #include "../Savegame/Ufo.h"
+#include "../Mod/RuleEnviroEffects.h"
 #include "../Mod/RuleInterface.h"
 #include "../Mod/RuleInventory.h"
 #include "../Mod/RuleSoldier.h"
-#include "../Mod/RuleStartingCondition.h"
 #include <algorithm>
 
 namespace OpenXcom
@@ -179,6 +179,7 @@ BattlescapeState::BattlescapeState() : _reserve(0), _firstInit(true), _paletteRe
 		_numVisibleUnit[i] = new NumberText(15, 12, _btnVisibleUnit[i]->getX() + 6 , _btnVisibleUnit[i]->getY() + 4);
 	}
 	_numVisibleUnit[9]->setX(_numVisibleUnit[9]->getX() - 2); // center number 10
+	_btnToggleNV = new InteractiveSurface(12, 12, x + 2, y - 23);
 	_warning = new WarningMessage(224, 24, x + 48, y + 32);
 	_btnLaunch = new BattlescapeButton(32, 24, screenWidth - 32, 0); // we need screenWidth, because that is independent of the black bars on the screen
 	_btnLaunch->setVisible(false);
@@ -207,10 +208,10 @@ BattlescapeState::BattlescapeState() : _reserve(0), _firstInit(true), _paletteRe
 	_txtTooltip = new Text(300, 10, x + 2, y - 10);
 
 	// Palette transformations
-	auto startingCondition = _game->getSavedGame()->getSavedBattle()->getStartingCondition();
-	if (startingCondition)
+	auto enviro = _game->getSavedGame()->getSavedBattle()->getEnviroEffects();
+	if (enviro)
 	{
-		for (auto change : *startingCondition->getPaletteTransformations())
+		for (auto& change : enviro->getPaletteTransformations())
 		{
 			Palette *origPal = _game->getMod()->getPalette(change.first, false);
 			Palette *newPal = _game->getMod()->getPalette(change.second, false);
@@ -339,6 +340,7 @@ BattlescapeState::BattlescapeState() : _reserve(0), _firstInit(true), _paletteRe
 		add(_btnVisibleUnit[i]);
 		add(_numVisibleUnit[i]);
 	}
+	add(_btnToggleNV);
 	add(_warning, "warning", "battlescape", _icons);
 	add(_txtDebug);
 	add(_txtTooltip, "textTooltip", "battlescape", _icons);
@@ -591,7 +593,15 @@ BattlescapeState::BattlescapeState() : _reserve(0), _firstInit(true), _paletteRe
 		_numVisibleUnit[i]->setValue(i+1);
 	}
 	_txtVisibleUnitTooltip[VISIBLE_MAX] = "STR_CENTER_ON_WOUNDED_FRIEND";
-	_txtVisibleUnitTooltip[VISIBLE_MAX+1] = "STR_CENTER_ON_SHOCKED_FRIEND";
+	_txtVisibleUnitTooltip[VISIBLE_MAX+1] = "STR_CENTER_ON_DIZZY_FRIEND";
+
+	_btnToggleNV->onMouseClick((ActionHandler)& BattlescapeState::btnToggleNightVisionAndPersonalLightsClick);
+	_btnToggleNV->setTooltip("STR_TOGGLE_NIGHT_VISION");
+	_btnToggleNV->onMouseIn((ActionHandler)& BattlescapeState::txtTooltipIn);
+	_btnToggleNV->onMouseOut((ActionHandler)& BattlescapeState::txtTooltipOut);
+	_btnToggleNV->drawRect(0, 0, 12, 12, 15);
+	_btnToggleNV->drawRect(1, 1, 10, 10, _indicatorBlue);
+	_btnToggleNV->setVisible(_save->getGlobalShade() > Options::oxceNightVisionButtonThreshold);
 
 	_warning->setColor(_game->getMod()->getInterface("battlescape")->getElement("warning")->color2);
 	_warning->setTextColor(_game->getMod()->getInterface("battlescape")->getElement("warning")->color);
@@ -1631,7 +1641,46 @@ void BattlescapeState::btnVisibleUnitClick(Action *action)
 
 	if (btnID != -1)
 	{
-		_map->getCamera()->centerOnPosition(_visibleUnit[btnID]->getPosition());
+		auto position = _visibleUnit[btnID]->getPosition();
+		if (position == TileEngine::invalid)
+		{
+			bool found = false;
+			for (auto& unit : *_save->getUnits())
+			{
+				if (!unit->isOut())
+				{
+					for (auto& invItem : *unit->getInventory())
+					{
+						if (invItem->getUnit() && invItem->getUnit() == _visibleUnit[btnID])
+						{
+							position = unit->getPosition(); // position of a unit that has the wounded unit in the inventory
+							found = true;
+							break;
+						}
+					}
+				}
+				if (found) break;
+			}
+		}
+		_map->getCamera()->centerOnPosition(position);
+	}
+
+	action->getDetails()->type = SDL_FIRSTEVENT; // consume the event
+#ifdef __MOBILE__
+	_longPressTimer->stop();
+#endif
+}
+
+/**
+ * Toggles night vision (purely cosmetic) and personal lights (NOT cosmetic!).
+ * @param action Pointer to an action.
+ */
+void BattlescapeState::btnToggleNightVisionAndPersonalLightsClick(Action* action)
+{
+	if (allowButtons())
+	{
+		_map->toggleNightVision();
+		_save->getTileEngine()->togglePersonalLighting();
 	}
 
 	action->getDetails()->type = SDL_FIRSTEVENT; // consume the event

@@ -35,7 +35,7 @@ class BattlescapeState;
 class Position;
 class Pathfinding;
 class TileEngine;
-class RuleStartingCondition;
+class RuleEnviroEffects;
 class BattleItem;
 class Mod;
 class State;
@@ -67,8 +67,8 @@ private:
 	std::vector<BattleItem*> _items, _deleted;
 	Pathfinding *_pathfinding;
 	TileEngine *_tileEngine;
-	std::string _missionType, _alienCustomDeploy, _alienCustomMission;
-	const RuleStartingCondition *_startingCondition;
+	std::string _missionType, _strTarget, _strCraftOrBase, _alienCustomDeploy, _alienCustomMission;
+	const RuleEnviroEffects *_enviroEffects;
 	bool _ecEnabledFriendly, _ecEnabledHostile, _ecEnabledNeutral;
 	int _globalShade;
 	UnitFaction _side;
@@ -122,12 +122,20 @@ public:
 	void setMissionType(const std::string &missionType);
 	/// Gets the mission type.
 	const std::string &getMissionType() const;
+	/// Sets the mission target.
+	void setMissionTarget(const std::string& missionTarget) { _strTarget = missionTarget; }
+	/// Gets the mission target.
+	const std::string& getMissionTarget() const { return _strTarget; }
+	/// Sets the mission craft/base.
+	void setMissionCraftOrBase(const std::string& missionCraftOrBase) { _strCraftOrBase = missionCraftOrBase; }
+	/// Gets the mission craft/base.
+	const std::string& getMissionCraftOrBase() const { return _strCraftOrBase; }
 	/// Gets the base's items BEFORE the mission.
 	ItemContainer *getBaseStorageItems();
-	/// Applies the starting condition.
-	void applyStartingCondition(const RuleStartingCondition* startingCondition);
-	/// Gets the starting condition.
-	const RuleStartingCondition *getStartingCondition() const;
+	/// Applies the enviro effects.
+	void applyEnviroEffects(const RuleEnviroEffects* enviroEffects);
+	/// Gets the enviro effects.
+	const RuleEnviroEffects* getEnviroEffects() const;
 	/// Are environmental conditions (for a given faction) enabled?
 	bool getEnvironmentalConditionsEnabled(UnitFaction faction) const;
 	/// Sets the custom alien data.

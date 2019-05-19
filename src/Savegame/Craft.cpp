@@ -37,6 +37,7 @@
 #include "Vehicle.h"
 #include "../Mod/Armor.h"
 #include "../Mod/RuleItem.h"
+#include "../Mod/RuleStartingCondition.h"
 #include "../Mod/AlienDeployment.h"
 #include "SerializationHelper.h"
 #include "../Engine/Logger.h"
@@ -946,7 +947,7 @@ void Craft::checkup()
 		if ((*i) == 0)
 			continue;
 		available++;
-		if ((*i)->getAmmo() >= (*i)->getRules()->getAmmoMax())
+		if ((*i)->getAmmo() >= (*i)->getRules()->getAmmoMax() || (*i)->isDisabled())
 		{
 			full++;
 		}
@@ -1057,7 +1058,7 @@ unsigned int Craft::calcRearmTime()
 	for (int idx = 0; idx < _rules->getWeapons(); idx++)
 	{
 		CraftWeapon *w1 = _weapons.at(idx);
-		if (w1 != 0)
+		if (w1 != 0 && !w1->isDisabled())
 		{
 			int needed = w1->getRules()->getAmmoMax() - w1->getAmmo();
 			if (needed > 0)
@@ -1216,12 +1217,28 @@ int Craft::getSpaceUsed() const
 }
 
 /**
+ * Checks if there are only permitted soldier types onboard.
+ * @return True if all soldiers onboard are permitted.
+ */
+bool Craft::areOnlyPermittedSoldierTypesOnboard(const RuleStartingCondition* sc)
+{
+	for (Soldier* s : *_base->getSoldiers())
+	{
+		if (s->getCraft() == this && !sc->isSoldierTypePermitted(s->getRules()->getType()))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
  * Checks if there are enough required items onboard.
  * @return True if the craft has enough required items.
  */
-bool Craft::areRequiredItemsOnboard(const std::map<std::string, int> *requiredItems)
+bool Craft::areRequiredItemsOnboard(const std::map<std::string, int>& requiredItems)
 {
-	for (auto mapItem : *requiredItems)
+	for (auto& mapItem : requiredItems)
 	{
 		if (_items->getItem(mapItem.first) < mapItem.second)
 		{
@@ -1234,9 +1251,9 @@ bool Craft::areRequiredItemsOnboard(const std::map<std::string, int> *requiredIt
 /**
  * Destroys given required items.
  */
-void Craft::destroyRequiredItems(const std::map<std::string, int> *requiredItems)
+void Craft::destroyRequiredItems(const std::map<std::string, int>& requiredItems)
 {
-	for (auto mapItem : *requiredItems)
+	for (auto& mapItem : requiredItems)
 	{
 		_items->removeItem(mapItem.first, mapItem.second);
 	}
@@ -1570,7 +1587,7 @@ void Craft::reuseItem(const std::string& item)
 	// Check if it's ammo to reload the craft
 	for (std::vector<CraftWeapon*>::iterator w = _weapons.begin(); w != _weapons.end(); ++w)
 	{
-		if ((*w) != 0 && item == (*w)->getRules()->getClipItem() && (*w)->getAmmo() < (*w)->getRules()->getAmmoMax())
+		if ((*w) != 0 && item == (*w)->getRules()->getClipItem() && (*w)->getAmmo() < (*w)->getRules()->getAmmoMax() && !(*w)->isDisabled())
 		{
 			(*w)->setRearming(true);
 			_status = "STR_REARMING";

@@ -1035,8 +1035,9 @@ void GeoscapeState::time5Seconds()
 					}
 				}
 				_game->getSavedGame()->stopHuntingXcomCraft((*j)); // craft destroyed in dogfight
-				delete *j;
-				j = (*i)->getCrafts()->erase(j);
+				Craft *craft = *j;
+				j = (*i)->removeCraft(craft, false);
+				delete craft;
 				continue;
 			}
 			if ((*j)->getDestination() != 0)
@@ -1319,6 +1320,7 @@ void GeoscapeState::time5Seconds()
 				((*d)->getWaitForAltitude() && (*d)->getUfo()->getAltitudeInt() <= (*d)->getCraft()->getRules()->getMaxAltitude()))
 			{
 				_pause = true; // the USO reached the sea during this interval period, stop the timer and let handleDogfights() take it from there.
+				timerReset();
 			}
 		}
 	}

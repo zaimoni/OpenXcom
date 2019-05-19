@@ -82,6 +82,7 @@ AllocatePsiTrainingState::AllocatePsiTrainingState(Base *base) : _sel(0), _base(
 	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&AllocatePsiTrainingState::btnOkClick);
 	_btnOk->onKeyboardPress((ActionHandler)&AllocatePsiTrainingState::btnOkClick, Options::keyCancel);
+	_btnOk->onKeyboardPress((ActionHandler)&AllocatePsiTrainingState::btnDeassignAllSoldiersClick, Options::keyResetAll);
 
 	_txtTitle->setBig();
 	_txtTitle->setAlign(ALIGN_CENTER);
@@ -413,7 +414,7 @@ void AllocatePsiTrainingState::lstSoldiersClick(Action *action)
 				_lstSoldiers->setRowColor(_sel, _lstSoldiers->getSecondaryColor());
 				_labSpace--;
 				_txtRemaining->setText(tr("STR_REMAINING_PSI_LAB_CAPACITY").arg(_labSpace));
-				_base->getSoldiers()->at(_sel)->setPsiTraining();
+				_base->getSoldiers()->at(_sel)->setPsiTraining(true);
 			}
 		}
 		else
@@ -422,7 +423,7 @@ void AllocatePsiTrainingState::lstSoldiersClick(Action *action)
 			_lstSoldiers->setRowColor(_sel, _lstSoldiers->getColor());
 			_labSpace++;
 			_txtRemaining->setText(tr("STR_REMAINING_PSI_LAB_CAPACITY").arg(_labSpace));
-			_base->getSoldiers()->at(_sel)->setPsiTraining();
+			_base->getSoldiers()->at(_sel)->setPsiTraining(false);
 		}
 	}
 }
@@ -457,6 +458,24 @@ void AllocatePsiTrainingState::lstSoldiersMousePress(Action *action)
 		}
 	}
 	*/
+}
+
+/**
+ * Removes all soldiers from Psi Training.
+ * @param action Pointer to an action.
+ */
+void AllocatePsiTrainingState::btnDeassignAllSoldiersClick(Action* action)
+{
+	int row = 0;
+	for (std::vector<Soldier*>::iterator i = _base->getSoldiers()->begin(); i != _base->getSoldiers()->end(); ++i)
+	{
+		(*i)->setPsiTraining(false);
+		_lstSoldiers->setCellText(row, 3, tr("STR_NO"));
+		_lstSoldiers->setRowColor(row, _lstSoldiers->getColor());
+		row++;
+	}
+	_labSpace = _base->getAvailablePsiLabs() - _base->getUsedPsiLabs();
+	_txtRemaining->setText(tr("STR_REMAINING_PSI_LAB_CAPACITY").arg(_labSpace));
 }
 
 }

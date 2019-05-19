@@ -55,6 +55,7 @@
 #include "../Mod/Armor.h"
 #include "../Mod/Unit.h"
 #include "../Mod/AlienRace.h"
+#include "../Mod/RuleEnviroEffects.h"
 #include "../Mod/RuleSoldier.h"
 #include "../Mod/RuleStartingCondition.h"
 #include "../Mod/AlienDeployment.h"
@@ -425,22 +426,22 @@ void BattlescapeGenerator::nextStage()
 	setDepth(ruleDeploy, true);
 	_worldShade = ruleDeploy->getShade();
 
-	RuleStartingCondition *startingCondition = _game->getMod()->getStartingCondition(ruleDeploy->getStartingCondition());
-	RuleStartingCondition *temp = _game->getMod()->getStartingCondition(_terrain->getStartingCondition());
+	RuleEnviroEffects* enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
+	RuleEnviroEffects* temp = _game->getMod()->getEnviroEffects(ruleDeploy->getEnviroEffects());
 	if (temp != 0)
 	{
-		startingCondition = temp;
+		enviro = temp;
 	}
-	_save->applyStartingCondition(startingCondition);
+	_save->applyEnviroEffects(enviro);
 
-	// starting conditions - armor transformation (no armor replacement! that is done only before the 1st stage)
-	if (startingCondition != 0)
+	// enviro effects - armor transformation (no armor replacement! that is done only before the 1st stage)
+	if (enviro != 0)
 	{
 		for (std::vector<BattleUnit*>::iterator j = _save->getUnits()->begin(); j != _save->getUnits()->end(); ++j)
 		{
 			if ((*j)->getOriginalFaction() == FACTION_PLAYER && (*j)->getGeoscapeSoldier())
 			{
-				auto transformedArmor = startingCondition->getArmorTransformation((*j)->getArmor());
+				auto transformedArmor = enviro->getArmorTransformation((*j)->getArmor());
 				if (transformedArmor)
 				{
 					// remember the original armor (i.e. only if there were no transformations in earlier stage(s)!)
@@ -662,13 +663,14 @@ void BattlescapeGenerator::run()
 
 	setupObjectives(ruleDeploy);
 
-	RuleStartingCondition *startingCondition = _game->getMod()->getStartingCondition(ruleDeploy->getStartingCondition());
-	RuleStartingCondition *temp = _game->getMod()->getStartingCondition(_terrain->getStartingCondition());
+	RuleStartingCondition* startingCondition = _game->getMod()->getStartingCondition(ruleDeploy->getStartingCondition());
+	RuleEnviroEffects* enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
+	RuleEnviroEffects* temp = _game->getMod()->getEnviroEffects(ruleDeploy->getEnviroEffects());
 	if (temp != 0)
 	{
-		startingCondition = temp;
+		enviro = temp;
 	}
-	deployXCOM(startingCondition);
+	deployXCOM(startingCondition, enviro);
 
 	size_t unitCount = _save->getUnits()->size();
 
@@ -705,9 +707,9 @@ void BattlescapeGenerator::run()
 /**
  * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
  */
-void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondition)
+void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondition, const RuleEnviroEffects* enviro)
 {
-	_save->applyStartingCondition(startingCondition);
+	_save->applyEnviroEffects(enviro);
 
 	RuleInventory *ground = _game->getMod()->getInventory("STR_GROUND", true);
 
@@ -735,7 +737,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 			for (std::vector<Vehicle*>::iterator i = _craft->getVehicles()->begin(); i != _craft->getVehicles()->end(); ++i)
 			{
 				RuleItem *item = (*i)->getRules();
-				if (startingCondition != 0 && !startingCondition->isVehicleAllowed(item->getType()))
+				if (startingCondition != 0 && !startingCondition->isVehiclePermitted(item->getType()))
 				{
 					// send disabled vehicles back to base
 					_base->getStorageItems()->addItem(item->getType(), 1);
@@ -791,15 +793,17 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 		}
 	}
 
-	// starting conditions - armor transformation or replacement
-	if (startingCondition != 0)
+	// enviro effects and starting conditions - armor transformation and replacement
+	if (startingCondition != 0 || enviro != 0)
 	{
 		for (std::vector<Soldier*>::iterator i = _base->getSoldiers()->begin(); i != _base->getSoldiers()->end(); ++i)
 		{
 			if ((_craft != 0 && (*i)->getCraft() == _craft) ||
 				(_craft == 0 && ((*i)->hasFullHealth() || (*i)->canDefendBase()) && ((*i)->getCraft() == 0 || (*i)->getCraft()->getStatus() != "STR_OUT")))
 			{
-				auto transformedArmor = startingCondition->getArmorTransformation((*i)->getArmor());
+				Armor* transformedArmor = nullptr;
+				if (enviro)
+					transformedArmor = enviro->getArmorTransformation((*i)->getArmor());
 				if (transformedArmor)
 				{
 					(*i)->setTransformedArmor((*i)->getArmor());
@@ -807,7 +811,9 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 				}
 				else
 				{
-					std::string replacedArmor = startingCondition->getArmorReplacement((*i)->getRules()->getType(), (*i)->getArmor()->getType());
+					std::string replacedArmor;
+					if (startingCondition)
+						replacedArmor = startingCondition->getArmorReplacement((*i)->getRules()->getType(), (*i)->getArmor()->getType());
 					if (!replacedArmor.empty())
 					{
 						(*i)->setReplacedArmor((*i)->getArmor());
@@ -866,7 +872,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition *startingCondi
 		// add items that are in the craft
 		for (std::map<std::string, int>::iterator i = _craft->getItems()->getContents()->begin(); i != _craft->getItems()->getContents()->end(); ++i)
 		{
-			if (startingCondition != 0 && !startingCondition->isItemAllowed(i->first, _game->getMod()))
+			if (startingCondition != 0 && !startingCondition->isItemPermitted(i->first, _game->getMod()))
 			{
 				// send disabled items back to base
 				_base->getStorageItems()->addItem(i->first, i->second);
@@ -1294,7 +1300,7 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  */
 BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outside)
 {
-	BattleUnit *unit = new BattleUnit(rules, FACTION_HOSTILE, _unitSequence++, _save->getStartingCondition(), rules->getArmor(), _game->getMod()->getStatAdjustment(_game->getSavedGame()->getDifficulty()), _save->getDepth(), _game->getMod()->getMaxViewDistance());
+	BattleUnit *unit = new BattleUnit(rules, FACTION_HOSTILE, _unitSequence++, _save->getEnviroEffects(), rules->getArmor(), _game->getMod()->getStatAdjustment(_game->getSavedGame()->getDifficulty()), _save->getDepth(), _game->getMod()->getMaxViewDistance());
 	Node *node = 0;
 
 	// safety to avoid index out of bounds errors
@@ -1366,7 +1372,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  */
 BattleUnit *BattlescapeGenerator::addCivilian(Unit *rules)
 {
-	BattleUnit *unit = new BattleUnit(rules, FACTION_NEUTRAL, _unitSequence++, _save->getStartingCondition(), rules->getArmor(), 0, _save->getDepth(), _game->getMod()->getMaxViewDistance());
+	BattleUnit *unit = new BattleUnit(rules, FACTION_NEUTRAL, _unitSequence++, _save->getEnviroEffects(), rules->getArmor(), 0, _save->getDepth(), _game->getMod()->getMaxViewDistance());
 	Node *node = _save->getSpawnNode(0, unit);
 
 	if (node)
@@ -1607,7 +1613,6 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 		{
 			if ((*j).x >= mapblock->getSizeX() || (*j).y >= mapblock->getSizeY() || (*j).z >= mapblock->getSizeZ())
 			{
-				std::ostringstream ss;
 				ss << "Item " << rule->getName() << " is outside of map block " << mapblock->getName() << ", position: [";
 				ss << (*j).x << "," << (*j).y << "," << (*j).z << "], block size: [";
 				ss << mapblock->getSizeX() << "," << mapblock->getSizeY() << "," << mapblock->getSizeZ() << "]";
@@ -1644,7 +1649,6 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 
 				if (i->position.x >= mapblock->getSizeX() || i->position.y >= mapblock->getSizeY() || i->position.z >= mapblock->getSizeZ())
 				{
-					std::ostringstream ss;
 					ss << "Random item " << rule->getName() << " is outside of map block " << mapblock->getName() << ", position: [";
 					ss << i->position.x << "," << i->position.y << "," << i->position.z << "], block size: [";
 					ss << mapblock->getSizeX() << "," << mapblock->getSizeY() << "," << mapblock->getSizeZ() << "]";
@@ -1955,7 +1959,7 @@ void BattlescapeGenerator::runInventory(Craft *craft)
 
 	// ok now generate the battleitems for inventory
 	if (craft != 0) setCraft(craft);
-	deployXCOM(0);
+	deployXCOM(nullptr, nullptr);
 	delete data;
 	delete set;
 }

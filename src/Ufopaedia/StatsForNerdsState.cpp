@@ -2223,6 +2223,7 @@ void StatsForNerdsState::initArmorList()
 
 		addSection("{Naming}", "", _white);
 		addSingleString(ss, armorRule->getType(), "type");
+		addSingleString(ss, armorRule->getRequiredResearch(), "requires");
 
 		addSection("{Recovery}", "", _white);
 		addVectorOfStrings(ss, armorRule->getCorpseBattlescape(), "corpseBattle");
@@ -2424,6 +2425,7 @@ void StatsForNerdsState::initFacilityList()
 	addBoolean(ss, facilityRule->isLift(), "lift");
 	addBoolean(ss, facilityRule->isHyperwave(), "hyper");
 	addBoolean(ss, facilityRule->isMindShield(), "mind");
+	addInteger(ss, facilityRule->getMindShieldPower(), "mindPower", 1);
 	addBoolean(ss, facilityRule->isGravShield(), "grav");
 
 	addInteger(ss, facilityRule->getStorage(), "storage");

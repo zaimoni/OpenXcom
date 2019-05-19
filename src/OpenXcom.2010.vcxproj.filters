@@ -1076,6 +1076,10 @@
     <ClCompile Include="Mod\RuleArcScript.cpp">
       <Filter>Mod</Filter>
     </ClCompile>
+    <ClCompile Include="md5.cpp" />
+    <ClCompile Include="Mod\RuleEnviroEffects.cpp">
+      <Filter>Mod</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -2193,6 +2197,10 @@
       <Filter>Basescape</Filter>
     </ClInclude>
     <ClInclude Include="Mod\RuleArcScript.h">
+      <Filter>Mod</Filter>
+    </ClInclude>
+    <ClInclude Include="md5.h" />
+    <ClInclude Include="Mod\RuleEnviroEffects.h">
       <Filter>Mod</Filter>
     </ClInclude>
   </ItemGroup>

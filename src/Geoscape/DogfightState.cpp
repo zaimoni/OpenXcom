@@ -246,7 +246,8 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	_timeout(50), _currentDist(640), _targetDist(560),
 	_end(false), _endUfoHandled(false), _endCraftHandled(false), _ufoBreakingOff(false), _hunterKillerBreakingOff(false), _destroyUfo(false), _destroyCraft(false),
 	_minimized(false), _endDogfight(false), _animatingHit(false), _waitForPoly(false), _waitForAltitude(false), _ufoSize(0), _craftHeight(0), _currentCraftDamageColor(0),
-	_interceptionNumber(0), _interceptionsCount(0), _x(0), _y(0), _minimizedIconX(0), _minimizedIconY(0), _firedAtLeastOnce(false), _experienceAwarded(false)
+	_interceptionNumber(0), _interceptionsCount(0), _x(0), _y(0), _minimizedIconX(0), _minimizedIconY(0), _firedAtLeastOnce(false), _experienceAwarded(false),
+	_delayedRecolorDone(false)
 {
 	_screen = false;
 	_craft->setInDogfight(true);
@@ -259,6 +260,12 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 		_weaponEnabled[i] = true;
 		_weaponFireCountdown[i] = 0;
 		_tractorLockedOn[i] = false;
+
+		CraftWeapon* w = _craft->getWeapons()->at(i);
+		if (w)
+		{
+			_weaponEnabled[i] = !w->isDisabled();
+		}
 	}
 
 	// pilot modifiers
@@ -499,7 +506,9 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	for (int i = 0; i < _weaponNum; ++i)
 	{
 		CraftWeapon *w = _craft->getWeapons()->at(i);
-		if (w == 0 || (w->getRules()->getAmmoMax() == 0 && w->getRules()->getTractorBeamPower() == 0))
+
+		// Slot empty or no sprite, skip!
+		if (w == 0 || w->getRules()->getSprite() < 0)
 			continue;
 
 		Surface *weapon = _weapon[i], *range = _range[i];
@@ -517,16 +526,29 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 			x2 = 20 - x_off;
 		}
 
-		// Draw weapon icon
+		// Draw icon
 		frame = set->getFrame(w->getRules()->getSprite() + 5);
 		frame->blitNShade(weapon, 0, 0);
 
-		// Draw ammo
-		std::ostringstream ss;
-		ss << w->getAmmo();
-		ammo->setText(ss.str());
+		// Just an equipment, it doesn't have any ammo (weapon) or range (tractor beam), skip!
+		if (w->getRules()->getAmmoMax() == 0 && w->getRules()->getTractorBeamPower() == 0)
+			continue;
+
+		// Used for weapon toggling.
+		// Only relevant for weapons and tractor beams, not for equipment.
+		_weapon[i]->onMouseClick((ActionHandler)& DogfightState::weaponClick);
+
+		// Draw ammo.
+		// Only relevant for weapons, not for tractor beams.
+		if (w->getRules()->getAmmoMax() > 0)
+		{
+			std::ostringstream ss;
+			ss << w->getAmmo();
+			ammo->setText(ss.str());
+		}
 
 		// Draw range (1 km = 1 pixel)
+		// Only relevant for weapons and tractor beams.
 		Uint8 color = _colors[RANGE_METER];
 		range->lock();
 
@@ -637,13 +659,6 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	drawCraftDamage();
 	drawCraftShield();
 
-	// Used for weapon toggling.
-
-	for (int i = 0; i < _weaponNum; ++i)
-	{
-		_weapon[i]->onMouseClick((ActionHandler)&DogfightState::weaponClick);
-	}
-
 	// Set this as the interception handling UFO shield recharge if no other is doing it
 	if (_ufo->getShieldRechargeHandle() == 0)
 	{
@@ -678,6 +693,18 @@ bool DogfightState::isUfoAttacking() const
  */
 void DogfightState::think()
 {
+	if (!_delayedRecolorDone)
+	{
+		// can't be done in the constructor (recoloring the ammo text doesn't work)
+		for (int i = 0; i < _weaponNum; ++i)
+		{
+			if (_craft->getWeapons()->at(i) && !_weaponEnabled[i])
+			{
+				recolor(i, _weaponEnabled[i]);
+			}
+		}
+		_delayedRecolorDone = true;
+	}
 	if (!_endDogfight)
 	{
 		update();
@@ -1671,6 +1698,14 @@ void DogfightState::maximumDistance()
 			min = (*i)->getRules()->getRange();
 		}
 	}
+	if (_ufoIsAttacking)
+	{
+		// If the UFO is actively hunting us, consider its weapon range too
+		if (_ufo->getRules()->getWeaponRange() > 0 && _ufo->getRules()->getWeaponRange() < min)
+		{
+			min = _ufo->getRules()->getWeaponRange();
+		}
+	}
 	if (min == 1000)
 	{
 		_targetDist = STANDOFF_DIST;
@@ -1884,7 +1919,7 @@ void DogfightState::previewClick(Action *)
 	_btnAggressive->setVisible(true);
 	_btnDisengage->setVisible(!_disableDisengage);
 	_btnUfo->setVisible(true);
-	_btnMinimize->setVisible(!_ufoIsAttacking);
+	_btnMinimize->setVisible(!_ufoIsAttacking || _craftIsDefenseless);
 	for (int i = 0; i < _weaponNum; ++i)
 	{
 		_weapon[i]->setVisible(true);
@@ -2031,6 +2066,15 @@ void DogfightState::weaponClick(Action * a)
 		{
 			_weaponEnabled[i] = !_weaponEnabled[i];
 			recolor(i, _weaponEnabled[i]);
+
+			if (Options::oxceRememberDisabledCraftWeapons)
+			{
+				CraftWeapon* w = _craft->getWeapons()->at(i);
+				if (w)
+				{
+					w->setDisabled(!_weaponEnabled[i]);
+				}
+			}
 			return;
 		}
 	}

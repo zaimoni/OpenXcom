@@ -65,6 +65,7 @@ class RuleResearch;
 class RuleManufacture;
 class RuleSoldierTransformation;
 class AlienRace;
+class RuleEnviroEffects;
 class RuleStartingCondition;
 class AlienDeployment;
 class UfoTrajectory;
@@ -125,6 +126,7 @@ private:
 	std::map<std::string, RuleSoldier*> _soldiers;
 	std::map<std::string, Unit*> _units;
 	std::map<std::string, AlienRace*> _alienRaces;
+	std::map<std::string, RuleEnviroEffects*> _enviroEffects;
 	std::map<std::string, RuleStartingCondition*> _startingConditions;
 	std::map<std::string, AlienDeployment*> _alienDeployments;
 	std::map<std::string, Armor*> _armors;
@@ -183,7 +185,6 @@ private:
 	bool _useCustomCategories, _showDogfightDistanceInKm, _showFullNameInAlienInventory;
 	bool _hidePediaInfoButton, _extraNerdyPediaInfo, _showAllCommendations;
 	bool _giveScoreAlsoForResearchedArtifacts, _statisticalBulletConservation;
-	int _theMostUselessOptionEver, _theBiggestRipOffEver;
 	int _shortRadarRange;
 	int _defeatScore, _defeatFunds;
 	std::pair<std::string, int> _alienFuel;
@@ -202,7 +203,7 @@ private:
 
 	std::map<std::string, int> _ufopaediaSections;
 	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
-	std::vector<std::string> _soldiersIndex, _aliensIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex, _soldierTransformationIndex;
+	std::vector<std::string> _soldiersIndex, _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex, _soldierTransformationIndex;
 	std::vector<std::string> _alienMissionsIndex, _terrainIndex, _customPalettesIndex, _arcScriptIndex, _missionScriptIndex;
 	std::vector<std::vector<int> > _alienItemLevels;
 	std::vector<SDL_Color> _transparencies;
@@ -396,10 +397,14 @@ public:
 	AlienRace *getAlienRace(const std::string &name, bool error = false) const;
 	/// Gets the available alien races.
 	const std::vector<std::string> &getAlienRacesList() const;
+	/// Gets an enviro effects definition.
+	RuleEnviroEffects* getEnviroEffects(const std::string& name) const;
+	/// Gets the available enviro effects.
+	const std::vector<std::string>& getEnviroEffectsList() const;
 	/// Gets a starting condition.
-	RuleStartingCondition *getStartingCondition(const std::string &name) const;
+	RuleStartingCondition* getStartingCondition(const std::string& name) const;
 	/// Gets the available starting conditions.
-	const std::vector<std::string> &getStartingConditionsList() const;
+	const std::vector<std::string>& getStartingConditionsList() const;
 	/// Gets deployment rules.
 	AlienDeployment *getDeployment(const std::string &name, bool error = false) const;
 	/// Gets the available alien deployments.
@@ -564,10 +569,6 @@ public:
 	bool getGiveScoreAlsoForResearchedArtifacts() const { return _giveScoreAlsoForResearchedArtifacts; }
 	/// When recovering ammo, should partially spent clip have a chance to recover as full?
 	bool getStatisticalBulletConservation() const { return _statisticalBulletConservation; }
-	/// Self-explanatory
-	int getTheMostUselessOptionEver() const { return _theMostUselessOptionEver; }
-	/// Shame on you!
-	int getTheBiggestRipOffEver() const { return _theBiggestRipOffEver; }
 	/// Gets whether or not to load base defense terrain from globe texture
 	int getBaseDefenseMapFromLocation() const { return _baseDefenseMapFromLocation; }
 	/// Gets the ruleset for a specific research project.

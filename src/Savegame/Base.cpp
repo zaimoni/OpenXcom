@@ -1488,49 +1488,6 @@ bool Base::getRetaliationTarget() const
 }
 
 /**
- * Functor to check for mind shield capability.
- */
-struct isMindShield: public std::unary_function<BaseFacility*, bool>
-{
-	/// Check isMindShield() for @a facility.
-	bool operator()(const BaseFacility *facility) const;
-};
-
-/**
- * Only fully operational facilities are checked.
- * @param facility Pointer to the facility to check.
- * @return If @a facility can act as a mind shield.
- */
-bool isMindShield::operator()(const BaseFacility *facility) const
-{
-	if (facility->getBuildTime() != 0 || facility->getDisabled())
-	{
-		// Still building this (or is temporarily disabled)
-		return false;
-	}
-	return (facility->getRules()->isMindShield());
-}
-
-/**
- * Functor to check for completed facilities.
- */
-struct isCompleted: public std::unary_function<BaseFacility*, bool>
-{
-	/// Check isCompleted() for @a facility.
-	bool operator()(const BaseFacility *facility) const;
-};
-
-/**
- * Facilities are checked for construction completion.
- * @param facility Pointer to the facility to check.
- * @return If @a facility has completed construction.
- */
-bool isCompleted::operator()(const BaseFacility *facility) const
-{
-	return (facility->getBuildTime() == 0);
-}
-
-/**
  * Calculate the detection chance of this base.
  * Big bases without mindshields are easier to detect.
  * @param difficulty The savegame difficulty.
@@ -1538,13 +1495,17 @@ bool isCompleted::operator()(const BaseFacility *facility) const
  */
 size_t Base::getDetectionChance() const
 {
-	size_t mindShields = std::count_if (_facilities.begin(), _facilities.end(), isMindShield());
+	size_t mindShields = 0;
 	size_t completedFacilities = 0;
 	for (std::vector<BaseFacility*>::const_iterator i = _facilities.begin(); i != _facilities.end(); ++i)
 	{
 		if ((*i)->getBuildTime() == 0)
 		{
 			completedFacilities += (*i)->getRules()->getSize() * (*i)->getRules()->getSize();
+			if ((*i)->getRules()->isMindShield() && !(*i)->getDisabled())
+			{
+				mindShields += (*i)->getRules()->getMindShieldPower();
+			}
 		}
 	}
 	return ((completedFacilities / 6 + 15) / (mindShields + 1));
@@ -1923,7 +1884,7 @@ void Base::destroyFacility(std::vector<BaseFacility*>::iterator facility)
 		{
 			if ((*i)->isInPsiTraining())
 			{
-				(*i)->setPsiTraining();
+				(*i)->setPsiTraining(false);
 				--toRemove;
 			}
 		}
@@ -2234,6 +2195,41 @@ float Base::getSickBayRelativeBonus() const
 	}
 
 	return result;
+}
+
+/**
+ * Removes the craft and all associations from the base (does not destroy it!).
+ * @param craft Pointer to craft.
+ * @param unload Unload craft contents before removing.
+ */
+std::vector<Craft*>::iterator Base::removeCraft(Craft *craft, bool unload)
+{
+	// Unload craft
+	if (unload)
+	{
+		craft->unload(_mod);
+	}
+
+	// Clear hangar
+	for (std::vector<BaseFacility*>::iterator f = _facilities.begin(); f != _facilities.end(); ++f)
+	{
+		if ((*f)->getCraftForDrawing() == craft)
+		{
+			(*f)->setCraftForDrawing(0);
+			break;
+		}
+	}
+
+	// Remove craft
+	std::vector<Craft*>::iterator c;
+	for (c = _crafts.begin(); c != _crafts.end(); ++c)
+	{
+		if (*c == craft)
+		{
+			return _crafts.erase(c);
+		}
+	}
+	return c;
 }
 
 }

@@ -442,6 +442,7 @@
     <ClCompile Include="Interface\Window.cpp" />
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="md5.cpp" />
     <ClCompile Include="Menu\AbandonGameState.cpp" />
     <ClCompile Include="Menu\ConfirmLoadState.cpp" />
     <ClCompile Include="Menu\CutsceneState.cpp" />
@@ -481,6 +482,7 @@
     <ClCompile Include="Mod\CustomPalettes.cpp" />
     <ClCompile Include="Mod\RuleArcScript.cpp" />
     <ClCompile Include="Mod\RuleDamageType.cpp" />
+    <ClCompile Include="Mod\RuleEnviroEffects.cpp" />
     <ClCompile Include="Mod\RuleItemCategory.cpp" />
     <ClCompile Include="Mod\RuleSoldierTransformation.cpp" />
     <ClCompile Include="Mod\RuleStartingCondition.cpp" />
@@ -820,6 +822,7 @@
     <ClInclude Include="Interface\ToggleTextButton.h" />
     <ClInclude Include="Interface\Window.h" />
     <ClInclude Include="lodepng.h" />
+    <ClInclude Include="md5.h" />
     <ClInclude Include="Menu\AbandonGameState.h" />
     <ClInclude Include="Menu\ConfirmLoadState.h" />
     <ClInclude Include="Menu\CutsceneState.h" />
@@ -859,6 +862,7 @@
     <ClInclude Include="Mod\CustomPalettes.h" />
     <ClInclude Include="Mod\RuleArcScript.h" />
     <ClInclude Include="Mod\RuleDamageType.h" />
+    <ClInclude Include="Mod\RuleEnviroEffects.h" />
     <ClInclude Include="Mod\RuleItemCategory.h" />
     <ClInclude Include="Mod\RuleSoldierTransformation.h" />
     <ClInclude Include="Mod\RuleStartingCondition.h" />
