@@ -113,8 +113,6 @@ namespace Options
 	bool isPasswordCorrect();
 	/// returns the id of the active master mod
 	std::string getActiveMaster();
-	/// Updates the reservedSpace for master mods if necessary
-	void updateReservedSpace();
 	/// Gets the map of mod ids to mod infos
 	const std::unordered_map<std::string, ModInfo> &getModInfos();
 	/// Refreshes the mods and filemaps.

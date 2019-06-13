@@ -19,6 +19,7 @@
 #include "Armor.h"
 #include "../Engine/ScriptBind.h"
 #include "Mod.h"
+#include "RuleSoldier.h"
 
 namespace OpenXcom
 {
@@ -133,10 +134,7 @@ void Armor::load(const YAML::Node &node, const ModScript &parsers, Mod *mod)
 	_drawingRoutine = node["drawingRoutine"].as<int>(_drawingRoutine);
 	_drawBubbles = node["drawBubbles"].as<bool>(_drawBubbles);
 	_movementType = (MovementType)node["movementType"].as<int>(_movementType);
-	if (node["moveSound"])
-	{
-		_moveSound = mod->getSoundOffset(node["moveSound"].as<int>(_moveSound), "BATTLE.CAT");
-	}
+	mod->loadSoundOffset(_type, _moveSound, node["moveSound"], "BATTLE.CAT");
 	_weight = node["weight"].as<int>(_weight);
 	_visibilityAtDark = node["visibilityAtDark"].as<int>(_visibilityAtDark);
 	_visibilityAtDay = node["visibilityAtDay"].as<int>(_visibilityAtDay);
@@ -223,21 +221,7 @@ void Armor::load(const YAML::Node &node, const ModScript &parsers, Mod *mod)
 
 	_units = node["units"].as< std::vector<std::string> >(_units);
 	_scriptValues.load(node, parsers.getShared());
-	if (const YAML::Node &capi = node["customArmorPreviewIndex"])
-	{
-		_customArmorPreviewIndex.clear();
-		if (capi.IsScalar())
-		{
-			_customArmorPreviewIndex.push_back(mod->getSpriteOffset(capi.as<int>(), "CustomArmorPreviews"));
-		}
-		else
-		{
-			for (YAML::const_iterator i = capi.begin(); i != capi.end(); ++i)
-			{
-				_customArmorPreviewIndex.push_back(mod->getSpriteOffset(i->as<int>(), "CustomArmorPreviews"));
-			}
-		}
-	}
+	mod->loadSpriteOffset(_type, _customArmorPreviewIndex, node["customArmorPreviewIndex"], "CustomArmorPreviews");
 	loadTriBoolHelper(_allowsRunning, node["allowsRunning"]);
 	loadTriBoolHelper(_allowsStrafing, node["allowsStrafing"]);
 	loadTriBoolHelper(_allowsKneeling, node["allowsKneeling"]);
@@ -803,9 +787,9 @@ int findWithFallback(const std::vector<int> &vec, size_t pos)
 	//if pos == 31 then we test for 31, 15, 7
 	//if pos == 36 then we test for 36, 4
 	//we stop on p < 8 for comatibility reasons.
-	for (int i = 0; i <= 4; ++i)
+	for (int i = 0; i <= RuleSoldier::LookVariantBits; ++i)
 	{
-		size_t p = (pos & (127 >> i));
+		size_t p = (pos & (RuleSoldier::LookTotalMask >> i));
 		if (p < vec.size())
 		{
 			return vec[p];
