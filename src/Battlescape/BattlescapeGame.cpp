@@ -132,6 +132,14 @@ bool BattleActionCost::haveTU(std::string *message)
 		}
 		return false;
 	}
+	if (actor->getMana() < Mana)
+	{
+		if (message)
+		{
+			*message = "STR_NOT_ENOUGH_MANA";
+		}
+		return false;
+	}
 	if (actor->getHealth() - actor->getStunlevel() <= Stun + Health)
 	{
 		if (message)
@@ -1434,7 +1442,7 @@ bool BattlescapeGame::handlePanickingPlayer()
 }
 
 /**
- * Common function for hanlding panicking units.
+ * Common function for handling panicking units.
  * @return False when unit not in panicking mode.
  */
 bool BattlescapeGame::handlePanickingUnit(BattleUnit *unit)

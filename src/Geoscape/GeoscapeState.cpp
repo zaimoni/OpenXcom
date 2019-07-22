@@ -2343,12 +2343,17 @@ void GeoscapeState::time1Day()
 		// Handle soldier wounds and martial training
 		float absBonus = base->getSickBayAbsoluteBonus();
 		float relBonus = base->getSickBayRelativeBonus();
+		int manaRecoveryPerDay = base->getManaRecoveryPerDay();
 		std::vector<Soldier *> trainingFinishedList;
 		for (std::vector<Soldier*>::iterator j = base->getSoldiers()->begin(); j != base->getSoldiers()->end(); ++j)
 		{
 			if ((*j)->isWounded())
 			{
 				(*j)->heal(absBonus, relBonus);
+			}
+			else if ((*j)->getManaMissing() > 0)
+			{
+				(*j)->replenishMana(manaRecoveryPerDay);
 			}
 			if ((*j)->isInTraining())
 			{
@@ -2401,6 +2406,44 @@ void GeoscapeState::time1Day()
 		for (std::vector<ResearchProject*>::const_iterator iter = obsolete.begin(); iter != obsolete.end(); ++iter)
 		{
 			(*i)->removeResearch(*iter);
+		}
+	}
+
+	// check and interrupt alien missions if necessary (based on discovered research)
+	for (auto am : saveGame->getAlienMissions())
+	{
+		auto researchName = am->getRules().getInterruptResearch();
+		if (!researchName.empty())
+		{
+			auto research = mod->getResearch(researchName, true);
+			if (saveGame->isResearched(research, false)) // ignore debug mode
+			{
+				am->setInterrupted(true);
+			}
+		}
+	}
+
+	// check and self-destruct alien bases if necessary (based on discovered research)
+	std::vector<AlienBase*>::iterator ab = saveGame->getAlienBases()->begin();
+	while (ab != saveGame->getAlienBases()->end())
+	{
+		auto selfDestructCode = (*ab)->getDeployment()->getBaseSelfDestructCode();
+		if (!selfDestructCode.empty())
+		{
+			auto research = mod->getResearch(selfDestructCode, true);
+			if (saveGame->isResearched(research, false)) // ignore debug mode
+			{
+				delete (*ab);
+				ab = saveGame->getAlienBases()->erase(ab);
+			}
+			else
+			{
+				++ab;
+			}
+		}
+		else
+		{
+			++ab;
 		}
 	}
 
