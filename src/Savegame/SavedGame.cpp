@@ -760,6 +760,8 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
 	if (_battleGame != 0)
 	{
 		brief["mission"] = _battleGame->getMissionType();
+		brief["target"] = _battleGame->getMissionTarget();
+		brief["craftOrBase"] = _battleGame->getMissionCraftOrBase();
 		brief["turn"] = _battleGame->getTurn();
 	}
 
@@ -2743,6 +2745,19 @@ bool SavedGame::getDisableSoldierEquipment() const
 void SavedGame::setDisableSoldierEquipment(bool disableSoldierEquipment)
 {
 	_disableSoldierEquipment = disableSoldierEquipment;
+}
+
+/**
+ * Is the mana feature already unlocked?
+ */
+bool SavedGame::isManaUnlocked(Mod *mod) const
+{
+	auto researchName = mod->getManaUnlockResearch();
+	if (researchName.empty() || isResearched(researchName))
+	{
+		return true;
+	}
+	return false;
 }
 
 }

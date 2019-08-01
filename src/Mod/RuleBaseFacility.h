@@ -43,6 +43,7 @@ private:
 	int _spriteShape, _spriteFacility;
 	int _missileAttraction;
 	bool _lift, _hyper, _mind, _grav;
+	int _mindPower;
 	int _size, _buildCost, _refundValue, _buildTime, _monthlyCost;
 	std::map<std::string, std::pair<int, int> > _buildCostItems;
 	int _storage, _personnel, _aliens, _crafts, _labs, _workshops, _psiLabs;
@@ -50,6 +51,7 @@ private:
 	std::string _mapName;
 	int _listOrder, _trainingRooms;
 	int _maxAllowedPerBase;
+	int _manaRecoveryPerDay;
 	float _sickBayAbsoluteBonus, _sickBayRelativeBonus;
 	int _prisonType;
 	int _rightClickActionType;
@@ -94,6 +96,8 @@ public:
 	bool isHyperwave() const;
 	/// Gets if the facility is a mind shield.
 	bool isMindShield() const;
+	/// Gets the mind shield power.
+	int getMindShieldPower() const;
 	/// Gets if the facility is a grav shield.
 	bool isGravShield() const;
 	/// Gets the facility's construction cost.
@@ -140,6 +144,8 @@ public:
 	int getTrainingFacilities() const;
 	/// Gets the maximum allowed number of facilities per base.
 	int getMaxAllowedPerBase() const;
+	/// Gets the facility's mana recovery rate.
+	int getManaRecoveryPerDay() const;
 	/// Gets the facility's bonus to hp healed.
 	float getSickBayAbsoluteBonus() const;
 	/// Gets the facility's bonus to hp healed (as percentage of max hp of the soldier).

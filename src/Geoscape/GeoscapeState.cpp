@@ -45,6 +45,7 @@
 #include "../Mod/RuleCraft.h"
 #include "../Savegame/Ufo.h"
 #include "../Mod/RuleUfo.h"
+#include "../Mod/RuleArcScript.h"
 #include "../Mod/RuleMissionScript.h"
 #include "../Savegame/Waypoint.h"
 #include "../Savegame/Transfer.h"
@@ -1034,8 +1035,9 @@ void GeoscapeState::time5Seconds()
 					}
 				}
 				_game->getSavedGame()->stopHuntingXcomCraft((*j)); // craft destroyed in dogfight
-				delete *j;
-				j = (*i)->getCrafts()->erase(j);
+				Craft *craft = *j;
+				j = (*i)->removeCraft(craft, false);
+				delete craft;
 				continue;
 			}
 			if ((*j)->getDestination() != 0)
@@ -1318,6 +1320,7 @@ void GeoscapeState::time5Seconds()
 				((*d)->getWaitForAltitude() && (*d)->getUfo()->getAltitudeInt() <= (*d)->getCraft()->getRules()->getMaxAltitude()))
 			{
 				_pause = true; // the USO reached the sea during this interval period, stop the timer and let handleDogfights() take it from there.
+				timerReset();
 			}
 		}
 	}
@@ -2169,9 +2172,17 @@ void GeoscapeState::time1Day()
 			project = nullptr;
 
 			// 3b. handle interrogation and spawned items
-			if (Options::retainCorpses && research->destroyItem() && mod->getUnit(research->getName()))
+			if (Options::retainCorpses && research->destroyItem())
 			{
-				base->getStorageItems()->addItem(mod->getUnit(research->getName())->getArmor()->getCorpseGeoscape());
+				auto ruleUnit = mod->getUnit(research->getName(), false);
+				if (ruleUnit)
+				{
+					auto ruleCorpse = mod->getItem(ruleUnit->getArmor()->getCorpseGeoscape(), false);
+					if (ruleCorpse && ruleCorpse->isRecoverable() && ruleCorpse->isCorpseRecoverable())
+					{
+						base->getStorageItems()->addItem(ruleUnit->getArmor()->getCorpseGeoscape());
+					}
+				}
 			}
 			RuleItem *spawnedItem = _game->getMod()->getItem(research->getSpawnedItem());
 			if (spawnedItem)
@@ -2332,12 +2343,17 @@ void GeoscapeState::time1Day()
 		// Handle soldier wounds and martial training
 		float absBonus = base->getSickBayAbsoluteBonus();
 		float relBonus = base->getSickBayRelativeBonus();
+		int manaRecoveryPerDay = base->getManaRecoveryPerDay();
 		std::vector<Soldier *> trainingFinishedList;
 		for (std::vector<Soldier*>::iterator j = base->getSoldiers()->begin(); j != base->getSoldiers()->end(); ++j)
 		{
 			if ((*j)->isWounded())
 			{
 				(*j)->heal(absBonus, relBonus);
+			}
+			else if ((*j)->getManaMissing() > 0)
+			{
+				(*j)->replenishMana(manaRecoveryPerDay);
 			}
 			if ((*j)->isInTraining())
 			{
@@ -2390,6 +2406,44 @@ void GeoscapeState::time1Day()
 		for (std::vector<ResearchProject*>::const_iterator iter = obsolete.begin(); iter != obsolete.end(); ++iter)
 		{
 			(*i)->removeResearch(*iter);
+		}
+	}
+
+	// check and interrupt alien missions if necessary (based on discovered research)
+	for (auto am : saveGame->getAlienMissions())
+	{
+		auto researchName = am->getRules().getInterruptResearch();
+		if (!researchName.empty())
+		{
+			auto research = mod->getResearch(researchName, true);
+			if (saveGame->isResearched(research, false)) // ignore debug mode
+			{
+				am->setInterrupted(true);
+			}
+		}
+	}
+
+	// check and self-destruct alien bases if necessary (based on discovered research)
+	std::vector<AlienBase*>::iterator ab = saveGame->getAlienBases()->begin();
+	while (ab != saveGame->getAlienBases()->end())
+	{
+		auto selfDestructCode = (*ab)->getDeployment()->getBaseSelfDestructCode();
+		if (!selfDestructCode.empty())
+		{
+			auto research = mod->getResearch(selfDestructCode, true);
+			if (saveGame->isResearched(research, false)) // ignore debug mode
+			{
+				delete (*ab);
+				ab = saveGame->getAlienBases()->erase(ab);
+			}
+			else
+			{
+				++ab;
+			}
+		}
+		else
+		{
+			++ab;
 		}
 	}
 
@@ -3016,6 +3070,12 @@ void GeoscapeState::handleBaseDefense(Base *base, Ufo *ufo)
 	double baseLat = ufo->getLatitude();
 	_globe->getPolygonTextureAndShade(baseLon, baseLat, &texture, &shade);
 
+	int ufoDamagePercentage = 0;
+	if (_game->getMod()->getLessAliensDuringBaseDefense())
+	{
+		ufoDamagePercentage = ufo->getDamage() * 100 / ufo->getCraftStats().damageMax;
+	}
+
 	// Whatever happens in the base defense, the UFO has finished its duty
 	ufo->setStatus(Ufo::DESTROYED);
 
@@ -3052,6 +3112,7 @@ void GeoscapeState::handleBaseDefense(Base *base, Ufo *ufo)
 		bgen.setAlienRace(ufo->getAlienRace());
 		bgen.setWorldShade(shade);
 		bgen.setWorldTexture(_game->getMod()->getGlobe()->getTexture(texture));
+		bgen.setUfoDamagePercentage(ufoDamagePercentage);
 		bgen.run();
 		_pause = true;
 		_game->pushState(new BriefingState(0, base));
@@ -3074,6 +3135,108 @@ void GeoscapeState::determineAlienMissions()
 	int month = _game->getSavedGame()->getMonthsPassed();
 	std::vector<RuleMissionScript*> availableMissions;
 	std::map<int, bool> conditions;
+
+	// sorry to interrupt, but before we start determining the actual monthly missions, let's determine and/or adjust our overall game plan
+	{
+		std::vector<RuleArcScript*> relevantArcScripts;
+
+		// first we need to build a list of "valid" commands
+		for (auto& scriptName : *mod->getArcScriptList())
+		{
+			RuleArcScript* arcScript = mod->getArcScript(scriptName);
+
+			// level one condition check: make sure we're within our time constraints
+			if (arcScript->getFirstMonth() <= month &&
+				(arcScript->getLastMonth() >= month || arcScript->getLastMonth() == -1) &&
+				// and make sure we satisfy the difficulty restrictions
+				arcScript->getMinDifficulty() <= save->getDifficulty() &&
+				arcScript->getMaxDifficulty() >= save->getDifficulty())
+			{
+				// level two condition check: make sure we meet any research requirements, if any.
+				bool triggerHappy = true;
+				for (auto& trigger : arcScript->getResearchTriggers())
+				{
+					triggerHappy = (save->isResearched(trigger.first) == trigger.second);
+					if (!triggerHappy)
+						break;
+				}
+				// level three condition check: does random chance favour this command's execution?
+				if (triggerHappy && RNG::percent(arcScript->getExecutionOdds()))
+				{
+					relevantArcScripts.push_back(arcScript);
+				}
+			}
+		}
+
+		// start processing command array
+		for (auto& arcCommand : relevantArcScripts)
+		{
+			// to remember stuff we can still enable
+			std::vector<std::string> disabledSeqArcs;
+			WeightedOptions disabledRngArcs;
+
+			int arcsEnabled = 0;
+			// level four condition check: check maxArcs (duplicates count, arcs enabled by other commands or in any other way count too!)
+			{
+				for (auto& seqArc : arcCommand->getSequentialArcs())
+				{
+					if (save->isResearched(seqArc))
+						++arcsEnabled;
+					else
+						disabledSeqArcs.push_back(seqArc);
+				}
+				WeightedOptions tmp = arcCommand->getRandomArcs(); // copy for the iterator, because of getNames()
+				disabledRngArcs = tmp; // copy for us to modify
+				for (auto& rngArc : tmp.getNames())
+				{
+					if (save->isResearched(rngArc))
+					{
+						++arcsEnabled;
+						disabledRngArcs.set(rngArc, 0); // delete
+					}
+				}
+			}
+			Base* hq = save->getBases()->front();
+			bool canAddOneMore = arcCommand->getMaxArcs() == -1 || arcCommand->getMaxArcs() > arcsEnabled;
+			if (canAddOneMore && !disabledSeqArcs.empty())
+			{
+				auto ruleResearchSeq = mod->getResearch(disabledSeqArcs.front(), true); // take first
+				save->addFinishedResearch(ruleResearchSeq, mod, hq, true);
+				++arcsEnabled;
+				if (ruleResearchSeq)
+				{
+					if (ruleResearchSeq->getLookup().empty())
+					{
+						Ufopaedia::openArticle(_game, ruleResearchSeq->getName());
+					}
+					else
+					{
+						save->addFinishedResearch(mod->getResearch(ruleResearchSeq->getLookup(), true), mod, hq, true);
+						Ufopaedia::openArticle(_game, ruleResearchSeq->getLookup());
+					}
+				}
+			}
+			canAddOneMore = arcCommand->getMaxArcs() == -1 || arcCommand->getMaxArcs() > arcsEnabled;
+			if (canAddOneMore && !disabledRngArcs.empty())
+			{
+				auto ruleResearchRng = mod->getResearch(disabledRngArcs.choose(), true); // take random
+				save->addFinishedResearch(ruleResearchRng, mod, hq, true);
+				++arcsEnabled; // for good measure :)
+				if (ruleResearchRng)
+				{
+					if (ruleResearchRng->getLookup().empty())
+					{
+						Ufopaedia::openArticle(_game, ruleResearchRng->getName());
+					}
+					else
+					{
+						save->addFinishedResearch(mod->getResearch(ruleResearchRng->getLookup(), true), mod, hq, true);
+						Ufopaedia::openArticle(_game, ruleResearchRng->getLookup());
+					}
+				}
+			}
+		}
+	}
 
 	// well, here it is, ladies and gents, the nuts and bolts behind the geoscape mission scheduling.
 

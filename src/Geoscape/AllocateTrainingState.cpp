@@ -94,6 +94,7 @@ AllocateTrainingState::AllocateTrainingState(Base *base) : _sel(0), _base(base),
 	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&AllocateTrainingState::btnOkClick);
 	_btnOk->onKeyboardPress((ActionHandler)&AllocateTrainingState::btnOkClick, Options::keyCancel);
+	_btnOk->onKeyboardPress((ActionHandler)& AllocateTrainingState::btnDeassignAllSoldiersClick, Options::keyResetAll);
 
 	_txtTitle->setBig();
 	_txtTitle->setAlign(ALIGN_CENTER);
@@ -128,6 +129,10 @@ AllocateTrainingState::AllocateTrainingState(Base *base) : _sel(0), _base(base),
 	PUSH_IN("STR_MISSIONS2", missionsStat);
 	PUSH_IN("STR_KILLS2", killsStat);
 	PUSH_IN("STR_WOUND_RECOVERY2", woundRecoveryStat);
+	if (_game->getMod()->isManaFeatureEnabled() && !_game->getMod()->getReplenishManaAfterMission())
+	{
+		PUSH_IN("STR_MANA_MISSING", manaMissingStat);
+	}
 	PUSH_IN("STR_TIME_UNITS", tuStat);
 	PUSH_IN("STR_STAMINA", staminaStat);
 	PUSH_IN("STR_HEALTH", healthStat);
@@ -137,6 +142,11 @@ AllocateTrainingState::AllocateTrainingState(Base *base) : _sel(0), _base(base),
 	PUSH_IN("STR_THROWING_ACCURACY", throwingStat);
 	PUSH_IN("STR_MELEE_ACCURACY", meleeStat);
 	PUSH_IN("STR_STRENGTH", strengthStat);
+	if (_game->getMod()->isManaFeatureEnabled())
+	{
+		// "unlock" is checked later
+		PUSH_IN("STR_MANA_POOL", manaStat);
+	}
 	PUSH_IN("STR_PSIONIC_STRENGTH", psiStrengthStat);
 	PUSH_IN("STR_PSIONIC_SKILL", psiSkillStat);
 
@@ -501,6 +511,34 @@ void AllocateTrainingState::lstSoldiersMousePress(Action *action)
 		}
 	}
 	*/
+}
+
+/**
+ * Removes all soldiers from Martial Training.
+ * @param action Pointer to an action.
+ */
+void AllocateTrainingState::btnDeassignAllSoldiersClick(Action* action)
+{
+	int row = 0;
+	for (std::vector<Soldier*>::iterator i = _base->getSoldiers()->begin(); i != _base->getSoldiers()->end(); ++i)
+	{
+		(*i)->setTraining(false);
+		(*i)->setReturnToTrainingWhenHealed(false);
+
+		std::string status;
+		if ((*i)->isFullyTrained())
+			status = tr("STR_NO_DONE");
+		else if ((*i)->isWounded())
+			status = tr("STR_NO_WOUNDED");
+		else
+			status = tr("STR_NO");
+
+		_lstSoldiers->setCellText(row, 8, tr(status).c_str());
+		_lstSoldiers->setRowColor(row, _lstSoldiers->getColor());
+		row++;
+	}
+	_space = _base->getAvailableTraining() - _base->getUsedTraining();
+	_txtRemaining->setText(tr("STR_REMAINING_TRAINING_FACILITY_CAPACITY").arg(_space));
 }
 
 }

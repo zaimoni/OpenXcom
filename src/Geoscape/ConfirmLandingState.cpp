@@ -83,9 +83,20 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *texture, int sha
 	_btnYes->onMouseClick((ActionHandler)&ConfirmLandingState::btnYesClick);
 	_btnYes->onKeyboardPress((ActionHandler)&ConfirmLandingState::btnYesClick, Options::keyOk);
 
-	_btnNo->setText(tr("STR_NO"));
+	if (SDL_GetModState() & KMOD_CTRL)
+	{
+		_btnNo->setText(tr("STR_PATROL"));
+	}
+	else
+	{
+		_btnNo->setText(tr("STR_NO"));
+	}
 	_btnNo->onMouseClick((ActionHandler)&ConfirmLandingState::btnNoClick);
 	_btnNo->onKeyboardPress((ActionHandler)&ConfirmLandingState::btnNoClick, Options::keyCancel);
+	_btnNo->onKeyboardPress((ActionHandler)&ConfirmLandingState::togglePatrolButton, SDLK_LCTRL);
+	_btnNo->onKeyboardRelease((ActionHandler)&ConfirmLandingState::togglePatrolButton, SDLK_LCTRL);
+	_btnNo->onKeyboardPress((ActionHandler)&ConfirmLandingState::togglePatrolButton, SDLK_RCTRL);
+	_btnNo->onKeyboardRelease((ActionHandler)&ConfirmLandingState::togglePatrolButton, SDLK_RCTRL);
 
 	_txtMessage->setBig();
 	_txtMessage->setAlign(ALIGN_CENTER);
@@ -179,9 +190,13 @@ std::string ConfirmLandingState::checkStartingCondition()
 	RuleStartingCondition *rule = _game->getMod()->getStartingCondition(ruleDeploy->getStartingCondition());
 	if (rule != 0)
 	{
-		if (!rule->isCraftAllowed(_craft->getRules()->getType()))
+		if (!rule->isCraftPermitted(_craft->getRules()->getType()))
 		{
 			return tr("STR_STARTING_CONDITION_CRAFT"); // simple message without details/argument
+		}
+		if (!_craft->areOnlyPermittedSoldierTypesOnboard(rule))
+		{
+			return tr("STR_STARTING_CONDITION_SOLDIER_TYPE"); // simple message without details/argument
 		}
 
 		if (!_craft->areRequiredItemsOnboard(rule->getRequiredItems()))
@@ -265,8 +280,31 @@ void ConfirmLandingState::btnYesClick(Action *)
  */
 void ConfirmLandingState::btnNoClick(Action *)
 {
-	_craft->returnToBase();
+	if (SDL_GetModState() & KMOD_CTRL)
+	{
+		_craft->setDestination(0);
+	}
+	else
+	{
+		_craft->returnToBase();
+	}
 	_game->popState();
+}
+
+/**
+ * Toggles No/Patrol button.
+ * @param action Pointer to an action.
+ */
+void ConfirmLandingState::togglePatrolButton(Action *)
+{
+	if (SDL_GetModState() & KMOD_CTRL)
+	{
+		_btnNo->setText(tr("STR_PATROL"));
+	}
+	else
+	{
+		_btnNo->setText(tr("STR_NO"));
+	}
 }
 
 }

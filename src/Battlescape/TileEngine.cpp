@@ -2101,6 +2101,19 @@ bool TileEngine::awardExperience(BattleActionAttack attack, BattleUnit *target, 
 		return false;
 	}
 
+	// Mana experience - this is a temporary/experimental approach, can be improved later after modder feedback
+	if (weapon->getRules()->getManaExperience() > 0)
+	{
+		for (int i = weapon->getRules()->getManaExperience() / 100; i > 0; --i)
+		{
+			unit->addManaExp();
+		}
+		if (RNG::percent(weapon->getRules()->getManaExperience() % 100))
+		{
+			unit->addManaExp();
+		}
+	}
+
 	using upExpType = void (BattleUnit::*)();
 
 	ExperienceTrainingMode expType = weapon->getRules()->getExperienceTrainingMode();
@@ -2484,7 +2497,7 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
  * @param center Center of the explosion in voxelspace.
  * @param power Power of the explosion.
  * @param type The damage type of the explosion.
- * @param maxRadius The maximum radius othe explosion.
+ * @param maxRadius The maximum radius of the explosion.
  * @param unit The unit that caused the explosion.
  * @param clipOrWeapon The clip or weapon that caused the explosion.
  */

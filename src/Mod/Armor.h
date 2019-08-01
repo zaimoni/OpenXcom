@@ -51,6 +51,7 @@ public:
 	static const std::string NONE;
 private:
 	std::string _type, _spriteSheet, _spriteInv, _corpseGeo, _storeItem, _specWeapon;
+	std::string _requires;
 	std::string _layersDefaultPrefix;
 	std::map<int, std::string> _layersSpecificPrefix;
 	std::map<std::string, std::vector<std::string> > _layersDefinition;
@@ -74,7 +75,7 @@ private:
 	Sint8 _ignoresMeleeThreat, _createsMeleeThreat;
 	float _overKill, _meleeDodgeBackPenalty;
 	RuleStatBonus _psiDefence, _meleeDodge;
-	RuleStatBonus _timeRecovery, _energyRecovery, _moraleRecovery, _healthRecovery, _stunRecovery;
+	RuleStatBonus _timeRecovery, _energyRecovery, _moraleRecovery, _healthRecovery, _stunRecovery, _manaRecovery;
 	ModScript::BattleUnitScripts::Container _battleUnitScripts;
 
 	std::vector<std::string> _units;
@@ -116,6 +117,8 @@ public:
 	std::string getStoreItem() const;
 	/// Gets the special weapon type.
 	std::string getSpecialWeapon() const;
+	/// Gets the research required to be able to equip this armor.
+	const std::string &getRequiredResearch() const;
 
 	/// Gets the default prefix for layered armor sprite names.
 	const std::string &getLayersDefaultPrefix() const { return _layersDefaultPrefix; }
@@ -164,6 +167,9 @@ public:
 	/// Gets unit Health recovery.
 	int getHealthRecovery(const BattleUnit* unit) const;
 	const RuleStatBonus *getHealthRecoveryRaw() const { return &_healthRecovery; }
+	/// Gets unit Mana recovery.
+	int getManaRecovery(const BattleUnit* unit) const;
+	const RuleStatBonus* getManaRecoveryRaw() const { return &_manaRecovery; }
 	/// Gets unit Stun recovery.
 	int getStunRegeneration(const BattleUnit* unit) const;
 	const RuleStatBonus *getStunRegenerationRaw() const { return &_stunRecovery; }

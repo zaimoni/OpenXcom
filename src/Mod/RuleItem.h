@@ -30,7 +30,7 @@ namespace OpenXcom
 {
 
 enum BattleType { BT_NONE, BT_FIREARM, BT_AMMO, BT_MELEE, BT_GRENADE, BT_PROXIMITYGRENADE, BT_MEDIKIT, BT_SCANNER, BT_MINDPROBE, BT_PSIAMP, BT_FLARE, BT_CORPSE };
-enum BattleFuseType { BFT_NONE = -3, BFT_INSTANT = -2, BFT_SET = -1, BFT_FIX_MIN = 0, BFT_FIX_MAX = 24 };
+enum BattleFuseType { BFT_NONE = -3, BFT_INSTANT = -2, BFT_SET = -1, BFT_FIX_MIN = 0, BFT_FIX_MAX = 64 };
 enum BattleMediKitType { BMT_NORMAL = 0, BMT_HEAL = 1, BMT_STIMULANT = 2, BMT_PAINKILLER = 3 };
 enum ExperienceTrainingMode {
 	ETM_DEFAULT,
@@ -64,14 +64,15 @@ struct RuleItemUseCost
 	int Morale;
 	int Health;
 	int Stun;
+	int Mana;
 
 	/// Default constructor.
-	RuleItemUseCost() : Time(0), Energy(0), Morale(0), Health(0), Stun(0)
+	RuleItemUseCost() : Time(0), Energy(0), Morale(0), Health(0), Stun(0), Mana(0)
 	{
 
 	}
 	/// Create new cost with one value for time units and another for rest.
-	RuleItemUseCost(int tu, int rest = 0) : Time(tu), Energy(rest), Morale(rest), Health(rest), Stun(rest)
+	RuleItemUseCost(int tu, int rest = 0) : Time(tu), Energy(rest), Morale(rest), Health(rest), Stun(rest), Mana(rest)
 	{
 
 	}
@@ -84,6 +85,7 @@ struct RuleItemUseCost
 		Morale += cost.Morale;
 		Health += cost.Health;
 		Stun += cost.Stun;
+		Mana += cost.Mana;
 		return *this;
 	}
 };
@@ -198,11 +200,12 @@ private:
 	RuleItemUseCost _flatUse, _flatThrow, _flatPrime, _flatUnprime;
 	bool _arcingShot;
 	ExperienceTrainingMode _experienceTrainingMode;
+	int _manaExperience;
 	int _listOrder, _maxRange, _minRange, _dropoff, _bulletSpeed, _explosionSpeed, _shotgunPellets;
 	int _shotgunBehaviorType, _shotgunSpread, _shotgunChoke;
 	std::string _zombieUnit, _spawnUnit;
 	int _spawnUnitFaction;
-	bool _LOSRequired, _underwaterOnly, _landOnly, _psiReqiured;
+	bool _LOSRequired, _underwaterOnly, _landOnly, _psiReqiured, _manaRequired;
 	int _meleePower, _specialType, _vaporColor, _vaporDensity, _vaporProbability;
 	std::vector<int> _customItemPreviewIndex;
 	int _kneelBonus, _oneHandedPenalty;
@@ -226,8 +229,6 @@ private:
 	void loadPercent(RuleItemUseCost& a, const YAML::Node& node, const std::string& name) const;
 	/// Load RuleItemAction from yaml.
 	void loadConfAction(RuleItemAction& a, const YAML::Node& node, const std::string& name) const;
-	/// Load sound vector from YAML.
-	void loadSoundVector(const YAML::Node &node, Mod *mod, std::vector<int> &vector);
 	/// Gets a random sound from a given vector.
 	int getRandomSound(const std::vector<int> &vector, int defaultValue = -1) const;
 	/// Load RuleItemFuseTrigger from yaml.
@@ -558,6 +559,8 @@ public:
 	bool getArcingShot() const;
 	/// Which experience training mode to use for this weapon?
 	ExperienceTrainingMode getExperienceTrainingMode() const;
+	/// How much mana experience does this weapon provide?
+	int getManaExperience() const { return _manaExperience; }
 	/// How much do aliens want this thing?
 	int getAttraction() const;
 	/// Get the list weight for this item.
@@ -614,6 +617,8 @@ public:
 	bool isLandOnly() const;
 	/// Is this item require unit with psi skill to use it?
 	bool isPsiRequired() const;
+	/// Does this item need mana to operate?
+	bool isManaRequired() const;
 	/// Get the associated special type of this item.
 	int getSpecialType() const;
 	/// Get the color offset to use for the vapor trail.

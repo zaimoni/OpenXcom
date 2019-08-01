@@ -116,7 +116,7 @@ void getErrorDialog()
 		if (getenv("KDE_SESSION_UID") && system("which kdialog 2>&1 > /dev/null") == 0)
 			errorDlg = "kdialog --error ";
 		else if (system("which zenity 2>&1 > /dev/null") == 0)
-			errorDlg = "zenity --error --text=";
+			errorDlg = "zenity --no-wrap --error --text=";
 		else if (system("which kdialog 2>&1 > /dev/null") == 0)
 			errorDlg = "kdialog --error ";
 		else if (system("which gdialog 2>&1 > /dev/null") == 0)
@@ -334,9 +334,11 @@ std::vector<std::string> findDataFolders()
  	list.push_back(path);
 
 	// Get global data folders
-	if (char *xdg_data_dirs = getenv("XDG_DATA_DIRS"))
+	if (char const *const xdg_data_dirs = getenv("XDG_DATA_DIRS"))
 	{
-		char *dir = strtok(xdg_data_dirs, ":");
+		char xdg_data_dirs_copy[strlen(xdg_data_dirs)+1];
+		strcpy(xdg_data_dirs_copy, xdg_data_dirs);
+		char *dir = strtok(xdg_data_dirs_copy, ":");
 		while (dir != 0)
 		{
 			snprintf(path, MAXPATHLEN, "%s/openxcom/", dir);
@@ -655,7 +657,11 @@ std::vector<std::tuple<std::string, bool, time_t>> getFolderContents(const std::
 	struct dirent *dirp;
 	while ((dirp = readdir(dp)) != 0) {
 		std::string filename = dirp->d_name;
-		if (filename == "." || filename == "..") { continue; }
+		if (filename[0] == '.') //allowed by C++11 for empty string as it equal '\0'
+		{
+			//skip ".", "..", ".git", ".svn", ".bashrc", ".ssh" etc.
+			continue;
+		}
 		if (!compareExt(filename, ext))	{ continue; }
 		std::string fullpath = path + "/" + filename;
 		bool is_directory = folderExists(fullpath);
@@ -1672,8 +1678,13 @@ void crashDump(void *ex, const std::string &err)
 #endif
 	std::ostringstream msg;
 	msg << "OpenXcom has crashed: " << error.str() << std::endl;
-	msg << "More details here: " << getLogFileName() << std::endl;
-	msg << "If this error was unexpected, please report it to the developers.";
+	msg << "Log file: " << getLogFileName() << std::endl;
+	msg << "If this error was unexpected, please report it on OpenXcom forum or discord." << std::endl;
+	msg << "The following can help us solve the problem:" << std::endl;
+	msg << "1. a saved game from just before the crash (helps 98%)" << std::endl;
+	msg << "2. a detailed description how to reproduce the crash (helps 80%)" << std::endl;
+	msg << "3. a log file (helps 10%)" << std::endl;
+	msg << "4. a screenshot of this error message (helps 5%)";
 	showError(msg.str());
 }
 

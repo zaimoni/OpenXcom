@@ -19,6 +19,7 @@
 
 #include "Options.h"
 #include "../version.h"
+#include "../md5.h"
 #include <SDL.h>
 #include <SDL_mixer.h>
 #include <map>
@@ -52,6 +53,7 @@ std::map<std::string, std::string> _commandLine;
 std::vector<OptionInfo> _info;
 std::unordered_map<std::string, ModInfo> _modInfos;
 std::string _masterMod;
+int _passwordCheck = -1;
 bool _loadLastSave = false;
 bool _loadLastSaveExpended = false;
 
@@ -93,6 +95,7 @@ void create()
 	//_info.push_back(OptionInfo("baseYBattlescape", &baseYBattlescape, Screen::ORIGINAL_HEIGHT));
 	_info.push_back(OptionInfo("geoscapeScale", &geoscapeScale, 0));
 	_info.push_back(OptionInfo("battlescapeScale", &battlescapeScale, 0));
+	_info.push_back(OptionInfo("password", &password, "secret"));
 	_info.push_back(OptionInfo("debug", &debug, false));
 	_info.push_back(OptionInfo("debugUi", &debugUi, false));
 	_info.push_back(OptionInfo("soundVolume", &soundVolume, 2*(MIX_MAX_VOLUME/3)));
@@ -268,7 +271,14 @@ void create()
 	_info.push_back(OptionInfo("oxceWoundedDefendBaseIf", &oxceWoundedDefendBaseIf, 100, "STR_WOUNDED_DEFEND_BASE_IF", "STR_OXCE"));
 	_info.push_back(OptionInfo("oxcePlayBriefingMusicDuringEquipment", &oxcePlayBriefingMusicDuringEquipment, false, "STR_PLAY_BRIEFING_MUSIC_DURING_EQUIPMENT", "STR_OXCE"));
 	_info.push_back(OptionInfo("oxceNightVisionColor", &oxceNightVisionColor, 5, "STR_NIGHT_VISION_COLOR", "STR_OXCE"));
+#ifdef __ANDROID__
+	_info.push_back(OptionInfo("oxceNightVisionButtonThreshold", &oxceNightVisionButtonThreshold, 15, "STR_NV_BUTTON_THRESHOLD", "STR_OXCE"));
+#else
+	_info.push_back(OptionInfo("oxceNightVisionButtonThreshold", &oxceNightVisionButtonThreshold, 15));
+#endif
 	_info.push_back(OptionInfo("oxceAutoSell", &oxceAutoSell, false, "STR_AUTO_SELL", "STR_OXCE"));
+	_info.push_back(OptionInfo("oxceRememberDisabledCraftWeapons", &oxceRememberDisabledCraftWeapons, false, "STR_REMEMBER_DISABLED_CRAFT_WEAPONS", "STR_OXCE"));
+	_info.push_back(OptionInfo("oxceHighlightNewTopics", &oxceHighlightNewTopics, false, "STR_HIGHLIGHT_NEW_TOPICS", "STR_OXCE"));
 
 	// controls
 	_info.push_back(KeyOptionInfo("keyOk", &keyOk, SDLK_RETURN, "STR_OK", "STR_GENERAL"));
@@ -504,6 +514,10 @@ static void loadArgs()
 					systemLocale += argv[i];
 					Log(LOG_INFO) << "Current locale is " << systemLocale;
 				}
+				else if (argname == "master")
+				{
+					_masterMod = argv[i];
+				}
 				else
 				{
 					//save this command line option for now, we will apply it later
@@ -534,8 +548,10 @@ static bool showHelp()
 	help << "        use PATH as the default User Folder instead of auto-detecting" << std::endl << std::endl;
 	help << "-cfg PATH  or  -config PATH" << std::endl;
 	help << "        use PATH as the default Config Folder instead of auto-detecting" << std::endl << std::endl;
+	help << "-master MOD" << std::endl;
+	help << "        set MOD to the current master mod (eg. -master xcom2)" << std::endl << std::endl;
 	help << "-KEY VALUE" << std::endl;
-	help << "        set option KEY to VALUE instead of default/loaded value (eg. -displayWidth 640)" << std::endl << std::endl;
+	help << "        override option KEY with VALUE (eg. -displayWidth 640)" << std::endl << std::endl;
 	help << "-help" << std::endl;
 	help << "-?" << std::endl;
 	help << "        show command-line help" << std::endl;
@@ -642,6 +658,11 @@ bool init()
 // called from the dos screen state (StartState)
 void updateMods()
 {
+	if (reload)
+	{
+		_masterMod = "";
+	}
+
 	FileMap::clear(false, embeddedOnly);
 	SDL_RWops *rwops = CrossPlatform::getEmbeddedAsset("standard.zip");
 	if (rwops) {
@@ -706,6 +727,10 @@ void updateMods()
 				found = true;
 				if (i->second.isMaster())
 				{
+					if (!_masterMod.empty())
+					{
+						j->second = (_masterMod == j->first);
+					}
 					if (j->second)
 					{
 						if (!activeMaster.empty())
@@ -775,7 +800,6 @@ void updateMods()
 		_masterMod = activeMaster;
 	}
 
-	updateReservedSpace();
 	FileMap::setup(getActiveMods(), embeddedOnly);
 	userSplitMasters();
 
@@ -787,6 +811,24 @@ void updateMods()
 			Log(LOG_ERROR) << "Mod '" << modInf->getName() << "' requires at least OXCE v" << modInf->getRequiredExtendedVersion();
 		}
 	}
+}
+
+/**
+ * Is the password correct?
+ * @return Mostly false.
+ */
+bool isPasswordCorrect()
+{
+	if (_passwordCheck < 0)
+	{
+		std::string md5hash = md5(Options::password);
+		if (md5hash == "52bd8e15118862c40fc0d6107e197f42")
+			_passwordCheck = 1;
+		else
+			_passwordCheck = 0;
+	}
+
+	return _passwordCheck > 0;
 }
 
 /**
@@ -806,57 +848,6 @@ bool getLoadLastSave()
 void expendLoadLastSave()
 {
 	_loadLastSaveExpended = true;
-}
-
-void updateReservedSpace()
-{
-	Log(LOG_VERBOSE) << "Updating reservedSpace for master mods if necessary...";
-
-	Log(LOG_VERBOSE) << "_masterMod = " << _masterMod;
-
-	int maxSize = 1;
-	for (auto i = mods.rbegin(); i != mods.rend(); ++i)
-	{
-		if (!i->second)
-		{
-			Log(LOG_VERBOSE) << "skipping inactive mod: " << i->first;
-			continue;
-		}
-
-		const ModInfo &modInfo = _modInfos.find(i->first)->second;
-		if (!modInfo.canActivate(_masterMod))
-		{
-			Log(LOG_VERBOSE) << "skipping mod for non-current master: " << i->first << "(" << modInfo.getMaster() << " != " << _masterMod << ")";
-			continue;
-		}
-
-		if (modInfo.getReservedSpace() > maxSize)
-		{
-			maxSize = modInfo.getReservedSpace();
-		}
-	}
-
-	if (maxSize > 1)
-	{
-		// Small hack: update ALL masters, not only active master!
-		// this is because, there can be a hierarchy of multiple masters (e.g. xcom1 master > fluffyUnicorns master > some fluffyUnicorns mod)
-		// and the one that needs to be updated is actually the "root", i.e. xcom1 master
-		for (auto i = _modInfos.begin(); i != _modInfos.end(); ++i)
-		{
-			if (i->second.isMaster())
-			{
-				if (i->second.getReservedSpace() < maxSize)
-				{
-					i->second.setReservedSpace(maxSize);
-					Log(LOG_INFO) << "reservedSpace for: " << i->first << " updated to: " << i->second.getReservedSpace();
-				}
-				else
-				{
-					Log(LOG_INFO) << "reservedSpace for: " << i->first << " is: " << i->second.getReservedSpace();
-				}
-			}
-		}
-	}
 }
 
 /**

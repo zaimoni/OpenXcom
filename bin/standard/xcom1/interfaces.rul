@@ -1212,6 +1212,7 @@ interfaces:
         color2: 208  # white
       - id: list
         color: 246   # purple
+        color2: 241  # pink
         border: 218  # blue
       - id: button
         color: 218   # blue
@@ -1328,6 +1329,10 @@ interfaces:
         color: 84
         color2: 88
         border: 80
+      - id: barMana
+        color: 132
+        color2: 136
+        border: 128
       - id: barPsiStrength
         color: 180
         color2: 184
@@ -1660,6 +1665,8 @@ interfaces:
         color2: 82
       - id: barMorale
         color: 192
+      - id: barMana
+        color: 208
       - id: numAmmoLeft
         color: 2
       - id: numAmmoRight
@@ -1818,6 +1825,8 @@ interfaces:
         color: 224
       - id: barStrength
         color: 48
+      - id: barMana
+        color: 128
       - id: barPsiStrength
         color: 192
       - id: barPsiSkill

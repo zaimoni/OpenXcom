@@ -132,6 +132,14 @@ bool BattleActionCost::haveTU(std::string *message)
 		}
 		return false;
 	}
+	if (actor->getMana() < Mana)
+	{
+		if (message)
+		{
+			*message = "STR_NOT_ENOUGH_MANA";
+		}
+		return false;
+	}
 	if (actor->getHealth() - actor->getStunlevel() <= Stun + Health)
 	{
 		if (message)
@@ -1434,7 +1442,7 @@ bool BattlescapeGame::handlePanickingPlayer()
 }
 
 /**
- * Common function for hanlding panicking units.
+ * Common function for handling panicking units.
  * @return False when unit not in panicking mode.
  */
 bool BattlescapeGame::handlePanickingUnit(BattleUnit *unit)
@@ -2050,7 +2058,7 @@ BattleUnit *BattlescapeGame::convertUnit(BattleUnit *unit)
 	BattleUnit *newUnit = new BattleUnit(type,
 		FACTION_HOSTILE,
 		_save->getUnits()->back()->getId() + 1,
-		_save->getStartingCondition(),
+		_save->getEnviroEffects(),
 		type->getArmor(),
 		getMod()->getStatAdjustment(_parentState->getGame()->getSavedGame()->getDifficulty()),
 		getDepth(),
@@ -2119,7 +2127,7 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 	BattleUnit *newUnit = new BattleUnit(type,
 		faction,
 		_save->getUnits()->back()->getId() + 1,
-		faction != FACTION_PLAYER ? _save->getStartingCondition() : nullptr,
+		faction != FACTION_PLAYER ? _save->getEnviroEffects() : nullptr,
 		type->getArmor(),
 		faction == FACTION_HOSTILE ? getMod()->getStatAdjustment(_parentState->getGame()->getSavedGame()->getDifficulty()) : nullptr,
 		getDepth(),
@@ -2265,7 +2273,7 @@ void BattlescapeGame::removeSummonedPlayerUnits()
 		BattleUnit *newUnit = new BattleUnit(type,
 			FACTION_NEUTRAL,
 			_save->getUnits()->back()->getId() + 1,
-			_save->getStartingCondition(),
+			_save->getEnviroEffects(),
 			type->getArmor(),
 			nullptr,
 			getDepth(),

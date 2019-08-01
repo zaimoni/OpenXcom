@@ -19,6 +19,7 @@
 #include "Armor.h"
 #include "../Engine/ScriptBind.h"
 #include "Mod.h"
+#include "RuleSoldier.h"
 
 namespace OpenXcom
 {
@@ -119,6 +120,7 @@ void Armor::load(const YAML::Node &node, const ModScript &parsers, Mod *mod)
 	_corpseGeo = node["corpseGeo"].as<std::string>(_corpseGeo);
 	_storeItem = node["storeItem"].as<std::string>(_storeItem);
 	_specWeapon = node["specialWeapon"].as<std::string>(_specWeapon);
+	_requires = node["requires"].as<std::string>(_requires);
 
 	_layersDefaultPrefix = node["layersDefaultPrefix"].as<std::string>(_layersDefaultPrefix);
 	_layersSpecificPrefix = node["layersSpecificPrefix"].as< std::map<int, std::string> >(_layersSpecificPrefix);
@@ -132,10 +134,7 @@ void Armor::load(const YAML::Node &node, const ModScript &parsers, Mod *mod)
 	_drawingRoutine = node["drawingRoutine"].as<int>(_drawingRoutine);
 	_drawBubbles = node["drawBubbles"].as<bool>(_drawBubbles);
 	_movementType = (MovementType)node["movementType"].as<int>(_movementType);
-	if (node["moveSound"])
-	{
-		_moveSound = mod->getSoundOffset(node["moveSound"].as<int>(_moveSound), "BATTLE.CAT");
-	}
+	mod->loadSoundOffset(_type, _moveSound, node["moveSound"], "BATTLE.CAT");
 	_weight = node["weight"].as<int>(_weight);
 	_visibilityAtDark = node["visibilityAtDark"].as<int>(_visibilityAtDark);
 	_visibilityAtDay = node["visibilityAtDay"].as<int>(_visibilityAtDay);
@@ -207,6 +206,7 @@ void Armor::load(const YAML::Node &node, const ModScript &parsers, Mod *mod)
 		_energyRecovery.load(_type, rec, parsers.bonusStatsScripts.get<ModScript::EnergyRecoveryStatBonus>());
 		_moraleRecovery.load(_type, rec, parsers.bonusStatsScripts.get<ModScript::MoraleRecoveryStatBonus>());
 		_healthRecovery.load(_type, rec, parsers.bonusStatsScripts.get<ModScript::HealthRecoveryStatBonus>());
+		_manaRecovery.load(_type, rec, parsers.bonusStatsScripts.get<ModScript::ManaRecoveryStatBonus>());
 		_stunRecovery.load(_type, rec, parsers.bonusStatsScripts.get<ModScript::StunRecoveryStatBonus>());
 	}
 	_faceColorGroup = node["spriteFaceGroup"].as<int>(_faceColorGroup);
@@ -222,21 +222,7 @@ void Armor::load(const YAML::Node &node, const ModScript &parsers, Mod *mod)
 
 	_units = node["units"].as< std::vector<std::string> >(_units);
 	_scriptValues.load(node, parsers.getShared());
-	if (const YAML::Node &capi = node["customArmorPreviewIndex"])
-	{
-		_customArmorPreviewIndex.clear();
-		if (capi.IsScalar())
-		{
-			_customArmorPreviewIndex.push_back(mod->getSpriteOffset(capi.as<int>(), "CustomArmorPreviews"));
-		}
-		else
-		{
-			for (YAML::const_iterator i = capi.begin(); i != capi.end(); ++i)
-			{
-				_customArmorPreviewIndex.push_back(mod->getSpriteOffset(i->as<int>(), "CustomArmorPreviews"));
-			}
-		}
-	}
+	mod->loadSpriteOffset(_type, _customArmorPreviewIndex, node["customArmorPreviewIndex"], "CustomArmorPreviews");
 	loadTriBoolHelper(_allowsRunning, node["allowsRunning"]);
 	loadTriBoolHelper(_allowsStrafing, node["allowsStrafing"]);
 	loadTriBoolHelper(_allowsKneeling, node["allowsKneeling"]);
@@ -375,6 +361,15 @@ std::string Armor::getStoreItem() const
 std::string Armor::getSpecialWeapon() const
 {
 	return _specWeapon;
+}
+
+/**
+ * Gets the research required to be able to equip this armor.
+ * @return The name of the research topic.
+ */
+const std::string &Armor::getRequiredResearch() const
+{
+	return _requires;
 }
 
 /**
@@ -525,6 +520,14 @@ int Armor::getMoraleRecovery(const BattleUnit* unit) const
 int Armor::getHealthRecovery(const BattleUnit* unit) const
 {
 	return _healthRecovery.getBonus(unit);
+}
+
+/**
+ *  Gets unit Mana recovery.
+ */
+int Armor::getManaRecovery(const BattleUnit* unit) const
+{
+	return _manaRecovery.getBonus(unit);
 }
 
 /**
@@ -793,9 +796,9 @@ int findWithFallback(const std::vector<int> &vec, size_t pos)
 	//if pos == 31 then we test for 31, 15, 7
 	//if pos == 36 then we test for 36, 4
 	//we stop on p < 8 for comatibility reasons.
-	for (int i = 0; i <= 4; ++i)
+	for (int i = 0; i <= RuleSoldier::LookVariantBits; ++i)
 	{
-		size_t p = (pos & (127 >> i));
+		size_t p = (pos & (RuleSoldier::LookTotalMask >> i));
 		if (p < vec.size())
 		{
 			return vec[p];

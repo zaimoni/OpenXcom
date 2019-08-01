@@ -62,6 +62,10 @@ OPT int oxceWoundedDefendBaseIf;
 OPT bool oxcePlayBriefingMusicDuringEquipment;
 OPT int oxceNightVisionColor;
 OPT bool oxceAutoSell;
+OPT int oxceNightVisionButtonThreshold;
+OPT bool oxceRememberDisabledCraftWeapons;
+OPT bool oxceHighlightNewTopics;
+OPT std::string password;
 
 // System-specific options
 OPT bool swipeToTurn, holdToTurn;

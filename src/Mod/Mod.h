@@ -65,6 +65,7 @@ class RuleResearch;
 class RuleManufacture;
 class RuleSoldierTransformation;
 class AlienRace;
+class RuleEnviroEffects;
 class RuleStartingCondition;
 class AlienDeployment;
 class UfoTrajectory;
@@ -82,14 +83,31 @@ class RuleGlobe;
 class RuleConverter;
 class SoundDefinition;
 class MapScript;
+class ModInfo;
 class RuleVideo;
 class RuleMusic;
+class RuleArcScript;
 class RuleMissionScript;
 class ModScript;
 class ModScriptGlobal;
 class ScriptParserBase;
 class ScriptGlobal;
 struct StatAdjustment;
+
+/**
+ * Mod data used when loading resources
+ */
+struct ModData
+{
+	/// Mod name
+	std::string name;
+	/// Optional info about mod
+	const ModInfo* info;
+	/// Offset that mod use is common sets
+	size_t offset;
+	/// Maximum size allowed by mod in common sets
+	size_t size;
+};
 
 /**
  * Contains all the game-specific static data that never changes
@@ -124,6 +142,7 @@ private:
 	std::map<std::string, RuleSoldier*> _soldiers;
 	std::map<std::string, Unit*> _units;
 	std::map<std::string, AlienRace*> _alienRaces;
+	std::map<std::string, RuleEnviroEffects*> _enviroEffects;
 	std::map<std::string, RuleStartingCondition*> _startingConditions;
 	std::map<std::string, AlienDeployment*> _alienDeployments;
 	std::map<std::string, Armor*> _armors;
@@ -141,6 +160,7 @@ private:
 	std::map<std::string, MCDPatch *> _MCDPatches;
 	std::map<std::string, std::vector<MapScript *> > _mapScripts;
 	std::map<std::string, RuleCommendations *> _commendations;
+	std::map<std::string, RuleArcScript*> _arcScripts;
 	std::map<std::string, RuleMissionScript*> _missionScripts;
 	std::map<std::string, std::vector<ExtraSprites *> > _extraSprites;
 	std::map<std::string, CustomPalettes *> _customPalettes;
@@ -163,12 +183,15 @@ private:
 	bool _aiPickUpWeaponsMoreActively;
 	int _maxLookVariant, _tooMuchSmokeThreshold, _customTrainingFactor, _minReactionAccuracy;
 	int _chanceToStopRetaliation;
+	bool _lessAliensDuringBaseDefense;
 	bool _allowCountriesToCancelAlienPact, _buildInfiltrationBaseCloseToTheCountry;
 	int _kneelBonusGlobal, _oneHandedPenaltyGlobal;
 	int _enableCloseQuartersCombat, _closeQuartersAccuracyGlobal, _closeQuartersTuCostGlobal, _closeQuartersEnergyCostGlobal;
 	int _noLOSAccuracyPenaltyGlobal;
 	int _surrenderMode;
 	int _bughuntMinTurn, _bughuntMaxEnemies, _bughuntRank, _bughuntLowMorale, _bughuntTimeUnitsLeft;
+	bool _manaEnabled, _manaBattleUI, _manaTrainingPrimary, _manaTrainingSecondary, _manaReplenishAfterMission;
+	std::string _manaUnlockResearch;
 	int _ufoGlancingHitThreshold, _ufoBeamWidthParameter;
 	int _ufoTractorBeamSizeModifiers[5];
 	int _escortRange, _drawEnemyRadarCircles;
@@ -181,7 +204,6 @@ private:
 	bool _useCustomCategories, _showDogfightDistanceInKm, _showFullNameInAlienInventory;
 	bool _hidePediaInfoButton, _extraNerdyPediaInfo, _showAllCommendations;
 	bool _giveScoreAlsoForResearchedArtifacts, _statisticalBulletConservation;
-	int _theMostUselessOptionEver, _theBiggestRipOffEver;
 	int _shortRadarRange;
 	int _defeatScore, _defeatFunds;
 	std::pair<std::string, int> _alienFuel;
@@ -200,12 +222,13 @@ private:
 
 	std::map<std::string, int> _ufopaediaSections;
 	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
-	std::vector<std::string> _soldiersIndex, _aliensIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex, _soldierTransformationIndex;
-	std::vector<std::string> _alienMissionsIndex, _terrainIndex, _customPalettesIndex, _missionScriptIndex;
+	std::vector<std::string> _soldiersIndex, _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex, _soldierTransformationIndex;
+	std::vector<std::string> _alienMissionsIndex, _terrainIndex, _customPalettesIndex, _arcScriptIndex, _missionScriptIndex;
 	std::vector<std::vector<int> > _alienItemLevels;
 	std::vector<SDL_Color> _transparencies;
 	int _facilityListOrder, _craftListOrder, _itemCategoryListOrder, _itemListOrder, _researchListOrder,  _manufactureListOrder, _transformationListOrder, _ufopaediaListOrder, _invListOrder, _soldierListOrder;
-	size_t _modOffset;
+	std::vector<ModData> _modData;
+	ModData* _modCurrent;
 	const SDL_Color *_statePalette;
 	std::vector<std::string> _psiRequirements; // it's a cache for psiStrengthEval
 	size_t _surfaceOffsetBigobs = 0;
@@ -217,6 +240,9 @@ private:
 	size_t _soundOffsetBattle = 0;
 	size_t _soundOffsetGeo = 0;
 
+	/// Loads a ruleset from a YAML file that have basic resources configuration.
+	void loadResourceConfigFile(const FileMap::FileRecord &filerec);
+	void loadConstants(const YAML::Node &node);
 	/// Loads a ruleset from a YAML file.
 	void loadFile(const FileMap::FileRecord &filerec, ModScript &parsers);
 	/// Loads a ruleset element.
@@ -236,7 +262,7 @@ private:
 	/// Creates a transparency lookup table for a given palette.
 	void createTransparencyLUT(Palette *pal);
 	/// Loads a specified mod content.
-	void loadMod(const std::vector<FileMap::FileRecord> &rulesetFiles, size_t modIdx, ModScript &parsers);
+	void loadMod(const std::vector<FileMap::FileRecord> &rulesetFiles, ModScript &parsers);
 	/// Loads resources from vanilla.
 	void loadVanillaResources();
 	/// Loads resources from extra rulesets.
@@ -325,12 +351,19 @@ public:
 	Sound *getSoundByDepth(unsigned int depth, unsigned int sound, bool error = true) const;
 	/// Gets list of LUT data.
 	const std::vector<std::vector<Uint8> > *getLUTs() const;
+
 	/// Gets the mod offset.
 	int getModOffset() const;
+	/// Get offset and index for sound set or sprite set.
+	void loadOffsetNode(const std::string &parent, int& offset, const YAML::Node &node, int shared, const std::string &set, size_t multiplier) const;
 	/// Gets the mod offset for a certain sprite.
-	int getSpriteOffset(int sprite, const std::string &set) const;
+	void loadSpriteOffset(const std::string &parent, int& sprite, const YAML::Node &node, const std::string &set, size_t multiplier = 1) const;
+	/// Gets the mod offset array for a certain sprite.
+	void loadSpriteOffset(const std::string &parent, std::vector<int>& sprites, const YAML::Node &node, const std::string &set) const;
 	/// Gets the mod offset for a certain sound.
-	int getSoundOffset(int sound, const std::string &set) const;
+	void loadSoundOffset(const std::string &parent, int& sound, const YAML::Node &node, const std::string &set) const;
+	/// Gets the mod offset array for a certain sound.
+	void loadSoundOffset(const std::string &parent, std::vector<int>& sounds, const YAML::Node &node, const std::string &set) const;
 	/// Gets the mod offset for a generic value.
 	int getOffset(int id, int max) const;
 
@@ -394,10 +427,14 @@ public:
 	AlienRace *getAlienRace(const std::string &name, bool error = false) const;
 	/// Gets the available alien races.
 	const std::vector<std::string> &getAlienRacesList() const;
+	/// Gets an enviro effects definition.
+	RuleEnviroEffects* getEnviroEffects(const std::string& name) const;
+	/// Gets the available enviro effects.
+	const std::vector<std::string>& getEnviroEffectsList() const;
 	/// Gets a starting condition.
-	RuleStartingCondition *getStartingCondition(const std::string &name) const;
+	RuleStartingCondition* getStartingCondition(const std::string& name) const;
 	/// Gets the available starting conditions.
-	const std::vector<std::string> &getStartingConditionsList() const;
+	const std::vector<std::string>& getStartingConditionsList() const;
 	/// Gets deployment rules.
 	AlienDeployment *getDeployment(const std::string &name, bool error = false) const;
 	/// Gets the available alien deployments.
@@ -474,6 +511,8 @@ public:
 	int getMinReactionAccuracy() const { return _minReactionAccuracy; }
 	/// Gets the chance to stop retaliation after unsuccessful xcom base attack (default = 0).
 	int getChanceToStopRetaliation() const { return _chanceToStopRetaliation; }
+	/// Should a damaged UFO deploy less aliens during the base defense?
+	bool getLessAliensDuringBaseDefense() const { return _lessAliensDuringBaseDefense; }
 	/// Will countries join the good side again after the infiltrator base is destroyed?
 	bool getAllowCountriesToCancelAlienPact() const { return _allowCountriesToCancelAlienPact; }
 	/// Should alien infiltration bases be built close to the infiltrated country?
@@ -504,6 +543,18 @@ public:
 	int getBughuntLowMorale() const { return _bughuntLowMorale; }
 	/// Gets the bug hunt mode time units % parameter (default = 60).
 	int getBughuntTimeUnitsLeft() const { return _bughuntTimeUnitsLeft; }
+	/// Is the mana feature enabled (default false)?
+	bool isManaFeatureEnabled() const { return _manaEnabled; }
+	/// Is the mana bar enabled for the Battlescape UI (default false)?
+	bool isManaBarEnabled() const { return _manaBattleUI; }
+	/// Is the mana trained as a primary skill (e.g. like firing accuracy)?
+	bool isManaTrainingPrimary() const { return _manaTrainingPrimary; }
+	/// Is the mana trained as a secondary skill (e.g. like strength)?
+	bool isManaTrainingSecondary() const { return _manaTrainingSecondary; }
+	/// Should a soldier's mana be fully replenished after a mission?
+	bool getReplenishManaAfterMission() const { return _manaReplenishAfterMission; }
+	/// Gets the mana unlock research topic (default empty)?
+	const std::string &getManaUnlockResearch() const { return _manaUnlockResearch; }
 	/// Gets the threshold for defining a glancing hit on a ufo during interception
 	int getUfoGlancingHitThreshold() const { return _ufoGlancingHitThreshold; }
 	/// Gets the parameter for drawing the width of a ufo's beam weapon based on power
@@ -562,10 +613,6 @@ public:
 	bool getGiveScoreAlsoForResearchedArtifacts() const { return _giveScoreAlsoForResearchedArtifacts; }
 	/// When recovering ammo, should partially spent clip have a chance to recover as full?
 	bool getStatisticalBulletConservation() const { return _statisticalBulletConservation; }
-	/// Self-explanatory
-	int getTheMostUselessOptionEver() const { return _theMostUselessOptionEver; }
-	/// Shame on you!
-	int getTheBiggestRipOffEver() const { return _theBiggestRipOffEver; }
 	/// Gets whether or not to load base defense terrain from globe texture
 	int getBaseDefenseMapFromLocation() const { return _baseDefenseMapFromLocation; }
 	/// Gets the ruleset for a specific research project.
@@ -644,6 +691,8 @@ public:
 	/// Gets a video for intro/outro etc.
 	RuleVideo *getVideo(const std::string &id, bool error = false) const;
 	const std::map<std::string, RuleMusic *> *getMusic() const;
+	const std::vector<std::string>* getArcScriptList() const;
+	RuleArcScript* getArcScript(const std::string& name, bool error = false) const;
 	const std::vector<std::string> *getMissionScriptList() const;
 	RuleMissionScript *getMissionScript(const std::string &name, bool error = false) const;
 	/// Get global script data.

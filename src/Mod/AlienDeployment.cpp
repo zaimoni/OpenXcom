@@ -151,6 +151,7 @@ void AlienDeployment::load(const YAML::Node &node, Mod *mod)
 		load(parent, mod);
 	}
 	_type = node["type"].as<std::string>(_type);
+	_enviroEffects = node["enviroEffects"].as<std::string>(_enviroEffects);
 	_startingCondition = node["startingCondition"].as<std::string>(_startingCondition);
 	_unlockedResearch = node["unlockedResearch"].as<std::string>(_unlockedResearch);
 	_missionBountyItem = node["missionBountyItem"].as<std::string>(_missionBountyItem);
@@ -176,10 +177,7 @@ void AlienDeployment::load(const YAML::Node &node, Mod *mod)
 	_alert = node["alert"].as<std::string>(_alert);
 	_alertBackground = node["alertBackground"].as<std::string>(_alertBackground);
 	_alertDescription = node["alertDescription"].as<std::string>(_alertDescription);
-	if (node["alertSound"])
-	{
-		_alertSound = mod->getSoundOffset(node["alertSound"].as<int>(_alertSound), "GEO.CAT");
-	}
+	mod->loadSoundOffset(_type, _alertSound, node["alertSound"], "GEO.CAT");
 	_briefingData = node["briefing"].as<BriefingData>(_briefingData);
 	_markerName = node["markerName"].as<std::string>(_markerName);
 	if (node["markerIcon"])
@@ -226,6 +224,7 @@ void AlienDeployment::load(const YAML::Node &node, Mod *mod)
 	_genMissionFrequency = node["genMissionFreq"].as<int>(_genMissionFrequency);
 	_genMissionLimit = node["genMissionLimit"].as<int>(_genMissionLimit);
 
+	_baseSelfDestructCode = node["baseSelfDestructCode"].as<std::string>(_baseSelfDestructCode);
 	_baseDetectionRange = node["baseDetectionRange"].as<int>(_baseDetectionRange);
 	_baseDetectionChance = node["baseDetectionChance"].as<int>(_baseDetectionChance);
 	_huntMissionMaxFrequency = node["huntMissionMaxFrequency"].as<int>(_huntMissionMaxFrequency);
@@ -260,10 +259,19 @@ std::string AlienDeployment::getType() const
 }
 
 /**
-* Returns the starting condition name for this mission.
-* @return String ID for starting condition.
-*/
-std::string AlienDeployment::getStartingCondition() const
+ * Returns the enviro effects name for this mission.
+ * @return String ID for the enviro effects.
+ */
+const std::string& AlienDeployment::getEnviroEffects() const
+{
+	return _enviroEffects;
+}
+
+/**
+ * Returns the starting condition name for this mission.
+ * @return String ID for starting condition.
+ */
+const std::string& AlienDeployment::getStartingCondition() const
 {
 	return _startingCondition;
 }
@@ -547,7 +555,7 @@ int AlienDeployment::getMaxDepth() const
 }
 
 /**
- * Gets the target type for this mission (ie: alien control consoles and synonium devices).
+ * Gets the target type for this mission (ie: alien control consoles and synomium devices).
  * @return the target type for this mission.
  */
 int AlienDeployment::getObjectiveType() const
@@ -687,6 +695,15 @@ std::string AlienDeployment::generateHuntMission(const size_t monthsPassed) cons
 	while (monthsPassed < rw->first)
 		++rw;
 	return rw->second->choose();
+}
+
+/**
+ * Returns the Alien Base self destruct code.
+ * @return String ID of the corresponding research topic.
+ */
+const std::string& AlienDeployment::getBaseSelfDestructCode() const
+{
+	return _baseSelfDestructCode;
 }
 
 /**

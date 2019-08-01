@@ -32,7 +32,7 @@
 #include "../Engine/Options.h"
 #include "../Savegame/SavedGame.h"
 #include "../Savegame/SavedBattleGame.h"
-#include "../Mod/RuleStartingCondition.h"
+#include "../Mod/RuleEnviroEffects.h"
 #include "../Engine/SurfaceSet.h"
 #include "../Savegame/BattleItem.h"
 #include "../Mod/RuleItem.h"
@@ -90,12 +90,12 @@ Inventory::Inventory(Game *game, int width, int height, int x, int y, bool base)
 	const SavedBattleGame *battleSave = _game->getSavedGame()->getSavedBattle();
 	if (battleSave)
 	{
-		auto startingCondition = battleSave->getStartingCondition();
-		if (startingCondition)
+		auto enviro = battleSave->getEnviroEffects();
+		if (enviro)
 		{
-			if (!startingCondition->getInventoryShockIndicator().empty())
+			if (!enviro->getInventoryShockIndicator().empty())
 			{
-				_shockIndicator = _game->getMod()->getSurface(startingCondition->getInventoryShockIndicator(), false);
+				_shockIndicator = _game->getMod()->getSurface(enviro->getInventoryShockIndicator(), false);
 			}
 		}
 	}
@@ -174,11 +174,14 @@ BattleUnit *Inventory::getSelectedUnit() const
  * Changes the unit to display the inventory of.
  * @param unit Pointer to battle unit.
  */
-void Inventory::setSelectedUnit(BattleUnit *unit)
+void Inventory::setSelectedUnit(BattleUnit *unit, bool resetGroundOffset)
 {
 	_selUnit = unit;
-	_groundOffset = 999;
-	arrangeGround(1);
+	if (resetGroundOffset)
+	{
+		_groundOffset = 999;
+		arrangeGround(1);
+	}
 }
 
 /**

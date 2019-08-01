@@ -23,7 +23,7 @@
 #include "../Engine/RNG.h"
 #include "../Engine/Screen.h"
 #include "../Mod/Mod.h"
-#include "../Mod/RuleStartingCondition.h"
+#include "../Mod/RuleEnviroEffects.h"
 #include "../Mod/RuleInterface.h"
 #include "../Engine/LocalizedText.h"
 #include "../Engine/Palette.h"
@@ -80,7 +80,7 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
 
 	// Note: un-hardcoded the color from 15 to ruleset value, default 15
 	int bgColor = 15;
-	auto sc = _battleGame->getStartingCondition();
+	auto sc = _battleGame->getEnviroEffects();
 	if (sc)
 	{
 		bgColor = sc->getMapBackgroundColor();
@@ -360,7 +360,7 @@ bool NextTurnState::applyEnvironmentalConditionToFaction(UnitFaction faction, En
 	// now check for new casualties
 	_battleGame->getBattleGame()->checkForCasualties(nullptr, BattleActionAttack{ }, true, false);
 	// revive units if damage could give hp or reduce stun
-	_battleGame->reviveUnconsciousUnits(true);
+	//_battleGame->reviveUnconsciousUnits(true);
 
 	return showMessage;
 }

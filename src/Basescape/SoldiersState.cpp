@@ -182,6 +182,10 @@ SoldiersState::SoldiersState(Base *base) : _base(base), _origSoldierOrder(*_base
 	PUSH_IN("STR_MISSIONS2", missionsStat);
 	PUSH_IN("STR_KILLS2", killsStat);
 	PUSH_IN("STR_WOUND_RECOVERY2", woundRecoveryStat);
+	if (_game->getMod()->isManaFeatureEnabled() && !_game->getMod()->getReplenishManaAfterMission())
+	{
+		PUSH_IN("STR_MANA_MISSING", manaMissingStat);
+	}
 	PUSH_IN("STR_TIME_UNITS", tuStat);
 	PUSH_IN("STR_STAMINA", staminaStat);
 	PUSH_IN("STR_HEALTH", healthStat);
@@ -191,6 +195,11 @@ SoldiersState::SoldiersState(Base *base) : _base(base), _origSoldierOrder(*_base
 	PUSH_IN("STR_THROWING_ACCURACY", throwingStat);
 	PUSH_IN("STR_MELEE_ACCURACY", meleeStat);
 	PUSH_IN("STR_STRENGTH", strengthStat);
+	if (_game->getMod()->isManaFeatureEnabled())
+	{
+		// "unlock" is checked later
+		PUSH_IN("STR_MANA_POOL", manaStat);
+	}
 	PUSH_IN("STR_PSIONIC_STRENGTH", psiStrengthStat);
 	PUSH_IN("STR_PSIONIC_SKILL", psiSkillStat);
 
@@ -321,6 +330,7 @@ void SoldiersState::initList(size_t scrl)
 		selAction = _availableOptions.at(_cbxScreenActions->getSelected());
 	}
 
+	int offset = 0;
 	if (selAction == "STR_SOLDIER_INFO")
 	{
 		_lstSoldiers->setArrowColumn(188, ARROW_VERTICAL);
@@ -330,6 +340,7 @@ void SoldiersState::initList(size_t scrl)
 	}
 	else
 	{
+		offset = 20;
 		_lstSoldiers->setArrowColumn(-1, ARROW_VERTICAL);
 
 		// filtered list of soldiers eligible for transformation
@@ -360,12 +371,13 @@ void SoldiersState::initList(size_t scrl)
 
 	if (_dynGetter != NULL)
 	{
-		_lstSoldiers->setColumns(4, 106, 98, 60, 16);
+		_lstSoldiers->setColumns(4, 106, 98 - offset, 60 + offset, 16);
 	}
 	else
 	{
-		_lstSoldiers->setColumns(3, 106, 98, 76);
+		_lstSoldiers->setColumns(3, 106, 98 - offset, 76 + offset);
 	}
+	_txtCraft->setX(_txtRank->getX() + 98 - offset);
 
 	float absBonus = _base->getSickBayAbsoluteBonus();
 	float relBonus = _base->getSickBayRelativeBonus();

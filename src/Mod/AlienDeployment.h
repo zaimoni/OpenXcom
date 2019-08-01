@@ -65,7 +65,7 @@ class AlienDeployment
 {
 private:
 	std::string _type;
-	std::string _startingCondition;
+	std::string _enviroEffects, _startingCondition;
 	std::string _unlockedResearch, _missionBountyItem;
 	int _bughuntMinTurn;
 	std::vector<DeploymentData> _data;
@@ -87,6 +87,7 @@ private:
 	ChronoTrigger _chronoTrigger;
 	bool _keepCraftAfterFailedMission;
 	EscapeType _escapeType;
+	std::string _baseSelfDestructCode;
 	int _baseDetectionRange, _baseDetectionChance, _huntMissionMaxFrequency;
 	std::vector<std::pair<size_t, WeightedOptions*> > _huntMissionDistribution;
 	std::vector<std::pair<size_t, WeightedOptions*> > _alienBaseUpgrades;
@@ -99,8 +100,10 @@ public:
 	void load(const YAML::Node& node, Mod *mod);
 	/// Gets the Alien Deployment's type.
 	std::string getType() const;
+	/// Gets the Alien Deployment's enviro effects.
+	const std::string& getEnviroEffects() const;
 	/// Gets the Alien Deployment's starting condition.
-	std::string getStartingCondition() const;
+	const std::string& getStartingCondition() const;
 	/// Gets the research topic to be unlocked after a successful mission.
 	std::string getUnlockedResearch() const;
 	/// Gets the item to be recovered/given after a successful mission.
@@ -199,6 +202,8 @@ public:
 
 	/// Generates a hunt mission based on the given month.
 	std::string generateHuntMission(const size_t monthsPassed) const;
+	/// Gets the Alien Base self destruct code.
+	const std::string& getBaseSelfDestructCode() const;
 	/// Gets the detection range of an alien base.
 	double getBaseDetectionRange() const;
 	/// Gets the chance of an alien base to detect a player's craft (once every 10 minutes).
