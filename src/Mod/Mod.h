@@ -183,6 +183,7 @@ private:
 	bool _aiPickUpWeaponsMoreActively;
 	int _maxLookVariant, _tooMuchSmokeThreshold, _customTrainingFactor, _minReactionAccuracy;
 	int _chanceToStopRetaliation;
+	bool _lessAliensDuringBaseDefense;
 	bool _allowCountriesToCancelAlienPact, _buildInfiltrationBaseCloseToTheCountry;
 	int _kneelBonusGlobal, _oneHandedPenaltyGlobal;
 	int _enableCloseQuartersCombat, _closeQuartersAccuracyGlobal, _closeQuartersTuCostGlobal, _closeQuartersEnergyCostGlobal;
@@ -354,9 +355,9 @@ public:
 	/// Gets the mod offset.
 	int getModOffset() const;
 	/// Get offset and index for sound set or sprite set.
-	void loadOffsetNode(const std::string &parent, int& offset, const YAML::Node &node, int shared, const std::string &set, size_t multipler) const;
+	void loadOffsetNode(const std::string &parent, int& offset, const YAML::Node &node, int shared, const std::string &set, size_t multiplier) const;
 	/// Gets the mod offset for a certain sprite.
-	void loadSpriteOffset(const std::string &parent, int& sprite, const YAML::Node &node, const std::string &set, int multipler = 1) const;
+	void loadSpriteOffset(const std::string &parent, int& sprite, const YAML::Node &node, const std::string &set, size_t multiplier = 1) const;
 	/// Gets the mod offset array for a certain sprite.
 	void loadSpriteOffset(const std::string &parent, std::vector<int>& sprites, const YAML::Node &node, const std::string &set) const;
 	/// Gets the mod offset for a certain sound.
@@ -510,6 +511,8 @@ public:
 	int getMinReactionAccuracy() const { return _minReactionAccuracy; }
 	/// Gets the chance to stop retaliation after unsuccessful xcom base attack (default = 0).
 	int getChanceToStopRetaliation() const { return _chanceToStopRetaliation; }
+	/// Should a damaged UFO deploy less aliens during the base defense?
+	bool getLessAliensDuringBaseDefense() const { return _lessAliensDuringBaseDefense; }
 	/// Will countries join the good side again after the infiltrator base is destroyed?
 	bool getAllowCountriesToCancelAlienPact() const { return _allowCountriesToCancelAlienPact; }
 	/// Should alien infiltration bases be built close to the infiltrated country?
