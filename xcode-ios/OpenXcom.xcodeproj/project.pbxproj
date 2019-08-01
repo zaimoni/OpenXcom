@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5B0DC8AC22F300BD0092A513 /* md5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AB22F300BC0092A513 /* md5.cpp */; };
+		5B0DC8AF22F300E70092A513 /* RuleEnviroEffects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */; };
+		5B0DC8B222F300FA0092A513 /* RuleArcScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */; };
 		5B8049FD226F8E12004E517F /* GlobalManufactureState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */; };
 		5BD0BAD62242E009008E6DFB /* TechTreeSelectState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BAC02242E005008E6DFB /* TechTreeSelectState.cpp */; };
 		5BD0BAD72242E009008E6DFB /* TechTreeViewerState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BAC12242E005008E6DFB /* TechTreeViewerState.cpp */; };
@@ -486,6 +489,12 @@
 		1D30AB110D05D00D00671497 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		1D3623EB0D0F72F000981E51 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		1DF5F4DF0D08C38300B7A737 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		5B0DC8A022F300BC0092A513 /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
+		5B0DC8AB22F300BC0092A513 /* md5.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = md5.cpp; sourceTree = "<group>"; };
+		5B0DC8AD22F300E70092A513 /* RuleEnviroEffects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleEnviroEffects.h; sourceTree = "<group>"; };
+		5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleEnviroEffects.cpp; sourceTree = "<group>"; };
+		5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleArcScript.cpp; sourceTree = "<group>"; };
+		5B0DC8B122F300FA0092A513 /* RuleArcScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleArcScript.h; sourceTree = "<group>"; };
 		5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GlobalManufactureState.cpp; sourceTree = "<group>"; };
 		5B8049FC226F8E12004E517F /* GlobalManufactureState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GlobalManufactureState.h; sourceTree = "<group>"; };
 		5BD0BAB42242E004008E6DFB /* CraftPilotSelectState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CraftPilotSelectState.h; sourceTree = "<group>"; };
@@ -1357,6 +1366,8 @@
 		B28341D4201F6D4D00BAEC9D /* src */ = {
 			isa = PBXGroup;
 			children = (
+				5B0DC8AB22F300BC0092A513 /* md5.cpp */,
+				5B0DC8A022F300BC0092A513 /* md5.h */,
 				B28343BD201F6D9D00BAEC9D /* Basescape */,
 				B283430A201F6D9C00BAEC9D /* Battlescape */,
 				B2834264201F6D9C00BAEC9D /* Engine */,
@@ -2076,6 +2087,10 @@
 		B283440E201F6D9D00BAEC9D /* Mod */ = {
 			isa = PBXGroup;
 			children = (
+				5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */,
+				5B0DC8B122F300FA0092A513 /* RuleArcScript.h */,
+				5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */,
+				5B0DC8AD22F300E70092A513 /* RuleEnviroEffects.h */,
 				5BD0BB312242E0C0008E6DFB /* CustomPalettes.cpp */,
 				5BD0BB2E2242E0BF008E6DFB /* CustomPalettes.h */,
 				5BD0BB322242E0C1008E6DFB /* ModScript.h */,
@@ -2377,6 +2392,7 @@
 				B2834591201F6D9E00BAEC9D /* RuleVideo.cpp in Sources */,
 				B2834544201F6D9E00BAEC9D /* ToggleTextButton.cpp in Sources */,
 				B28344D7201F6D9E00BAEC9D /* AlienBase.cpp in Sources */,
+				5B0DC8AC22F300BD0092A513 /* md5.cpp in Sources */,
 				B28344B1201F6D9E00BAEC9D /* Screen.cpp in Sources */,
 				B2834514201F6D9E00BAEC9D /* CannotReequipState.cpp in Sources */,
 				B2834467201F6D9D00BAEC9D /* SaveGameState.cpp in Sources */,
@@ -2558,6 +2574,7 @@
 				B2834501201F6D9E00BAEC9D /* Camera.cpp in Sources */,
 				B28344FD201F6D9E00BAEC9D /* CommendationState.cpp in Sources */,
 				B283447D201F6D9D00BAEC9D /* OptionsControlsState.cpp in Sources */,
+				5B0DC8AF22F300E70092A513 /* RuleEnviroEffects.cpp in Sources */,
 				B2834529201F6D9E00BAEC9D /* Ufopaedia.cpp in Sources */,
 				B283458F201F6D9E00BAEC9D /* RuleUfo.cpp in Sources */,
 				B283459A201F6D9E00BAEC9D /* RuleSoldier.cpp in Sources */,
@@ -2692,6 +2709,7 @@
 				B2834599201F6D9E00BAEC9D /* UfoTrajectory.cpp in Sources */,
 				B2834502201F6D9E00BAEC9D /* UnitDieBState.cpp in Sources */,
 				B28344F6201F6D9E00BAEC9D /* ScannerState.cpp in Sources */,
+				5B0DC8B222F300FA0092A513 /* RuleArcScript.cpp in Sources */,
 				B28344EC201F6D9E00BAEC9D /* CraftWeaponProjectile.cpp in Sources */,
 				5BD0BB382242E0C1008E6DFB /* RuleSoldierTransformation.cpp in Sources */,
 				B28344B5201F6D9E00BAEC9D /* scalebit.cpp in Sources */,
