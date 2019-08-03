@@ -23,7 +23,6 @@
 #include <SDL.h>
 #include <SDL_mixer.h>
 #include <map>
-#include <unordered_map>
 #include <sstream>
 #include <iostream>
 #include <algorithm>
@@ -33,7 +32,6 @@
 #include "CrossPlatform.h"
 #include "FileMap.h"
 #include "Screen.h"
-#include "Unicode.h"
 
 namespace OpenXcom
 {
@@ -51,7 +49,7 @@ std::string _configFolder;
 std::vector<std::string> _userList;
 std::map<std::string, std::string> _commandLine;
 std::vector<OptionInfo> _info;
-std::unordered_map<std::string, ModInfo> _modInfos;
+std::map<std::string, ModInfo> _modInfos;
 std::string _masterMod;
 int _passwordCheck = -1;
 bool _loadLastSave = false;
@@ -584,7 +582,7 @@ static bool showHelp()
 	return false;
 }
 
-const std::unordered_map<std::string, ModInfo> &getModInfos() { return _modInfos; }
+const std::map<std::string, ModInfo> &getModInfos() { return _modInfos; }
 
 /**
  * Splits the game's User folder by master mod,
@@ -665,7 +663,7 @@ bool init()
 }
 
 // called from the dos screen state (StartState)
-void updateMods()
+void refreshMods()
 {
 	if (reload)
 	{
@@ -696,6 +694,8 @@ void updateMods()
 	_modInfos = FileMap::getModInfos();
 
 	// remove mods from list that no longer exist
+	bool nonMasterModFound = false;
+	std::map<std::string, bool> corruptedMasters;
 	for (auto i = mods.begin(); i != mods.end();)
 	{
 		auto modIt = _modInfos.find(i->first);
@@ -705,23 +705,32 @@ void updateMods()
 			i = mods.erase(i);
 			continue;
 		}
-		++i;
-	}
-	// sort mods if that's the first time we see any (one or two are added in _setDefaultMods())
-	if (mods.size() <= 2) {
-		std::unordered_set<std::string> seen_modrefs;
-		for (const auto& seen_modref: mods) {
-			seen_modrefs.insert(seen_modref.first);
-		}
-		for (const auto& i: _modInfos) {
-			if (seen_modrefs.find(i.first) == seen_modrefs.end()) {
-				mods.push_back(std::make_pair(i.first, false));
+		else
+		{
+			if ((*modIt).second.isMaster())
+			{
+				if (nonMasterModFound)
+				{
+					Log(LOG_ERROR) << "Removing master mod '" << i->first << "' from the list, because it is on a wrong position. It will be re-added automatically.";
+					corruptedMasters[i->first] = i->second;
+					i = mods.erase(i);
+					continue;
+				}
+			}
+			else
+			{
+				nonMasterModFound = true;
 			}
 		}
-		std::sort(mods.begin(), mods.end(),
-			[](const std::pair<std::string, bool>& a, const std::pair<std::string, bool> &b)
-				{ return Unicode::naturalCompare(a.first, b.first); });
+		++i;
 	}
+	// re-insert corrupted masters at the beginning of the list
+	for (auto j : corruptedMasters)
+	{
+		std::pair<std::string, bool> newMod(j.first, j.second);
+		mods.insert(mods.begin(), newMod);
+	}
+
 	// add in any new mods picked up from the scan and ensure there is but a single
 	// master active
 	std::string activeMaster;
@@ -808,13 +817,20 @@ void updateMods()
 	{
 		_masterMod = activeMaster;
 	}
+	save();
+}
 
+void updateMods()
+{
+	refreshMods();
 	FileMap::setup(getActiveMods(), embeddedOnly);
 	userSplitMasters();
 
 	// report active mods that don't meet the minimum OXCE requirements
+	Log(LOG_INFO) << "Active mods:";
 	for (auto& modInf : getActiveMods())
 	{
+		Log(LOG_INFO) << "- " << modInf->getId() << " v" << modInf->getVersion();
 		if (!modInf->isVersionOk())
 		{
 			Log(LOG_ERROR) << "Mod '" << modInf->getName() << "' requires at least OXCE v" << modInf->getRequiredExtendedVersion();
