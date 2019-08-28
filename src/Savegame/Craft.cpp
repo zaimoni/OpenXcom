@@ -982,30 +982,38 @@ void Craft::checkup()
  * @param target Pointer to target to compare.
  * @return True if it's detected, False otherwise.
  */
-bool Craft::detect(Target *target) const
+UfoDetection Craft::detect(const Ufo *target, bool alreadyTracked) const
 {
-	if (_stats.radarRange == 0 || !insideRadarRange(target))
-		return false;
+	auto distance = XcomDistance(getDistance(target));
 
+	auto detectionChance = 0;
+	auto detectionType = DETECTION_NONE;
+
+	if (distance < _stats.radarRange)
+	{
+		detectionType = DETECTION_RADAR;
+		if (alreadyTracked)
+		{
+			detectionChance = 100;
+		}
+		else
+		{
+			detectionChance = _stats.radarChance * (100 + target->getVisibility()) / 100;
+		}
+	}
 	// backward compatibility with vanilla
-	if (_stats.radarChance == 100)
-		return true;
+	else if (_stats.radarChance == 100)
+	{
+		detectionType = DETECTION_RADAR;
+		detectionChance = 100;
+	}
 
-	Ufo *u = dynamic_cast<Ufo*>(target);
-	int chance = _stats.radarChance * (100 + u->getVisibility()) / 100;
-	return RNG::percent(chance);
-}
+	ModScript::DetectUfoFromCraft::Output args { detectionType, detectionChance, };
+	ModScript::DetectUfoFromCraft::Worker work { target, distance, alreadyTracked, _stats.radarChance, _stats.radarRange, };
 
-/**
- * Returns if a certain target is inside the craft's
- * radar range, taking in account the positions of both.
- * @param target Pointer to target to compare.
- * @return True if inside radar range.
- */
-bool Craft::insideRadarRange(Target *target) const
-{
-	double range = Nautical(_stats.radarRange);
-	return (getDistance(target) <= range);
+	work.execute(target->getRules()->getScript<ModScript::DetectUfoFromCraft>(), args);
+
+	return RNG::percent(args.getSecond()) ? (UfoDetection)args.getFirst() : DETECTION_NONE;
 }
 
 /**
