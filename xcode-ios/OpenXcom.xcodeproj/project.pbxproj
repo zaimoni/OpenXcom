@@ -2765,7 +2765,7 @@
 		B235EF5C201C4DF200FF7AC3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++1z";
 				CLANG_CXX_LIBRARY = "libc++";
 				DEVELOPMENT_TEAM = 38S292YZ37;
 				GCC_OPTIMIZATION_LEVEL = s;
@@ -2791,7 +2791,7 @@
 		B235EF5D201C4DF200FF7AC3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++1z";
 				CLANG_CXX_LIBRARY = "libc++";
 				DEVELOPMENT_TEAM = 38S292YZ37;
 				GCC_OPTIMIZATION_LEVEL = 3;
