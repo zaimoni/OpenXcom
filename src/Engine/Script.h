@@ -349,7 +349,7 @@ class ScriptContainerEventsBase
 {
 	friend class ScriptParserEventsBase;
 	ScriptContainerBase _current;
-	const ScriptContainerBase* _events;
+	const ScriptContainerBase* _events = nullptr;
 
 public:
 	/// Test if is any script there.
@@ -1731,6 +1731,7 @@ public:
 	/// Constructor.
 	ScriptGroup(ScriptGlobal* shared, Master* master) : Parsers{ shared, master, }...
 	{
+		(void)master;
 		(void)helper::DummySeq
 		{
 			(shared->pushParser(&get<Parsers>()), 0)...,

@@ -422,64 +422,84 @@ void Base::setEngineers(int engineers)
  * Returns if a certain target is covered by the base's
  * radar range, taking in account the range and chance.
  * @param target Pointer to target to compare.
+ * @param alreadyDedected Was ufo already detected, `true` mean we track it without propability.
  * @return 0 - not detected, 1 - detected by conventional radar, 2 - detected by hyper-wave decoder.
  */
-int Base::detect(Target *target) const
+UfoDetection Base::detect(const Ufo *target, bool alreadyTracked) const
 {
-	int chance = 0;
-	double distance = getDistance(target) * 60.0 * (180.0 / M_PI);
+	auto distance = XcomDistance(getDistance(target));
+	auto hyperwave = false;
+	auto hyperwave_max_range = 0;
+	auto radar_max_range = 0;
+	auto radar_chance = 0;
+
 	for (std::vector<BaseFacility*>::const_iterator i = _facilities.begin(); i != _facilities.end(); ++i)
 	{
-		if ((*i)->getRules()->getRadarRange() >= distance && (*i)->getBuildTime() == 0)
+		if ((*i)->getBuildTime() != 0)
+		{
+			continue;
+		}
+		if ((*i)->getRules()->getRadarRange() >= distance)
 		{
 			int radarChance = (*i)->getRules()->getRadarChance();
 			if ((*i)->getRules()->isHyperwave())
 			{
 				if (radarChance == 100 || RNG::percent(radarChance))
 				{
-					return 2;
+					hyperwave = true;
 				}
 			}
 			else
 			{
-				chance += radarChance;
+				radar_chance += radarChance;
 			}
 		}
-	}
-	if (chance == 0) return 0;
-
-	Ufo *u = dynamic_cast<Ufo*>(target);
-	if (u != 0)
-	{
-		chance = chance * (100 + u->getVisibility()) / 100;
-	}
-
-	return RNG::percent(chance)? 1 : 0;
-}
-
-/**
- * Returns if a certain target is inside the base's
- * radar range, taking in account the positions of both.
- * @param target Pointer to target to compare.
- * @return 0 - outside radar range, 1 - inside conventional radar range, 2 - inside hyper-wave decoder range.
- */
-int Base::insideRadarRange(Target *target) const
-{
-	bool insideRange = false;
-	double distance = getDistance(target) * 60.0 * (180.0 / M_PI);
-	for (std::vector<BaseFacility*>::const_iterator i = _facilities.begin(); i != _facilities.end(); ++i)
-	{
-		if ((*i)->getRules()->getRadarRange() >= distance && (*i)->getBuildTime() == 0)
+		if ((*i)->getRules()->isHyperwave())
 		{
-			if ((*i)->getRules()->isHyperwave())
-			{
-				return 2;
-			}
-			insideRange = true;
+			hyperwave_max_range = std::max(hyperwave_max_range, (*i)->getRules()->getRadarRange());
+		}
+		else
+		{
+			radar_max_range = std::max(radar_max_range, (*i)->getRules()->getRadarRange());
 		}
 	}
 
-	return insideRange? 1 : 0;
+	auto detectionChance = 0;
+	auto detectionType = DETECTION_NONE;
+
+	if (alreadyTracked)
+	{
+		if (hyperwave)
+		{
+			detectionType = DETECTION_HYPERWAVE;
+			detectionChance = 100;
+		}
+		else if (radar_chance > 0)
+		{
+			detectionType = DETECTION_RADAR;
+			detectionChance = 100;
+		}
+	}
+	else
+	{
+		if (hyperwave)
+		{
+			detectionType = DETECTION_HYPERWAVE;
+			detectionChance = 100;
+		}
+		else if (radar_chance > 0)
+		{
+			detectionType = DETECTION_RADAR;
+			detectionChance = radar_chance * (100 + target->getVisibility()) / 100;
+		}
+	}
+
+	ModScript::DetectUfoFromBase::Output args { detectionType, detectionChance, };
+	ModScript::DetectUfoFromBase::Worker work { target, distance, alreadyTracked, radar_chance, radar_max_range, hyperwave_max_range, };
+
+	work.execute(target->getRules()->getScript<ModScript::DetectUfoFromBase>(), args);
+
+	return RNG::percent(args.getSecond()) ? (UfoDetection)args.getFirst() : DETECTION_NONE;
 }
 
 /**

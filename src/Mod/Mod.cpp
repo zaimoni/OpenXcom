@@ -844,7 +844,7 @@ SoundSet *Mod::getSoundSet(const std::string &name, bool error) const
  * @param sound ID of the sound.
  * @return Pointer to the sound.
  */
-Sound *Mod::getSound(const std::string &set, unsigned int sound, bool error) const
+Sound *Mod::getSound(const std::string &set, int sound, bool error) const
 {
 	if (Options::mute)
 	{
@@ -1590,7 +1590,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		RuleUfo *rule = loadRule(*i, &_ufos, &_ufosIndex);
 		if (rule != 0)
 		{
-			rule->load(*i, this);
+			rule->load(*i, parsers, this);
 		}
 	}
 	for (YAML::const_iterator i = doc["invs"].begin(); i != doc["invs"].end(); ++i)

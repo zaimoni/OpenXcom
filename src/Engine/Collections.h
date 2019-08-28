@@ -31,42 +31,38 @@ namespace OpenXcom
 class Collections
 {
 public:
+	/**
+	 * Delete can be only used on owning pointers, to make clear diffrence to removeAll we reject case when it is used on colection without pointers.
+	 * @param p
+	 */
 	template<typename T>
 	static void deleteAll(const T& p)
 	{
-		//nothing
+		static_assert(sizeof(T) == 0, "deleteAll can be only used on pointers and colection of pointers");
 	}
 	template<typename T>
 	static void deleteAll(T* p)
 	{
 		delete p;
 	}
-	template<typename T>
-	static void deleteAll(std::vector<T>& vec)
-	{
-		for (auto p : vec)
-		{
-			deleteAll(p);
-		}
-		removeAll(vec);
-	}
-	template<typename T>
-	static void deleteAll(std::list<T>& list)
-	{
-		for (auto p : list)
-		{
-			deleteAll(p);
-		}
-		removeAll(list);
-	}
 	template<typename K, typename V>
-	static void deleteAll(std::map<K, V>& map)
+	static void deleteAll(std::pair<const K, V>& p)
 	{
-		for (auto p : map)
+		deleteAll(p.second);
+	}
+
+	/**
+	 * Delete all pointers from container, it can be nested.
+	 * SFINAE, valid only if type look like container.
+	 */
+	template<typename C, typename = decltype(std::declval<C>().begin()), typename = decltype(std::declval<C>().end())>
+	static void deleteAll(C& colection)
+	{
+		for (auto p : colection)
 		{
-			deleteAll(p.second);
+			deleteAll(p);
 		}
-		removeAll(map);
+		removeAll(colection);
 	}
 
 	/**
@@ -93,6 +89,18 @@ public:
 				}
 			}
 		);
+	}
+
+	/**
+	 * Remove and delete (if pointer) items from colection.
+	 * @param colection Ccolection from witch remove items
+	 * @param func Test what should be removed, can modyfy everyting except this colection
+	 * @return Number of values left in colection
+	 */
+	template<typename C, typename F>
+	static int deleteIf(C& colection, F&& func)
+	{
+		return deleteIf(colection, colection.size(), std::forward<F>(func));
 	}
 
 	/**
@@ -180,6 +188,18 @@ public:
 			}
 		}
 		return numberToRemove;
+	}
+
+	/**
+	 * Remove items from colection.
+	 * @param list List from witch remove items
+	 * @param func Test what should be removed, can modyfy everyting except this colection
+	 * @return Number of values left in colection
+	 */
+	template<typename C, typename F>
+	static int removeIf(C& colection, F&& func)
+	{
+		return removeIf(colection, colection.size(), std::forward<F>(func));
 	}
 
 	template<typename C, typename Predicate, typename Callback>

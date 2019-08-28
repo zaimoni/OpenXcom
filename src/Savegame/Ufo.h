@@ -33,6 +33,13 @@ class SavedGame;
 class Mod;
 class Waypoint;
 
+enum UfoDetection : int
+{
+	DETECTION_NONE = 0x00,
+	DETECTION_RADAR = 0x01,
+	DETECTION_HYPERWAVE = 0x03,
+};
+
 /**
  * Represents an alien UFO on the map.
  * Contains variable info about a UFO like
@@ -44,6 +51,12 @@ class Ufo : public MovingTarget
 public:
 	static const char *ALTITUDE_STRING[];
 	enum UfoStatus { FLYING, LANDED, CRASHED, DESTROYED };
+
+	/// Name of class used in script.
+	static constexpr const char *ScriptName = "Ufo";
+	/// Register all useful function used by script.
+	static void ScriptRegister(ScriptParserBase* parser);
+
 private:
 	const RuleUfo *_rules;
 	int _uniqueId;

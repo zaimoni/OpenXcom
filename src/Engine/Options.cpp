@@ -163,6 +163,7 @@ void create()
 	_info.push_back(OptionInfo("touchEnabled", &touchEnabled, false));
 #endif
 	_info.push_back(OptionInfo("rootWindowedMode", &rootWindowedMode, false));
+	_info.push_back(OptionInfo("rawScreenShots", &rawScreenShots, false));
 	// SDL2 scaler options
 	_info.push_back(OptionInfo("renderer", &renderer, "SDL"));
 	_info.push_back(OptionInfo("scalerName", &scalerName, "nearest"));
