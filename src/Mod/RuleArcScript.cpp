@@ -23,11 +23,11 @@ namespace OpenXcom
 
 /**
  * RuleArcScript: the (optional) rules for the high-level game progression.
- * Each script element is independant, and the saved game will probe the list of these each month to determine what's going to happen.
+ * Each script element is independent, and the saved game will probe the list of these each month to determine what's going to happen.
  * Arc scripts are executed just before the mission scripts and unlock research topics that can then be used by mission scripts.
  */
 RuleArcScript::RuleArcScript(const std::string& type) :
-	_type(type), _firstMonth(0), _lastMonth(-1), _executionOdds(100), _maxArcs(-1), _minDifficulty(0), _maxDifficulty(4)
+	_type(type), _firstMonth(0), _lastMonth(-1), _executionOdds(100), _maxArcs(-1), _minDifficulty(0), _maxDifficulty(4), _minScore(-999999), _maxScore(999999)
 {
 }
 
@@ -60,7 +60,10 @@ void RuleArcScript::load(const YAML::Node& node)
 	_maxArcs = node["maxArcs"].as<int>(_maxArcs);
 	_minDifficulty = node["minDifficulty"].as<int>(_minDifficulty);
 	_maxDifficulty = node["maxDifficulty"].as<int>(_maxDifficulty);
+	_minScore = node["minScore"].as<int>(_minScore);
+	_maxScore = node["maxScore"].as<int>(_maxScore);
 	_researchTriggers = node["researchTriggers"].as<std::map<std::string, bool> >(_researchTriggers);
+	_itemTriggers = node["itemTriggers"].as<std::map<std::string, bool> >(_itemTriggers);
 }
 
 }

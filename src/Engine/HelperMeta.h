@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright 2010-2015 OpenXcom Developers.
  *
@@ -16,10 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_HELPERMETA_H
-#define OPENXCOM_HELPERMETA_H
-
 #include <initializer_list>
 
 namespace OpenXcom
@@ -57,7 +54,7 @@ struct PosTag
 };
 
 /**
- * Tag class with list of ints.
+ * Tag class with list of integers.
  */
 template<int... I>
 struct ListTag
@@ -66,13 +63,13 @@ struct ListTag
 };
 
 /**
- * Implemetation used to create ListTag.
+ * Implementation used to create ListTag.
  */
 template<typename PT>
 struct ImplMakeListTagAdd;
 
 /**
- * Implemetation used to create ListTag.
+ * Implementation used to create ListTag.
  */
 template<int... I>
 struct ImplMakeListTagAdd<ListTag<I...>>
@@ -81,7 +78,7 @@ struct ImplMakeListTagAdd<ListTag<I...>>
 };
 
 /**
- * Implemetation used to create ListTag.
+ * Implementation used to create ListTag.
  */
 template<int I>
 struct ImplMakeListTag
@@ -90,7 +87,7 @@ struct ImplMakeListTag
 };
 
 /**
- * Implemetation used to create ListTag.
+ * Implementation used to create ListTag.
  */
 template<>
 struct ImplMakeListTag<0>
@@ -111,7 +108,7 @@ template<typename T>
 using Decay = typename std::decay<T>::type;
 
 /**
- * Helper used to deley static assertion error test.
+ * Helper used to delay static assertion error test.
  */
 template<typename>
 struct StaticError
@@ -123,7 +120,3 @@ struct StaticError
 } //namespace helper
 
 } //namespace OpenXcom
-
-
-#endif /* OPENXCOM_HELPERMETA_H */
-

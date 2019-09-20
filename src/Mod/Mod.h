@@ -63,6 +63,7 @@ class ArticleDefinition;
 class RuleInventory;
 class RuleResearch;
 class RuleManufacture;
+class RuleSoldierBonus;
 class RuleSoldierTransformation;
 class AlienRace;
 class RuleEnviroEffects;
@@ -87,6 +88,8 @@ class ModInfo;
 class RuleVideo;
 class RuleMusic;
 class RuleArcScript;
+class RuleEventScript;
+class RuleEvent;
 class RuleMissionScript;
 class ModScript;
 class ModScriptGlobal;
@@ -151,6 +154,7 @@ private:
 	bool _inventoryOverlapsPaperdoll;
 	std::map<std::string, RuleResearch *> _research;
 	std::map<std::string, RuleManufacture *> _manufacture;
+	std::map<std::string, RuleSoldierBonus *> _soldierBonus;
 	std::map<std::string, RuleSoldierTransformation *> _soldierTransformation;
 	std::map<std::string, UfoTrajectory *> _ufoTrajectories;
 	std::map<std::string, RuleAlienMission *> _alienMissions;
@@ -161,6 +165,8 @@ private:
 	std::map<std::string, std::vector<MapScript *> > _mapScripts;
 	std::map<std::string, RuleCommendations *> _commendations;
 	std::map<std::string, RuleArcScript*> _arcScripts;
+	std::map<std::string, RuleEventScript*> _eventScripts;
+	std::map<std::string, RuleEvent*> _events;
 	std::map<std::string, RuleMissionScript*> _missionScripts;
 	std::map<std::string, std::vector<ExtraSprites *> > _extraSprites;
 	std::map<std::string, CustomPalettes *> _customPalettes;
@@ -215,15 +221,20 @@ private:
 	std::map<int, std::string> _missionRatings, _monthlyRatings;
 	std::map<std::string, std::string> _fixedUserOptions;
 	std::vector<std::string> _hiddenMovementBackgrounds;
+	std::vector<std::string> _baseNamesFirst, _baseNamesMiddle, _baseNamesLast;
+	std::vector<std::string> _operationNamesFirst, _operationNamesLast;
 	bool _disableUnderwaterSounds;
+	bool _enableUnitResponseSounds;
+	std::map<std::string, std::vector<int> > _selectUnitSound, _startMovingSound, _selectWeaponSound, _annoyedSound;
 	std::vector<int> _flagByKills;
 	int _pediaReplaceCraftFuelWithRangeType;
 	StatAdjustment _statAdjustment[5];
 
 	std::map<std::string, int> _ufopaediaSections;
 	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
-	std::vector<std::string> _soldiersIndex, _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex, _soldierTransformationIndex;
-	std::vector<std::string> _alienMissionsIndex, _terrainIndex, _customPalettesIndex, _arcScriptIndex, _missionScriptIndex;
+	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
+	std::vector<std::string> _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex;
+	std::vector<std::string> _alienMissionsIndex, _terrainIndex, _customPalettesIndex, _arcScriptIndex, _eventScriptIndex, _eventIndex, _missionScriptIndex;
 	std::vector<std::vector<int> > _alienItemLevels;
 	std::vector<SDL_Color> _transparencies;
 	int _facilityListOrder, _craftListOrder, _itemCategoryListOrder, _itemListOrder, _researchListOrder,  _manufactureListOrder, _transformationListOrder, _ufopaediaListOrder, _invListOrder, _soldierListOrder;
@@ -309,6 +320,7 @@ public:
 	static std::string DEBRIEF_MUSIC_BAD;
 	static int DIFFICULTY_COEFFICIENT[5];
 	static int DIFFICULTY_BASED_RETAL_DELAY[5];
+	static int UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
 	// reset all the statics in all classes to default values
 	static void resetGlobalStatics();
 
@@ -459,16 +471,14 @@ public:
 	int getMaxViewDistance() const { return _maxViewDistance; }
 	/// Gets threshold of darkness for LoS calculation.
 	int getMaxDarknessToSeeUnits() const { return _maxDarknessToSeeUnits; }
-	/// Gets max static (tiles & fire) ligth distance in BattleScape.
+	/// Gets max static (tiles & fire) light distance in BattleScape.
 	int getMaxStaticLightDistance() const { return _maxStaticLightDistance; }
-	/// Gets max dynamic (items & units) ligth distance in BattleScape.
+	/// Gets max dynamic (items & units) light distance in BattleScape.
 	int getMaxDynamicLightDistance() const { return _maxDynamicLightDistance; }
 	/// Get flags for enhanced lighting, 0x1 - tiles and fire, 0x2 - items, 0x4 - units.
 	int getEnhancedLighting() const { return _enhancedLighting; }
 	/// Get basic damage type
 	const RuleDamageType *getDamageType(ItemDamageType type) const;
-	/// Gets the cost of a soldier.
-	int getSoldierCost() const;
 	/// Gets the cost of hiring an engineer.
 	int getHireEngineerCost() const;
 	/// Gets the cost of hiring a scientist.
@@ -627,6 +637,10 @@ public:
 	RuleManufacture *getManufacture (const std::string &id, bool error = false) const;
 	/// Gets the list of all manufacture projects.
 	const std::vector<std::string> &getManufactureList() const;
+	/// Gets the ruleset for a specific soldier bonus type.
+	RuleSoldierBonus *getSoldierBonus(const std::string &id, bool error = false) const;
+	/// Gets the list of all soldier bonus types.
+	const std::vector<std::string> &getSoldierBonusList() const;
 	/// Gets the ruleset for a specific soldier transformation project.
 	RuleSoldierTransformation *getSoldierTransformation(const std::string &id, bool error = false) const;
 	/// Gets the list of all soldier transformation projects.
@@ -693,6 +707,10 @@ public:
 	const std::map<std::string, RuleMusic *> *getMusic() const;
 	const std::vector<std::string>* getArcScriptList() const;
 	RuleArcScript* getArcScript(const std::string& name, bool error = false) const;
+	const std::vector<std::string>* getEventScriptList() const;
+	RuleEventScript* getEventScript(const std::string& name, bool error = false) const;
+	const std::vector<std::string>* getEventList() const;
+	RuleEvent* getEvent(const std::string& name, bool error = false) const;
 	const std::vector<std::string> *getMissionScriptList() const;
 	RuleMissionScript *getMissionScript(const std::string &name, bool error = false) const;
 	/// Get global script data.
@@ -703,6 +721,16 @@ public:
 	const std::map<int, std::string> *getMonthlyRatings() const;
 	const std::map<std::string, std::string> &getFixedUserOptions() const;
 	const std::vector<std::string> &getHiddenMovementBackgrounds() const;
+	const std::vector<std::string> &getBaseNamesFirst() const { return _baseNamesFirst; }
+	const std::vector<std::string> &getBaseNamesMiddle() const { return _baseNamesMiddle; }
+	const std::vector<std::string> &getBaseNamesLast() const { return _baseNamesLast; }
+	const std::vector<std::string> &getOperationNamesFirst() const { return _operationNamesFirst; }
+	const std::vector<std::string> &getOperationNamesLast() const { return _operationNamesLast; }
+	bool getEnableUnitResponseSounds() const { return _enableUnitResponseSounds; }
+	const std::map<std::string, std::vector<int> > &getSelectUnitSounds() const { return _selectUnitSound; }
+	const std::map<std::string, std::vector<int> > &getStartMovingSounds() const { return _startMovingSound; }
+	const std::map<std::string, std::vector<int> > &getSelectWeaponSounds() const { return _selectWeaponSound; }
+	const std::map<std::string, std::vector<int> > &getAnnoyedSounds() const { return _annoyedSound; }
 	const std::vector<int> &getFlagByKills() const;
 	StatAdjustment *getStatAdjustment(int difficulty);
 	int getDefeatScore() const;

@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright 2010-2015 OpenXcom Developers.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_SCRIPTBIND_H
-#define	OPENXCOM_SCRIPTBIND_H
-
 #include "Script.h"
 #include "Exception.h"
 #include "Logger.h"
@@ -29,8 +27,8 @@ namespace OpenXcom
 
 
 /**
- * Hack needed by Clang 6.0 to propery transfer `auto` template parameters,
- * This need be macro becasue GCC 7.4 fail on this hack,
+ * Hack needed by Clang 6.0 to properly transfer `auto` template parameters,
+ * This need be macro because GCC 7.4 fail on this hack,
  * VS look it could handle both cases
  */
 #ifdef __clang__
@@ -112,17 +110,17 @@ struct ParserWriter
 			ScriptContainerBase& c,
 			const ScriptParserBase& d);
 
-	/// Finall fixes of data.
+	/// Final fixes of data.
 	void relese();
 
-	/// Get referece based on name.
+	/// Get reference based on name.
 	ScriptRefData getReferece(const ScriptRef& s) const;
-	/// Add referece based.
+	/// Add reference based.
 	ScriptRefData addReferece(const ScriptRefData& data);
 
 	/// Get current position in proc vector.
 	ProgPos getCurrPos() const;
-	/// Get distance betwean two positions in proc vector.
+	/// Get distance between two positions in proc vector.
 	size_t getDiffPos(ProgPos begin, ProgPos end) const;
 
 	/// Push zeros to fill empty space.
@@ -136,7 +134,7 @@ struct ParserWriter
 	{
 		return { ParserWriter::push(sizeof(T)) };
 	}
-	/// Setting previosly prepared place with value.
+	/// Setting previously prepared place with value.
 	template<typename T>
 	void updateReserved(ReservedPos<T> pos, T value)
 	{
@@ -149,7 +147,7 @@ struct ParserWriter
 	/// Pushing proc operation id on proc vector.
 	ReservedPos<ProcOp> pushProc(Uint8 procId);
 
-	/// Updating previosoly added proc operation id.
+	/// Updating previously added proc operation id.
 	void updateProc(ReservedPos<ProcOp> pos, int procOffset);
 
 	/// Try pushing label arg on proc vector. Can't use this to create loop back label.
@@ -459,7 +457,7 @@ struct ArgColection<MaxSize>
 	}
 	static int parse(ParserWriter& ph, const ScriptRefData* begin, const ScriptRefData* end)
 	{
-		//we shoud have used all avaiable tokens.
+		//we should have used all available tokens.
 		if (begin == end)
 		{
 			return 0;
@@ -478,7 +476,7 @@ struct ArgColection<MaxSize>
 };
 
 ////////////////////////////////////////////////////////////
-//						Arguments impl
+//						Arguments implementation
 ////////////////////////////////////////////////////////////
 
 struct ArgContextDef : ArgInternal<ArgContextDef>
@@ -985,7 +983,7 @@ struct BindFunc<X>
 template<typename T, typename P, typename... Args, P*(T::*X)(Args...)>
 struct BindFunc<X>
 {
-	static RetEnum func(T* t, const P*& r, Args... a)
+	static RetEnum func(T* t, P*& r, Args... a)
 	{
 		if (t) r = (t->*X)(std::forward<Args>(a)...); else r = {};
 		return RetContinue;
@@ -1146,6 +1144,3 @@ struct Bind : BindBase
 };
 
 } //namespace OpenXcom
-
-#endif	/* OPENXCOM_SCRIPTBIND_H */
-

@@ -65,12 +65,12 @@ NewResearchListState::NewResearchListState(Base *base, bool sortByCost) : _base(
 	add(_lstResearch, "list", "selectNewResearch");
 
 	_colorNormal = _lstResearch->getColor();
-	_colorNew = Options::oxceHighlightNewTopics ? _lstResearch->getSecondaryColor() : _colorNormal;
+	_colorNew = Options::oxceHighlightNewTopicsHidden ? _lstResearch->getSecondaryColor() : _colorNormal;
 
 	centerAllSurfaces();
 
 	// Set up objects
-	_window->setBackground(_game->getMod()->getSurface("BACK05.SCR"));
+	setWindowBackground(_window, "selectNewResearch");
 
 	_btnOK->setText(tr("STR_OK"));
 	_btnOK->onMouseClick((ActionHandler)&NewResearchListState::btnOKClick);
@@ -124,7 +124,7 @@ void NewResearchListState::onSelectProject(Action *)
 */
 void NewResearchListState::onToggleProjectStatus(Action *)
 {
-	if (!Options::oxceHighlightNewTopics)
+	if (!Options::oxceHighlightNewTopicsHidden)
 		return;
 
 	// change status

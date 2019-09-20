@@ -1,6 +1,6 @@
 #pragma once
 /*
- * Copyright 2010-2018 OpenXcom Developers.
+ * Copyright 2010-2019 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,34 +17,42 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <vector>
+#include <string>
 #include "../Engine/State.h"
 
 namespace OpenXcom
 {
 
-class Surface;
-class Text;
+class Base;
 class TextButton;
+class Window;
+class Text;
+class TextList;
 
 /**
- * Easter Egg.
+ * SoldierBonus window displays all soldier bonuses.
  */
-class HelloCommanderState : public State
+class SoldierBonusState : public State
 {
 private:
-	Surface *_bg;
-	Text *_txtMessage;
-	TextButton *_btnOk;
-	bool _exit;
+	Base *_base;
+	size_t _soldier;
+	std::vector<std::string> _bonuses;
+
+	TextButton *_btnCancel;
+	Window *_window;
+	Text *_txtTitle, *_txtType;
+	TextList *_lstBonuses;
 public:
-	/// Creates the HelloCommander state.
-	HelloCommanderState();
-	/// Cleans up the HelloCommander state.
-	~HelloCommanderState();
-	/// Initializes the state.
-	void init() override;
-	/// Handler for clicking the OK button.
-	void btnOkClick(Action *action);
+	/// Creates the SoldierBonus state.
+	SoldierBonusState(Base *base, size_t soldier);
+	/// Cleans up the SoldierBonus state.
+	~SoldierBonusState();
+	/// Handler for clicking the Cancel button.
+	void btnCancelClick(Action *action);
+	/// Handler for clicking the Bonuses list.
+	void lstBonusesClick(Action *action);
 };
 
 }

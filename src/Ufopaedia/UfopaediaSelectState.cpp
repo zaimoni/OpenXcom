@@ -63,11 +63,11 @@ namespace OpenXcom
 		add(_lstSelection, "list", "ufopaedia");
 
 		_colorNormal = _lstSelection->getColor();
-		_colorNew = Options::oxceHighlightNewTopics ? _lstSelection->getSecondaryColor() : _colorNormal;
+		_colorNew = Options::oxceHighlightNewTopicsHidden ? _lstSelection->getSecondaryColor() : _colorNormal;
 
 		centerAllSurfaces();
 
-		_window->setBackground(_game->getMod()->getSurface("BACK01.SCR"));
+		setWindowBackground(_window, "ufopaedia");
 
 		_txtTitle->setBig();
 		_txtTitle->setAlign(ALIGN_CENTER);
@@ -145,7 +145,7 @@ namespace OpenXcom
 	 */
 	void UfopaediaSelectState::lstSelectionClickRight(Action *)
 	{
-		if (!Options::oxceHighlightNewTopics)
+		if (!Options::oxceHighlightNewTopicsHidden)
 			return;
 
 		// change status

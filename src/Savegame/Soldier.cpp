@@ -33,6 +33,7 @@
 #include "../Mod/Mod.h"
 #include "../Mod/StatString.h"
 #include "../Mod/RuleSoldierTransformation.h"
+#include "../Mod/RuleCommendations.h"
 
 namespace OpenXcom
 {
@@ -131,9 +132,9 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 	}
 	_armor = armor;
 	if (node["replacedArmor"])
-		_replacedArmor = mod->getArmor(node["replacedArmor"].as<std::string>());;
+		_replacedArmor = mod->getArmor(node["replacedArmor"].as<std::string>());
 	if (node["transformedArmor"])
-		_transformedArmor = mod->getArmor(node["transformedArmor"].as<std::string>());;
+		_transformedArmor = mod->getArmor(node["transformedArmor"].as<std::string>());
 	_psiTraining = node["psiTraining"].as<bool>(_psiTraining);
 	_training = node["training"].as<bool>(_training);
 	_returnToTrainingWhenHealed = node["returnToTrainingWhenHealed"].as<bool>(_returnToTrainingWhenHealed);
@@ -174,6 +175,7 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 	calcStatString(mod->getStatStrings(), (Options::psiStrengthEval && save->isResearched(mod->getPsiRequirements())));
 	_corpseRecovered = node["corpseRecovered"].as<bool>(_corpseRecovered);
 	_previousTransformations = node["previousTransformations"].as<std::map<std::string, int > >(_previousTransformations);
+	_transformationBonuses = node["transformationBonuses"].as<std::map<std::string, int > >(_transformationBonuses);
 	_scriptValues.load(node, shared);
 }
 
@@ -230,8 +232,13 @@ YAML::Node Soldier::save(const ScriptGlobal *shared) const
 	{
 		node["diary"] = _diary->save();
 	}
-	node["corpseRecovered"] = _corpseRecovered;
-	node["previousTransformations"] = _previousTransformations;
+	if (_corpseRecovered)
+		node["corpseRecovered"] = _corpseRecovered;
+	if (!_previousTransformations.empty())
+		node["previousTransformations"] = _previousTransformations;
+	if (!_transformationBonuses.empty())
+		node["transformationBonuses"] = _transformationBonuses;
+
 	_scriptValues.save(node, shared);
 
 	return node;
@@ -535,7 +542,7 @@ void Soldier::setLookVariant(int lookVariant)
 
 /**
  * Returns the soldier's rules.
- * @return rulesoldier
+ * @return rule soldier
  */
 RuleSoldier *Soldier::getRules() const
 {
@@ -859,7 +866,7 @@ void Soldier::trainPsi()
 
 	_improvement = _psiStrImprovement = 0;
 	// -10 days - tolerance threshold for switch from anytimePsiTraining option.
-	// If soldier has psiskill -10..-1, he was trained 20..59 days. 81.7% probability, he was trained more that 30 days.
+	// If soldier has psi skill -10..-1, he was trained 20..59 days. 81.7% probability, he was trained more that 30 days.
 	if (_currentStats.psiSkill < -10 + _rules->getMinStats().psiSkill)
 		_currentStats.psiSkill = _rules->getMinStats().psiSkill;
 	else if (_currentStats.psiSkill <= _rules->getMaxStats().psiSkill)
@@ -1291,6 +1298,12 @@ void Soldier::transform(const Mod *mod, RuleSoldierTransformation *transformatio
 		}
 	}
 
+	// Reset performed transformations (on the destination soldier), if needed
+	if (transformationRule->getReset())
+	{
+		_previousTransformations.clear();
+	}
+
 	// Remember the performed transformation (on the source soldier)
 	auto& history = sourceSoldier->getPreviousTransformations();
 	auto it = history.find(transformationRule->getName());
@@ -1301,6 +1314,26 @@ void Soldier::transform(const Mod *mod, RuleSoldierTransformation *transformatio
 	else
 	{
 		history[transformationRule->getName()] = 1;
+	}
+
+	// Reset soldier bonuses, if needed
+	if (transformationRule->getReset())
+	{
+		_transformationBonuses.clear();
+	}
+
+	// Award a soldier bonus, if defined
+	if (!transformationRule->getSoldierBonusType().empty())
+	{
+		auto it = _transformationBonuses.find(transformationRule->getSoldierBonusType());
+		if (it != _transformationBonuses.end())
+		{
+			it->second += 1;
+		}
+		else
+		{
+			_transformationBonuses[transformationRule->getSoldierBonusType()] = 1;
+		}
 	}
 }
 
@@ -1359,6 +1392,44 @@ UnitStats Soldier::calculateStatChanges(const Mod *mod, RuleSoldierTransformatio
 	}
 
 	return statChange;
+}
+
+/**
+ * Gets all the soldier bonuses
+ * @return The map of soldier bonuses
+ */
+std::map<RuleSoldierBonus*, int> *Soldier::getBonuses(const Mod *mod, bool rebuild)
+{
+	if (rebuild && mod)
+	{
+		_bonusCache.clear();
+		for (auto bonusName : _transformationBonuses)
+		{
+			auto bonusRule = mod->getSoldierBonus(bonusName.first, false);
+			if (bonusRule)
+			{
+				_bonusCache[bonusRule] += bonusName.second;
+			}
+		}
+		for (auto commendation : *_diary->getSoldierCommendations())
+		{
+			auto commendationRule = mod->getCommendation(commendation->getType(), false);
+			if (commendationRule)
+			{
+				auto bonusName = commendationRule->getSoldierBonus(commendation->getDecorationLevelInt());
+				if (bonusName)
+				{
+					auto bonusRule = mod->getSoldierBonus(*bonusName, false);
+					if (bonusRule)
+					{
+						_bonusCache[bonusRule] += 1;
+					}
+				}
+			}
+		}
+	}
+
+	return &_bonusCache;
 }
 
 

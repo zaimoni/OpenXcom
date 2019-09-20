@@ -61,6 +61,7 @@ private:
 	std::vector<Production *> _productions;
 	bool _inBattlescape;
 	bool _retaliationTarget;
+	bool _fakeUnderwater;
 	std::vector<Vehicle*> _vehicles;
 	std::vector<Vehicle*> _vehiclesFromBase;
 	std::vector<BaseFacility*> _defenses;
@@ -214,6 +215,10 @@ public:
 	void setRetaliationTarget(bool mark = true);
 	/// Gets the retaliation status of this base.
 	bool getRetaliationTarget() const;
+	/// Mark/unmark this base as a fake underwater base.
+	void setFakeUnderwater(bool fakeUnderwater) { _fakeUnderwater = fakeUnderwater; }
+	/// Is this a fake underwater base?
+	bool isFakeUnderwater() const { return _fakeUnderwater; }
 	/// Get the detection chance for this base.
 	size_t getDetectionChance() const;
 	/// Gets how many Grav Shields the base has
@@ -240,7 +245,7 @@ public:
 	std::vector<std::string> getProvidedBaseFunc(const BaseFacility *skip = 0) const;
 	/// Gets used base functionality.
 	std::vector<std::string> getRequireBaseFunc(const BaseFacility *skip = 0) const;
-	/// Gets forbiden base functionality.
+	/// Gets forbidden base functionality.
 	std::vector<std::string> getForbiddenBaseFunc() const;
 	/// Gets future base functionality.
 	std::vector<std::string> getFutureBaseFunc() const;

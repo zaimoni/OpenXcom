@@ -41,6 +41,7 @@ struct DeploymentData
 	int lowQty, highQty, dQty, extraQty;
 	int percentageOutsideUfo;
 	std::vector<ItemSet> itemSets, extraRandomItems;
+	DeploymentData() : alienRank(0), lowQty(0), highQty(0), dQty(0), extraQty(0), percentageOutsideUfo(0) { }
 };
 struct BriefingData
 {
@@ -83,7 +84,7 @@ private:
 	std::string _markerName, _objectivePopup, _objectiveCompleteText, _objectiveFailedText;
 	WeightedOptions _genMission;
 	int _markerIcon, _durationMin, _durationMax, _minDepth, _maxDepth, _genMissionFrequency, _genMissionLimit;
-	int _objectiveType, _objectivesRequired, _objectiveCompleteScore, _objectiveFailedScore, _despawnPenalty, _points, _turnLimit, _cheatTurn;
+	int _objectiveType, _objectivesRequired, _objectiveCompleteScore, _objectiveFailedScore, _despawnPenalty, _abortPenalty, _points, _turnLimit, _cheatTurn;
 	ChronoTrigger _chronoTrigger;
 	bool _keepCraftAfterFailedMission;
 	EscapeType _escapeType;
@@ -164,10 +165,6 @@ public:
 	int getMinDepth() const;
 	/// Gets the maximum depth.
 	int getMaxDepth() const;
-	/// Gets the minimum site depth.
-	int getMinSiteDepth() const;
-	/// Gets the maximum site depth.
-	int getMaxSiteDepth() const;
 	/// Gets the target type for this mission.
 	int getObjectiveType() const;
 	/// Gets a fixed number of objectives requires (if any).
@@ -180,6 +177,8 @@ public:
 	bool getObjectiveFailedInfo(std::string &text, int &score) const;
 	/// Gets the score penalty XCom receives for ignoring this site.
 	int getDespawnPenalty() const;
+	/// Gets the score penalty XCom receives for aborting this mission.
+	int getAbortPenalty() const { return _abortPenalty; }
 	/// Gets the (half hourly) score penalty XCom receives for this site existing.
 	int getPoints() const;
 	/// Gets the turn limit for this deployment.

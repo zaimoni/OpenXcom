@@ -57,7 +57,6 @@
 #include "../Savegame/BaseFacility.h"
 #include <sstream>
 #include "../Menu/ErrorMessageState.h"
-#include "../Menu/HelloCommanderState.h"
 #include "../Menu/MainMenuState.h"
 #include "../Interface/Cursor.h"
 #include "../Engine/Options.h"
@@ -168,7 +167,7 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 	centerAllSurfaces();
 
 	// Set up objects
-	_window->setBackground(_game->getMod()->getSurface("BACK01.SCR"));
+	setWindowBackground(_window, "debriefing");
 
 	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&DebriefingState::btnOkClick);
@@ -821,9 +820,6 @@ void DebriefingState::btnOkClick(Action *)
 	}
 	_game->getSavedGame()->setBattleGame(0);
 	_game->popState();
-
-	_game->pushState(new HelloCommanderState);
-
 	if (_game->getSavedGame()->getMonthsPassed() == -1)
 	{
 		_game->setState(new MainMenuState);
@@ -991,13 +987,14 @@ void DebriefingState::prepareDebriefing()
 	{
 		ruleDeploy = alienCustomMission;
 	}
-	// OXCE+: Don't forget about UFO landings/crash sites
+	// OXCE: Don't forget about UFO landings/crash sites
 	if (!ruleDeploy)
 	{
 		for (std::vector<Ufo*>::iterator ufo = _game->getSavedGame()->getUfos()->begin(); ufo != _game->getSavedGame()->getUfos()->end(); ++ufo)
 		{
 			if ((*ufo)->isInBattlescape())
 			{
+				// Note: fake underwater UFO deployment was already considered above (via alienCustomMission)
 				ruleDeploy = _game->getMod()->getDeployment((*ufo)->getRules()->getType());
 				break;
 			}
@@ -1033,6 +1030,11 @@ void DebriefingState::prepareDebriefing()
 		if (ruleDeploy->getObjectiveFailedInfo(objectiveFailedText, objectiveFailedScore))
 		{
 			_stats.push_back(new DebriefingStat(objectiveFailedText, false));
+		}
+		if (aborted && ruleDeploy->getAbortPenalty() != 0)
+		{
+			_stats.push_back(new DebriefingStat("STR_MISSION_ABORTED", false));
+			addStat("STR_MISSION_ABORTED", 1, -ruleDeploy->getAbortPenalty());
 		}
 	}
 
@@ -1084,7 +1086,7 @@ void DebriefingState::prepareDebriefing()
 				if (craft->getDestination() != 0)
 				{
 					_missionStatistics->markerName = craft->getDestination()->getMarkerName();
-					_missionStatistics->markerId = craft->getDestination()->getId();
+					_missionStatistics->markerId = craft->getDestination()->getMarkerId();
 					target = craft->getDestination()->getType();
 					// Ignore custom mission names
 					if (dynamic_cast<AlienBase*>(craft->getDestination()))
@@ -1144,7 +1146,7 @@ void DebriefingState::prepareDebriefing()
 			{
 				if (AreSame((*k)->getLongitude(), base->getLongitude()) && AreSame((*k)->getLatitude(), base->getLatitude()))
 				{
-					_missionStatistics->ufo = (*k)->getRules()->getType();
+					_missionStatistics->ufo = (*k)->getRules()->getType(); // no need to check for fake underwater UFOs here
 					_missionStatistics->alienRace = (*k)->getAlienRace();
 					break;
 				}
@@ -1253,7 +1255,7 @@ void DebriefingState::prepareDebriefing()
 	{
 		if ((*i)->isInBattlescape())
 		{
-			_missionStatistics->ufo = (*i)->getRules()->getType();
+			_missionStatistics->ufo = (*i)->getRules()->getType(); // no need to check for fake underwater UFOs here
 			if (save->getMonthsPassed() != -1)
 			{
 				_missionStatistics->alienRace = (*i)->getAlienRace();
@@ -2137,7 +2139,7 @@ void DebriefingState::addItemsToBaseStores(const std::string &itemType, Base *ba
 /**
  * Recovers items from the battlescape.
  *
- * Converts the battlescape inventory into a geoscape itemcontainer.
+ * Converts the battlescape inventory into a geoscape item container.
  * @param from Items recovered from the battlescape.
  * @param base Base to add items to.
  */
@@ -2284,7 +2286,7 @@ void DebriefingState::recoverItems(std::vector<BattleItem*> *from, Base *base)
 				}
 			}
 			// special case of fixed weapons on a soldier's armor, but not HWPs
-			// makes sure we recover the ammuntion from this weapon
+			// makes sure we recover the ammunition from this weapon
 			else if (rule->isFixed() && (*it)->getOwner()->getOriginalFaction() == FACTION_PLAYER && (*it)->getOwner()->getGeoscapeSoldier())
 			{
 				switch (rule->getBattleType())

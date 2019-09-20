@@ -78,6 +78,8 @@
 #include "ExtraStrings.h"
 #include "RuleInterface.h"
 #include "RuleArcScript.h"
+#include "RuleEventScript.h"
+#include "RuleEvent.h"
 #include "RuleMissionScript.h"
 #include "../Geoscape/Globe.h"
 #include "../Savegame/SavedGame.h"
@@ -100,6 +102,7 @@
 #include "RuleVideo.h"
 #include "RuleConverter.h"
 #include "RuleSoldierTransformation.h"
+#include "RuleSoldierBonus.h"
 
 #define ARRAYLEN(x) (sizeof(x) / sizeof(x[0]))
 
@@ -139,6 +142,7 @@ std::string Mod::DEBRIEF_MUSIC_GOOD;
 std::string Mod::DEBRIEF_MUSIC_BAD;
 int Mod::DIFFICULTY_COEFFICIENT[5];
 int Mod::DIFFICULTY_BASED_RETAL_DELAY[5];
+int Mod::UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
 
 /// Predefined name for first loaded mod that have all original data
 const std::string ModNameMaster = "master";
@@ -210,6 +214,11 @@ void Mod::resetGlobalStatics()
 	DIFFICULTY_BASED_RETAL_DELAY[2] = 0;
 	DIFFICULTY_BASED_RETAL_DELAY[3] = 0;
 	DIFFICULTY_BASED_RETAL_DELAY[4] = 0;
+
+	UNIT_RESPONSE_SOUNDS_FREQUENCY[0] = 100; // select unit
+	UNIT_RESPONSE_SOUNDS_FREQUENCY[1] = 100; // start moving
+	UNIT_RESPONSE_SOUNDS_FREQUENCY[2] = 100; // select weapon
+	UNIT_RESPONSE_SOUNDS_FREQUENCY[3] = 20;  // annoyed
 }
 
 /**
@@ -314,7 +323,7 @@ Mod::Mod() :
 	_giveScoreAlsoForResearchedArtifacts(false), _statisticalBulletConservation(false),
 	_shortRadarRange(0),
 	_defeatScore(0), _defeatFunds(0), _startingTime(6, 1, 1, 1999, 12, 0, 0), _startingDifficulty(0),
-	_baseDefenseMapFromLocation(0), _disableUnderwaterSounds(false), _pediaReplaceCraftFuelWithRangeType(-1),
+	_baseDefenseMapFromLocation(0), _disableUnderwaterSounds(false), _enableUnitResponseSounds(false), _pediaReplaceCraftFuelWithRangeType(-1),
 	_facilityListOrder(0), _craftListOrder(0), _itemCategoryListOrder(0), _itemListOrder(0),
 	_researchListOrder(0),  _manufactureListOrder(0), _transformationListOrder(0), _ufopaediaListOrder(0), _invListOrder(0), _soldierListOrder(0), _modCurrent(0), _statePalette(0)
 {
@@ -575,6 +584,10 @@ Mod::~Mod()
 	{
 		delete i->second;
 	}
+	for (std::map<std::string, RuleSoldierBonus *>::const_iterator i = _soldierBonus.begin(); i != _soldierBonus.end(); ++i)
+	{
+		delete i->second;
+	}
 	for (std::map<std::string, RuleSoldierTransformation *>::const_iterator i = _soldierTransformation.begin(); i != _soldierTransformation.end(); ++i)
 	{
 		delete i->second;
@@ -630,6 +643,14 @@ Mod::~Mod()
 		delete i->second;
 	}
 	for (std::map<std::string, RuleArcScript*>::const_iterator i = _arcScripts.begin(); i != _arcScripts.end(); ++i)
+	{
+		delete i->second;
+	}
+	for (std::map<std::string, RuleEventScript*>::const_iterator i = _eventScripts.begin(); i != _eventScripts.end(); ++i)
+	{
+		delete i->second;
+	}
+	for (std::map<std::string, RuleEvent*>::const_iterator i = _events.begin(); i != _events.end(); ++i)
 	{
 		delete i->second;
 	}
@@ -1049,7 +1070,7 @@ void Mod::loadSpriteOffset(const std::string &parent, int& sprite, const YAML::N
 /**
  * Gets the mod offset array for a certain sprite.
  * @param parent Name of parent node, used for better error message
- * @param sprites Member to load new arrat of sprite ID index.
+ * @param sprites Member to load new array of sprite ID index.
  * @param node Node with data
  * @param set Name of the surfaceset to lookup.
  */
@@ -1232,8 +1253,8 @@ void Mod::loadAll()
 	// load rulesets that can affect loading vanilla resources
 	for (size_t i = 0; _modData.size() > i; ++i)
 	{
-		_modCurrent = &_modData.at(0);
-		if (_modCurrent->info->isMaster())
+		_modCurrent = &_modData.at(i);
+		//if (_modCurrent->info->isMaster())
 		{
 			auto file = FileMap::getModRuleFile(_modCurrent->info, _modCurrent->info->getResourceConfigFile());
 			if (file)
@@ -1324,6 +1345,8 @@ void Mod::loadAll()
 	// fixed user options
 	if (!_fixedUserOptions.empty())
 	{
+		_fixedUserOptions.erase("oxceUpdateCheck");
+
 		const std::vector<OptionInfo> &options = Options::getOptionInfo();
 		for (std::vector<OptionInfo>::const_iterator i = options.begin(); i != options.end(); ++i)
 		{
@@ -1345,7 +1368,7 @@ void Mod::loadAll()
  * Loads a list of rulesets from YAML files for the mod at the specified index. The first
  * mod loaded should be the master at index 0, then 1, and so on.
  * @param rulesetFiles List of rulesets to load.
- * @param parsers Object with all avaiable parser.
+ * @param parsers Object with all available parsers.
  */
 void Mod::loadMod(const std::vector<FileMap::FileRecord> &rulesetFiles, ModScript &parsers)
 {
@@ -1444,7 +1467,7 @@ void Mod::loadResourceConfigFile(const FileMap::FileRecord &filerec)
 			color.r = (*j)[0].as<int>(0);
 			color.g = (*j)[1].as<int>(0);
 			color.b = (*j)[2].as<int>(0);
-			color.a = (*j)[3].as<int>(2);;
+			color.a = (*j)[3].as<int>(2);
 			_transparencies.push_back(color);
 		}
 	}
@@ -1507,7 +1530,7 @@ void Mod::loadConstants(const YAML::Node &node)
  * Loads a ruleset's contents from a YAML file.
  * Rules that match pre-existing rules overwrite them.
  * @param filename YAML filename.
- * @param parsers Object with all avaiable parser.
+ * @param parsers Object with all available parsers.
  */
 void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 {
@@ -1690,6 +1713,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i, _manufactureListOrder);
 		}
 	}
+	for (YAML::const_iterator i = doc["soldierBonuses"].begin(); i != doc["soldierBonuses"].end(); ++i)
+	{
+		RuleSoldierBonus *rule = loadRule(*i, &_soldierBonus, &_soldierBonusIndex, "name");
+		if (rule != 0)
+		{
+			rule->load(*i, parsers);
+		}
+	}
 	for (YAML::const_iterator i = doc["soldierTransformation"].begin(); i != doc["soldierTransformation"].end(); ++i)
 	{
 		RuleSoldierTransformation *rule = loadRule(*i, &_soldierTransformation, &_soldierTransformationIndex, "name");
@@ -1712,7 +1743,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			else
 			{
 				if (!(*i)["type_id"].IsDefined()) { // otherwise it throws and I wasted hours
-					Log(LOG_ERROR) << "ufopaedia item misses type_id attr.";
+					Log(LOG_ERROR) << "ufopaedia item misses type_id attribute.";
 					continue;
 				}
 				UfopaediaTypeId type = (UfopaediaTypeId)(*i)["type_id"].as<int>();
@@ -1896,7 +1927,25 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_monthlyRatings = doc["monthlyRatings"].as<std::map<int, std::string> >(_monthlyRatings);
 	_fixedUserOptions = doc["fixedUserOptions"].as<std::map<std::string, std::string> >(_fixedUserOptions);
 	_hiddenMovementBackgrounds = doc["hiddenMovementBackgrounds"].as<std::vector<std::string> >(_hiddenMovementBackgrounds);
+	_baseNamesFirst = doc["baseNamesFirst"].as<std::vector<std::string> >(_baseNamesFirst);
+	_baseNamesMiddle = doc["baseNamesMiddle"].as<std::vector<std::string> >(_baseNamesMiddle);
+	_baseNamesLast = doc["baseNamesLast"].as<std::vector<std::string> >(_baseNamesLast);
+	_operationNamesFirst = doc["operationNamesFirst"].as<std::vector<std::string> >(_operationNamesFirst);
+	_operationNamesLast = doc["operationNamesLast"].as<std::vector<std::string> >(_operationNamesLast);
 	_disableUnderwaterSounds = doc["disableUnderwaterSounds"].as<bool>(_disableUnderwaterSounds);
+	_enableUnitResponseSounds = doc["enableUnitResponseSounds"].as<bool>(_enableUnitResponseSounds);
+	for (YAML::const_iterator i = doc["unitResponseSounds"].begin(); i != doc["unitResponseSounds"].end(); ++i)
+	{
+		std::string type = (*i)["name"].as<std::string>();
+		if ((*i)["selectUnitSound"])
+			loadSoundOffset(type, _selectUnitSound[type], (*i)["selectUnitSound"], "BATTLE.CAT");
+		if ((*i)["startMovingSound"])
+			loadSoundOffset(type, _startMovingSound[type], (*i)["startMovingSound"], "BATTLE.CAT");
+		if ((*i)["selectWeaponSound"])
+			loadSoundOffset(type, _selectWeaponSound[type], (*i)["selectWeaponSound"], "BATTLE.CAT");
+		if ((*i)["annoyedSound"])
+			loadSoundOffset(type, _annoyedSound[type], (*i)["annoyedSound"], "BATTLE.CAT");
+	}
 	_flagByKills = doc["flagByKills"].as<std::vector<int> >(_flagByKills);
 
 	_defeatScore = doc["defeatScore"].as<int>(_defeatScore);
@@ -1918,6 +1967,15 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		for (YAML::const_iterator i = doc["difficultyBasedRetaliationDelay"].begin(); i != doc["difficultyBasedRetaliationDelay"].end() && num < 5; ++i)
 		{
 			DIFFICULTY_BASED_RETAL_DELAY[num] = (*i).as<int>(DIFFICULTY_BASED_RETAL_DELAY[num]);
+			++num;
+		}
+	}
+	if (doc["unitResponseSoundsFrequency"])
+	{
+		size_t num = 0;
+		for (YAML::const_iterator i = doc["unitResponseSoundsFrequency"].begin(); i != doc["unitResponseSoundsFrequency"].end() && num < 4; ++i)
+		{
+			UNIT_RESPONSE_SOUNDS_FREQUENCY[num] = (*i).as<int>(UNIT_RESPONSE_SOUNDS_FREQUENCY[num]);
 			++num;
 		}
 	}
@@ -2074,6 +2132,22 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i);
 		}
 	}
+	for (YAML::const_iterator i = doc["eventScripts"].begin(); i != doc["eventScripts"].end(); ++i)
+	{
+		RuleEventScript* rule = loadRule(*i, &_eventScripts, &_eventScriptIndex, "type");
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+	for (YAML::const_iterator i = doc["events"].begin(); i != doc["events"].end(); ++i)
+	{
+		RuleEvent* rule = loadRule(*i, &_events, &_eventIndex, "name");
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
 	for (YAML::const_iterator i = doc["missionScripts"].begin(); i != doc["missionScripts"].end(); ++i)
 	{
 		RuleMissionScript *rule = loadRule(*i, &_missionScripts, &_missionScriptIndex, "type");
@@ -2146,10 +2220,10 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 }
 
 /**
- * Helper function protecting from circual references in node definition.
+ * Helper function protecting from circular references in node definition.
  * @param node Node to test
  * @param name Name of original node.
- * @param limit Current deepth.
+ * @param limit Current depth.
  */
 static void refNodeTestDeepth(const YAML::Node &node, const std::string &name, int limit)
 {
@@ -2162,7 +2236,7 @@ static void refNodeTestDeepth(const YAML::Node &node, const std::string &name, i
 		if (!nested.IsMap())
 		{
 			std::stringstream ss;
-			ss << "Invaild refNode at nest level of ";
+			ss << "Invalid refNode at nest level of ";
 			ss << limit;
 			ss << " in ";
 			ss << name;
@@ -2202,7 +2276,7 @@ T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::ve
 			}
 		}
 
-		// protection from self referecing refNode node
+		// protection from self referencing refNode node
 		refNodeTestDeepth(node, type, 0);
 	}
 	else if (node["delete"])
@@ -2886,7 +2960,7 @@ RuleResearch *Mod::getResearch(const std::string &id, bool error) const
 }
 
 /**
- * Gets the ruleset list for from reserch list.
+ * Gets the ruleset list for from research list.
  */
 std::vector<const RuleResearch*> Mod::getResearch(const std::vector<std::string> &id) const
 {
@@ -2941,6 +3015,25 @@ RuleManufacture *Mod::getManufacture (const std::string &id, bool error) const
 const std::vector<std::string> &Mod::getManufactureList() const
 {
 	return _manufactureIndex;
+}
+
+/**
+ * Returns the rules for the specified soldier bonus type.
+ * @param id Soldier bonus type.
+ * @return Rules for the soldier bonus type.
+ */
+RuleSoldierBonus *Mod::getSoldierBonus(const std::string &id, bool error) const
+{
+	return getRule(id, "SoldierBonus", _soldierBonus, error);
+}
+
+/**
+ * Returns the list of soldier bonus types.
+ * @return The list of soldier bonus types.
+ */
+const std::vector<std::string> &Mod::getSoldierBonusList() const
+{
+	return _soldierBonusIndex;
 }
 
 /**
@@ -3280,6 +3373,7 @@ void Mod::sortLists()
 	_ufopaediaSections[UFOPAEDIA_NOT_AVAILABLE] = 0;
 	std::sort(_ufopaediaIndex.begin(), _ufopaediaIndex.end(), compareRule<ArticleDefinition>(this));
 	std::sort(_ufopaediaCatIndex.begin(), _ufopaediaCatIndex.end(), compareSection(this));
+	std::sort(_soldiersIndex.begin(), _soldiersIndex.end(), compareRule<RuleSoldier>(this, (compareRule<RuleSoldier>::RuleLookup) & Mod::getSoldier));
 }
 
 /**
@@ -3477,6 +3571,26 @@ const std::vector<std::string>* Mod::getArcScriptList() const
 RuleArcScript* Mod::getArcScript(const std::string& name, bool error) const
 {
 	return getRule(name, "Arc Script", _arcScripts, error);
+}
+
+const std::vector<std::string>* Mod::getEventScriptList() const
+{
+	return &_eventScriptIndex;
+}
+
+RuleEventScript* Mod::getEventScript(const std::string& name, bool error) const
+{
+	return getRule(name, "Event Script", _eventScripts, error);
+}
+
+const std::vector<std::string>* Mod::getEventList() const
+{
+	return &_eventIndex;
+}
+
+RuleEvent* Mod::getEvent(const std::string& name, bool error) const
+{
+	return getRule(name, "Event", _events, error);
 }
 
 const std::vector<std::string> *Mod::getMissionScriptList() const
@@ -3897,7 +4011,7 @@ void Mod::loadVanillaResources()
 			SurfaceSet* s = _sets["GlobeMarkers"];
 			s->setMaxSharedFrames(9);
 		}
-		//HACK: because of value "hitAnimation" from item that is used as offet in "X1.PCK", this set need have same number of shared frames as "SMOKE.PCK".
+		//HACK: because of value "hitAnimation" from item that is used as offset in "X1.PCK", this set need have same number of shared frames as "SMOKE.PCK".
 		{
 			SurfaceSet* s = _sets["X1.PCK"];
 			s->setMaxSharedFrames((int)_sets["SMOKE.PCK"]->getMaxSharedFrames());
@@ -4365,6 +4479,22 @@ void Mod::loadExtraResources()
 			_palettes[newName] = new Palette();
 			_palettes[newName]->initBlack();
 			_palettes[newName]->copyFrom(pal.second);
+		}
+	}
+
+	// Hack for hybrid UFO-based games
+	if (_transparencyLUTs.empty() && !_transparencies.empty())
+	{
+		if (_palettes["PAL_BATTLESCAPE"] &&
+			_palettes["PAL_BATTLESCAPE_1"] &&
+			_palettes["PAL_BATTLESCAPE_2"] &&
+			_palettes["PAL_BATTLESCAPE_3"])
+		{
+			Log(LOG_INFO) << "Creating transparency LUTs for custom palettes...";
+			createTransparencyLUT(_palettes["PAL_BATTLESCAPE"]);
+			createTransparencyLUT(_palettes["PAL_BATTLESCAPE_1"]);
+			createTransparencyLUT(_palettes["PAL_BATTLESCAPE_2"]);
+			createTransparencyLUT(_palettes["PAL_BATTLESCAPE_3"]);
 		}
 	}
 

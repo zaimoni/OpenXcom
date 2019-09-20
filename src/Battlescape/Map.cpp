@@ -976,7 +976,7 @@ void Map::drawTerrain(Surface *surface)
 
 					if (movingUnit && positionInRangeXY(movingUnitPosition, mapPosition, 2))
 					{
-						// special handling for a moving unit in forground of tile.
+						// special handling for a moving unit in foreground of tile.
 						const int frontPosSize = 5;
 						Position frontPos[frontPosSize] =
 						{
@@ -1715,6 +1715,19 @@ void Map::animate(bool redraw)
 	_save->nextAnimFrame();
 	_animFrame = _save->getAnimFrame();
 
+	// random ambient sounds
+	{
+		if (!_save->getAmbienceRandom().empty())
+		{
+			_save->decreaseCurrentAmbienceDelay();
+			if (_save->getCurrentAmbienceDelay() <= 0)
+			{
+				_save->resetCurrentAmbienceDelay();
+				_save->playRandomAmbientSound();
+			}
+		}
+	}
+
 	// animate tiles
 	for (int i = 0; i < _save->getMapSizeXYZ(); ++i)
 	{
@@ -1905,7 +1918,7 @@ void Map::setCursorType(CursorType type, int size)
 
 /**
  * Gets the cursor type.
- * @return cursortype.
+ * @return cursor type.
  */
 CursorType Map::getCursorType() const
 {

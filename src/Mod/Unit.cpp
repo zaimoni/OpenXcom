@@ -29,7 +29,7 @@ namespace OpenXcom
  * @param type String defining the type.
  */
 Unit::Unit(const std::string &type) :
-	_type(type), _showFullNameInAlienInventory(-1), _standHeight(0), _kneelHeight(0), _floatHeight(0), _value(0),
+	_type(type), _showFullNameInAlienInventory(-1), _armor(nullptr), _standHeight(0), _kneelHeight(0), _floatHeight(0), _value(0),
 	_moraleLossWhenKilled(100), _aggroSound(-1), _moveSound(-1), _intelligence(0), _aggression(0),
 	_spotter(0), _sniper(0), _energyRecovery(30), _specab(SPECAB_NONE), _livingWeapon(false),
 	_psiWeapon("ALIEN_PSI_WEAPON"), _capturable(true), _canSurrender(false), _autoSurrender(false),
@@ -98,6 +98,12 @@ void Unit::load(const YAML::Node &node, Mod *mod)
 	mod->loadSoundOffset(_type, _panicSound, node["panicSound"], "BATTLE.CAT");
 	mod->loadSoundOffset(_type, _berserkSound, node["berserkSound"], "BATTLE.CAT");
 	mod->loadSoundOffset(_type, _aggroSound, node["aggroSound"], "BATTLE.CAT");
+
+	mod->loadSoundOffset(_type, _selectUnitSound, node["selectUnitSound"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _startMovingSound, node["startMovingSound"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _selectWeaponSound, node["selectWeaponSound"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _annoyedSound, node["annoyedSound"], "BATTLE.CAT");
+
 	mod->loadSoundOffset(_type, _moveSound, node["moveSound"], "BATTLE.CAT");
 }
 

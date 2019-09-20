@@ -424,6 +424,23 @@ std::string Ufo::getMarkerName() const
 }
 
 /**
+ * Returns the marker ID on the globe for the UFO.
+ * @return Marker ID.
+ */
+int Ufo::getMarkerId() const
+{
+	switch (_status)
+	{
+	case LANDED:
+		return _landId;
+	case CRASHED:
+		return _crashId;
+	default:
+		return _id;
+	}
+}
+
+/**
  * Returns the globe marker for the UFO.
  * @return Marker sprite, -1 if none.
  */
@@ -524,7 +541,7 @@ void Ufo::setDetected(bool detected)
 
 /**
  * Returns the amount of remaining seconds the UFO has left on the ground.
- * After this many seconds thet UFO will take off, if landed, or disappear, if
+ * After this many seconds the UFO will take off, if landed, or disappear, if
  * crashed.
  * @return Amount of seconds.
  */
@@ -535,7 +552,7 @@ size_t Ufo::getSecondsRemaining() const
 
 /**
  * Changes the amount of remaining seconds the UFO has left on the ground.
- * After this many seconds thet UFO will take off, if landed, or disappear, if
+ * After this many seconds the UFO will take off, if landed, or disappear, if
  * crashed.
  * @param seconds Amount of seconds.
  */
@@ -1278,7 +1295,7 @@ std::string debugDisplayScript(const Ufo* u)
 		s += "(type: \"";
 		s += u->getRules()->getType();
 		s += "\" id: ";
-		s += u->getId();
+		s += std::to_string(u->getId());
 		s += "\")";
 		return s;
 	}

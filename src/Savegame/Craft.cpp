@@ -991,21 +991,24 @@ UfoDetection Craft::detect(const Ufo *target, bool alreadyTracked) const
 
 	if (distance < _stats.radarRange)
 	{
-		detectionType = DETECTION_RADAR;
-		if (alreadyTracked)
+		// backward compatibility with vanilla
+		if (_stats.radarChance == 100)
 		{
+			detectionType = DETECTION_RADAR;
 			detectionChance = 100;
 		}
 		else
 		{
-			detectionChance = _stats.radarChance * (100 + target->getVisibility()) / 100;
+			detectionType = DETECTION_RADAR;
+			if (alreadyTracked)
+			{
+				detectionChance = 100;
+			}
+			else
+			{
+				detectionChance = _stats.radarChance * (100 + target->getVisibility()) / 100;
+			}
 		}
-	}
-	// backward compatibility with vanilla
-	else if (_stats.radarChance == 100)
-	{
-		detectionType = DETECTION_RADAR;
-		detectionChance = 100;
 	}
 
 	ModScript::DetectUfoFromCraft::Output args { detectionType, detectionChance, };
@@ -1583,7 +1586,7 @@ void Craft::unload(const Mod *mod)
 void Craft::reuseItem(const std::string& item)
 {
 	// Note: Craft in-base status hierarchy is repair, rearm, refuel, ready.
-	// We only want to interrupt processes that are lower in the hierarachy.
+	// We only want to interrupt processes that are lower in the hierarchy.
 	// (And we don't want to interrupt any out-of-base status.)
 
 	// The only states we are willing to interrupt are "ready" and "refuelling"

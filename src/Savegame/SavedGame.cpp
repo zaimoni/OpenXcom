@@ -55,6 +55,7 @@
 #include "AlienBase.h"
 #include "AlienStrategy.h"
 #include "AlienMission.h"
+#include "GeoscapeEvent.h"
 #include "../Mod/RuleRegion.h"
 #include "../Mod/RuleSoldier.h"
 #include "BaseFacility.h"
@@ -192,6 +193,10 @@ SavedGame::~SavedGame()
 	}
 	delete _alienStrategy;
 	for (std::vector<AlienMission*>::iterator i = _activeMissions.begin(); i != _activeMissions.end(); ++i)
+	{
+		delete *i;
+	}
+	for (std::vector<GeoscapeEvent*>::iterator i = _geoscapeEvents.begin(); i != _geoscapeEvents.end(); ++i)
 	{
 		delete *i;
 	}
@@ -500,6 +505,23 @@ void SavedGame::load(const std::string &filename, Mod *mod)
 		else
 		{
 			Log(LOG_ERROR) << "Failed to load UFO " << type;
+		}
+	}
+
+	const YAML::Node &geoEvents = doc["geoscapeEvents"];
+	for (YAML::const_iterator it = geoEvents.begin(); it != geoEvents.end(); ++it)
+	{
+		std::string eventName = (*it)["name"].as<std::string>();
+		if (mod->getEvent(eventName))
+		{
+			const RuleEvent &eventRule = *mod->getEvent(eventName);
+			GeoscapeEvent *event = new GeoscapeEvent(eventRule);
+			event->load(*it);
+			_geoscapeEvents.push_back(event);
+		}
+		else
+		{
+			Log(LOG_ERROR) << "Failed to load geoscape event " << eventName;
 		}
 	}
 
@@ -834,6 +856,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
 	for (std::vector<Ufo*>::const_iterator i = _ufos.begin(); i != _ufos.end(); ++i)
 	{
 		node["ufos"].push_back((*i)->save(getMonthsPassed() == -1));
+	}
+	for (std::vector<GeoscapeEvent *>::const_iterator i = _geoscapeEvents.begin(); i != _geoscapeEvents.end(); ++i)
+	{
+		node["geoscapeEvents"].push_back((*i)->save());
 	}
 	for (std::vector<const RuleResearch *>::const_iterator i = _discovered.begin(); i != _discovered.end(); ++i)
 	{
@@ -1432,7 +1458,7 @@ void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * m
 			// process "disables"
 			for (auto& dis : currentQueueItem->getDisabled())
 			{
-				removeDiscoveredResearch(dis); // un-research
+				removeDiscoveredResearch(dis); // unresearch
 				setResearchRuleStatus(dis->getName(), RuleResearch::RESEARCH_STATUS_DISABLED); // mark as permanently disabled
 			}
 		}
@@ -1626,7 +1652,7 @@ void SavedGame::getAvailableResearchProjects(std::vector<RuleResearch *> &projec
 			}
 		}
 
-		// Haleluja, all checks passed, add the research topic to the list
+		// Hallelujah, all checks passed, add the research topic to the list
 		projects.push_back(research);
 	}
 }
@@ -2030,6 +2056,22 @@ bool SavedGame::isResearched(const std::vector<const RuleResearch *> &research, 
 }
 
 /**
+ * Returns if a certain item has been obtained, i.e. is present directly in the base stores.
+ * Items in and on craft, in transfer, worn by soldiers, etc. are ignored!!
+ * @param itemType Item ID.
+ * @return Whether it's obtained or not.
+ */
+bool SavedGame::isItemObtained(const std::string &itemType) const
+{
+	for (auto base : _bases)
+	{
+		if (base->getStorageItems()->getItem(itemType) > 0)
+			return true;
+	}
+	return false;
+}
+
+/**
  * Returns pointer to the Soldier given it's unique ID.
  * @param id A soldier's unique id.
  * @return Pointer to Soldier.
@@ -2393,7 +2435,7 @@ private:
 
 /**
  * Find the region containing this location.
- * @param lon The longtitude.
+ * @param lon The longitude.
  * @param lat The latitude.
  * @return Pointer to the region, or 0.
  */
@@ -2527,7 +2569,7 @@ std::vector<Soldier*> *SavedGame::getDeadSoldiers()
 }
 
 /**
- * Sets the last selected armour.
+ * Sets the last selected armor.
  * @param value The new value for last selected armor - Armor type string.
  */
 
@@ -2537,7 +2579,7 @@ void SavedGame::setLastSelectedArmor(const std::string &value)
 }
 
 /**
- * Gets the last selected armour
+ * Gets the last selected armor
  * @return last used armor type string
  */
 std::string SavedGame::getLastSelectedArmor() const
@@ -2768,6 +2810,22 @@ bool SavedGame::isManaUnlocked(Mod *mod) const
 		return true;
 	}
 	return false;
+}
+
+/**
+ * Gets the current score based on research score and xcom/alien activity in regions.
+ */
+int SavedGame::getCurrentScore() const
+{
+	size_t invertedEntry = _funds.size() - 1;
+	int scoreTotal = _researchScores.at(invertedEntry);
+	if (_monthsPassed > 1)
+		scoreTotal += 400;
+	for (auto region : _regions)
+	{
+		scoreTotal += region->getActivityXcom().at(invertedEntry) - region->getActivityAlien().at(invertedEntry);
+	}
+	return scoreTotal;
 }
 
 }

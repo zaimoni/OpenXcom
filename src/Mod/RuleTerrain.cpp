@@ -29,12 +29,12 @@ namespace OpenXcom
 /**
  * RuleTerrain construction.
  */
-RuleTerrain::RuleTerrain(const std::string &name) : _name(name), _script("DEFAULT"), _minDepth(0), _maxDepth(0), _ambience(-1), _ambientVolume(0.5)
+RuleTerrain::RuleTerrain(const std::string &name) : _name(name), _script("DEFAULT"), _minDepth(0), _maxDepth(0), _ambience(-1), _ambientVolume(0.5), _minAmbienceRandomDelay(20), _maxAmbienceRandomDelay(60)
 {
 }
 
 /**
- * Ruleterrain only holds mapblocks. Map datafiles are referenced.
+ * RuleTerrain only holds mapblocks. Map datafiles are referenced.
  */
 RuleTerrain::~RuleTerrain()
 {
@@ -99,6 +99,12 @@ void RuleTerrain::load(const YAML::Node &node, Mod *mod)
 	}
 	mod->loadSoundOffset(_name, _ambience, node["ambience"], "BATTLE.CAT");
 	_ambientVolume = node["ambientVolume"].as<double>(_ambientVolume);
+	mod->loadSoundOffset(_name, _ambienceRandom, node["ambienceRandom"], "BATTLE.CAT");
+	if (node["ambienceRandomDelay"])
+	{
+		_minAmbienceRandomDelay = node["ambienceRandomDelay"][0].as<int>(_minAmbienceRandomDelay);
+		_maxAmbienceRandomDelay = node["ambienceRandomDelay"][1].as<int>(_maxAmbienceRandomDelay);
+	}
 	_script = node["script"].as<std::string>(_script);
 }
 
@@ -211,7 +217,7 @@ MapData *RuleTerrain::getMapData(unsigned int *id, int *mapDataSetID) const
 		*id = 0;
 		*mapDataSetID = 0;
 	}
-	return mdf->getObjects()->at(*id);
+	return mdf->getObject(*id);
 }
 
 /**

@@ -59,7 +59,7 @@ TrainingFinishedState::TrainingFinishedState(Base *base, const std::vector<Soldi
 	centerAllSurfaces();
 
 	// Set up objects
-	_window->setBackground(_game->getMod()->getSurface("BACK02.SCR"));
+	setWindowBackground(_window, "trainingFinished");
 
 	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&TrainingFinishedState::btnOkClick);
@@ -82,7 +82,7 @@ TrainingFinishedState::TrainingFinishedState(Base *base, const std::vector<Soldi
 }
 
 /**
- * Closes the screeen.
+ * Closes the screen.
  * @param action Pointer to an action.
  */
 void TrainingFinishedState::btnOkClick(Action *)

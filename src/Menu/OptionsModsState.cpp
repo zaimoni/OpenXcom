@@ -81,12 +81,12 @@ OptionsModsState::OptionsModsState() : _curMasterIdx(0)
 	int leftcol = _lstMods->getWidth() - (rightcol + arrowCol);
 
 	// Set up objects
-	_window->setBackground(_game->getMod()->getSurface("BACK01.SCR"));
+	setWindowBackground(_window, "modsMenu");
 
 	_txtMaster->setText(tr("STR_BASE_GAME"));
 
 	// scan for masters
-	Options::refreshMods();
+	//Options::refreshMods(); // TODO: uncomment (and properly test!) after mod.io integration is merged
 	const std::map<std::string, ModInfo> &modInfos(Options::getModInfos());
 	std::vector<std::string> masterNames;
 	for (std::vector< std::pair<std::string, bool> >::const_iterator i = Options::mods.begin(); i != Options::mods.end(); ++i)

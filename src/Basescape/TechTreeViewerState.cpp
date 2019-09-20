@@ -94,7 +94,7 @@ TechTreeViewerState::TechTreeViewerState(const RuleResearch *r, const RuleManufa
 	centerAllSurfaces();
 
 	// Set up objects
-	_window->setBackground(_game->getMod()->getSurface("BACK05.SCR"));
+	setWindowBackground(_window, "techTreeViewer");
 
 	_txtTitle->setBig();
 	_txtTitle->setAlign(ALIGN_CENTER);
@@ -286,7 +286,7 @@ void TechTreeViewerState::initLists()
 		const std::vector<std::string> &researchList = _game->getMod()->getResearchList();
 		const std::vector<std::string> &manufactureList = _game->getMod()->getManufactureList();
 
-		// 0. common pre-calc
+		// 0. common pre-calculation
 		const std::vector<const RuleResearch*> reqs = rule->getRequirements();
 		const std::vector<const RuleResearch*> deps = rule->getDependencies();
 		std::vector<std::string> unlockedBy;

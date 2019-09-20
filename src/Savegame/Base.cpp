@@ -54,7 +54,7 @@ namespace OpenXcom
  * Initializes an empty base.
  * @param mod Pointer to mod.
  */
-Base::Base(const Mod *mod) : Target(), _mod(mod), _scientists(0), _engineers(0), _inBattlescape(false), _retaliationTarget(false)
+Base::Base(const Mod *mod) : Target(), _mod(mod), _scientists(0), _engineers(0), _inBattlescape(false), _retaliationTarget(false), _fakeUnderwater(false)
 {
 	_items = new ItemContainer();
 }
@@ -226,6 +226,7 @@ void Base::load(const YAML::Node &node, SavedGame *save, bool newGame, bool newB
 	}
 
 	_retaliationTarget = node["retaliationTarget"].as<bool>(_retaliationTarget);
+	_fakeUnderwater = node["fakeUnderwater"].as<bool>(_fakeUnderwater);
 }
 
 /**
@@ -299,7 +300,9 @@ YAML::Node Base::save() const
 		node["productions"].push_back((*i)->save());
 	}
 	if (_retaliationTarget)
-	node["retaliationTarget"] = _retaliationTarget;
+		node["retaliationTarget"] = _retaliationTarget;
+	if (_fakeUnderwater)
+		node["fakeUnderwater"] = _fakeUnderwater;
 	return node;
 }
 
@@ -422,7 +425,7 @@ void Base::setEngineers(int engineers)
  * Returns if a certain target is covered by the base's
  * radar range, taking in account the range and chance.
  * @param target Pointer to target to compare.
- * @param alreadyDedected Was ufo already detected, `true` mean we track it without propability.
+ * @param alreadyDedected Was ufo already detected, `true` mean we track it without probability.
  * @return 0 - not detected, 1 - detected by conventional radar, 2 - detected by hyper-wave decoder.
  */
 UfoDetection Base::detect(const Ufo *target, bool alreadyTracked) const
@@ -940,8 +943,8 @@ int Base::getFreeWorkshops() const
 }
 
 /**
- * Return psilab space not in use
- * @return psilab space not in use
+ * Return psi lab space not in use
+ * @return psi lab space not in use
  */
 int Base::getFreePsiLabs() const
 {
@@ -1509,7 +1512,7 @@ bool Base::getRetaliationTarget() const
 
 /**
  * Calculate the detection chance of this base.
- * Big bases without mindshields are easier to detect.
+ * Big bases without mind shields are easier to detect.
  * @param difficulty The savegame difficulty.
  * @return The detection chance.
  */
@@ -1826,7 +1829,7 @@ std::list<std::vector<BaseFacility*>::iterator> Base::getDisconnectedFacilities(
 	BaseFacility *lastFacility = 0;
 	for (std::vector<std::pair<std::vector<BaseFacility*>::iterator, bool>*>::iterator i = facilitiesConnStates.begin(); i != facilitiesConnStates.end(); ++i)
 	{
-		// Not a connected fac.? -> push its iterator into the list!
+		// Not a connected facility? -> push its iterator into the list!
 		// Oh, and we don't want duplicates (facilities with bigger sizes like hangar)
 		if (*((*i)->first) != lastFacility && !(*i)->second) result.push_back((*i)->first);
 		lastFacility = *((*i)->first);
@@ -2053,9 +2056,9 @@ namespace
 {
 
 /**
- * Store unique values from diffrent vectors.
+ * Store unique values from different vectors.
  * @param result Vector where final data will be send.
- * @param temp Temporaly data container storing working buffer.
+ * @param temp Temporary data container storing working buffer.
  * @param data Data to add.
  */
 void aggregateUnique(std::vector<std::string> &result, std::vector<std::string> &temp, const std::vector<std::string> &data)
@@ -2126,7 +2129,7 @@ std::vector<std::string> Base::getRequireBaseFunc(const BaseFacility *skip) cons
 }
 
 /**
- * Return list of all forbiden functionality in base.
+ * Return list of all forbidden functionality in base.
  * @return List of custom IDs.
  */
 std::vector<std::string> Base::getForbiddenBaseFunc() const
