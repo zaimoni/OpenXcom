@@ -92,7 +92,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo) : _baseFrom
 	centerAllSurfaces();
 
 	// Set up objects
-	_window->setBackground(_game->getMod()->getSurface("BACK13.SCR"));
+	setWindowBackground(_window, "transferMenu");
 
 	_btnOk->setText(tr("STR_TRANSFER"));
 	_btnOk->onMouseClick((ActionHandler)&TransferItemsState::btnOkClick);
@@ -131,6 +131,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo) : _baseFrom
 	_distance = getDistance();
 
 	_cats.push_back("STR_ALL_ITEMS");
+	_cats.push_back("STR_ITEMS_AT_DESTINATION");
 
 	const std::vector<std::string> &cw = _game->getMod()->getCraftWeaponsList();
 	for (std::vector<std::string>::const_iterator i = cw.begin(); i != cw.end(); ++i)
@@ -230,6 +231,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo) : _baseFrom
 		// then use them nicely in order
 		_cats.clear();
 		_cats.push_back("STR_ALL_ITEMS");
+		_cats.push_back("STR_ITEMS_AT_DESTINATION");
 		const std::vector<std::string> &categories = _game->getMod()->getItemCategoriesList();
 		for (std::vector<std::string>::const_iterator k = categories.begin(); k != categories.end(); ++k)
 		{
@@ -376,23 +378,34 @@ void TransferItemsState::updateList()
 
 	_lstItems->clearList();
 	_rows.clear();
+
+	std::string cat = _cats[_cbxCategory->getSelected()];
+	bool allItems = (cat == "STR_ALL_ITEMS");
+	bool onlyItemsAtDestination = (cat == "STR_ITEMS_AT_DESTINATION");
+	bool specialCategory = allItems || onlyItemsAtDestination;
+
 	for (size_t i = 0; i < _items.size(); ++i)
 	{
 		// filter
-		std::string cat = _cats[_cbxCategory->getSelected()];
 		if (_game->getMod()->getUseCustomCategories())
 		{
-			if (cat != "STR_ALL_ITEMS" && !belongsToCategory(i, cat))
+			if (!specialCategory && !belongsToCategory(i, cat))
 			{
 				continue;
 			}
 		}
 		else
 		{
-			if (cat != "STR_ALL_ITEMS" && cat != getCategory(i))
+			if (!specialCategory && cat != getCategory(i))
 			{
 				continue;
 			}
+		}
+
+		// "items at destination" filter
+		if (onlyItemsAtDestination && _items[i].qtyDst <= 0)
+		{
+			continue;
 		}
 
 		// quick search

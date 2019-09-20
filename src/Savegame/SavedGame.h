@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include "GameTime.h"
 #include "../Mod/RuleAlienMission.h"
+#include "../Mod/RuleEvent.h"
 #include "../Savegame/Craft.h"
 #include "../Mod/RuleManufacture.h"
 #include "../Mod/RuleBaseFacility.h"
@@ -52,6 +53,7 @@ class MissionSite;
 class AlienBase;
 class AlienStrategy;
 class AlienMission;
+class GeoscapeEvent;
 class Target;
 class Soldier;
 class Craft;
@@ -136,6 +138,7 @@ private:
 	std::map<std::string, int> _researchRuleStatus;
 	std::map<std::string, bool> _hiddenPurchaseItemsMap;
 	std::vector<AlienMission*> _activeMissions;
+	std::vector<GeoscapeEvent*> _geoscapeEvents;
 	bool _debug, _warned;
 	int _monthsPassed;
 	std::string _graphRegionToggles;
@@ -144,7 +147,7 @@ private:
 	std::vector<const RuleResearch*> _poppedResearch;
 	std::vector<Soldier*> _deadSoldiers;
 	size_t _selectedBase;
-	std::string _lastselectedArmor; //contains the last selected armour
+	std::string _lastselectedArmor; //contains the last selected armor
 	std::string _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
 	std::vector<EquipmentLayoutItem*> _globalEquipmentLayout[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
 	std::string _globalCraftLoadoutName[MAX_CRAFT_LOADOUT_TEMPLATES];
@@ -295,6 +298,8 @@ public:
 	bool isResearched(const std::vector<std::string> &research, bool considerDebugMode = true) const;
 	/// Gets if a certain list of research topics has been completed.
 	bool isResearched(const std::vector<const RuleResearch *> &research, bool considerDebugMode = true, bool skipDisabled = false) const;
+	/// Gets if a certain item has been obtained.
+	bool isItemObtained(const std::string &itemType) const;
 	/// Gets the soldier matching this ID.
 	Soldier *getSoldier(int id) const;
 	/// Handles the higher promotions.
@@ -333,6 +338,10 @@ public:
 	const std::vector<AlienMission*> &getAlienMissions() const { return _activeMissions; }
 	/// Finds a mission by region and objective.
 	AlienMission *findAlienMission(const std::string &region, MissionObjective objective) const;
+	/// Full access to the current geoscape events.
+	std::vector<GeoscapeEvent*> &getGeoscapeEvents() { return _geoscapeEvents; }
+	/// Read-only access to the current geoscape events.
+	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
 	/// Locate a region containing a position.
 	Region *locateRegion(double lon, double lat) const;
 	/// Locate a region containing a Target.
@@ -367,9 +376,9 @@ public:
 	void setSelectedBase(size_t base);
 	/// Evaluate the score of a soldier based on all of his stats, missions and kills.
 	int getSoldierScore(Soldier *soldier);
-	/// Sets the last selected armour
+	/// Sets the last selected armor
 	void setLastSelectedArmor(const std::string &value);
-	/// Gets the last selected armour
+	/// Gets the last selected armor
 	std::string getLastSelectedArmor() const;
 	/// Returns the craft corresponding to the specified unique id.
 	Craft *findCraftByUniqueId(const CraftId& craftId) const;
@@ -409,6 +418,8 @@ public:
 	void setDisableSoldierEquipment(bool disableSoldierEquipment);
 	/// Is the mana feature already unlocked?
 	bool isManaUnlocked(Mod *mod) const;
+	/// Gets the current score based on research score and xcom/alien activity in regions.
+	int getCurrentScore() const;
 };
 
 }

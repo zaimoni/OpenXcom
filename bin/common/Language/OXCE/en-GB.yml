@@ -87,6 +87,8 @@ en-GB:
   STR_NOT_ENOUGH_CRAFT_SPACE: "Not enough space onboard!"
 #SoldierAvatarState.cpp
   STR_SELECT_AVATAR_FOR: "SELECT AVATAR FOR{NEWLINE}{0}"
+#SoldierBonusState.cpp
+  STR_SOLDIER_BONUSES_FOR: "SOLDIER BONUSES FOR{NEWLINE}{0}"
 #SoldierInfoState.cpp
   STR_MANA_RECOVERY: "MANA RECOVERY> {ALT}{0}"
 #SoldierDiaryOverviewState.cpp
@@ -99,6 +101,7 @@ en-GB:
   STR_RECOVERY_TIME: "Recovery Time>{ALT}{0}"
   STR_CURRENT_STATS: "Current stats"
   STR_CHANGES: "Changes"
+  STR_BONUS_STATS: "Bonus stats"
 #StoresState.cpp
   STR_GRAND_TOTAL: "Grand Total"
 #TechTreeSelectState.cpp
@@ -138,6 +141,8 @@ en-GB:
   STR_UNLOCKS_MISSIONS: "Unlocks missions:"
   STR_DISABLES_MISSIONS: "Disables missions:"
   STR_AFFECTS_GAME_PROGRESSION: "Affects game progression!"
+#TransferItemsState.cpp
+  STR_ITEMS_AT_DESTINATION: "Items at destination"
 #=================== Battlescape ===================
 #ActionMenuState.cpp
   STR_MUST_USE_BOTH_HANDS: "Both hands are required for this!"
@@ -159,6 +164,8 @@ en-GB:
   STR_TARGET_ON_THE_GROUND: " (on the ground)"
   STR_USE_SPECIAL_ITEM: "Use Special Item"
   STR_NO_EXPERIENCE_YET: "No experience yet:"
+#BriefingState.cpp
+  STR_OPERATION_UC: "OPERATION> {0}"
 #BriefingLightState.cpp
   STR_WHAT_CAN_I_WEAR: "What can I wear?"
   STR_STARTING_CONDITION_ARMORS_FORBIDDEN: "This mission requires specific gear.{NEWLINE}{NEWLINE}Forbidden armour types are: {0}"
@@ -173,6 +180,7 @@ en-GB:
   STR_LOOT: "LOOT"
   STR_SELL: "SELL"
   STR_LIVE_ALIENS_SURRENDERED: "ENEMIES SURRENDERED"
+  STR_MISSION_ABORTED: "MISSION ABORTED"
   STR_BOUNTY: "BOUNTY"
   STR_MANA_ABBREVIATION: "MAN"
 #Inventory.cpp
@@ -199,6 +207,8 @@ en-GB:
   STR_HIT_LOG_REACTION_FIRE: "Reaction fire..."
 #=================== Engine ===================
 #Options.cpp
+  STR_UPDATE_CHECK: "Automatic update check"
+  STR_UPDATE_CHECK_DESC: "If enabled, OpenXcom will automatically check for updates and give you an option to update itself by a single button click."
   STR_LAZY_LOADING: "Lazy loading"
   STR_LAZY_LOADING_DESC: "If enabled, graphic resources are loaded on-demand. Otherwise everything is loaded at start-up."
   STR_UFO_LANDING_ALERT: "UFO landing alert"
@@ -209,16 +219,17 @@ en-GB:
   STR_PLAY_BRIEFING_MUSIC_DURING_EQUIPMENT_DESC: "Briefing music will continue playing during equipment phase until the Battlescape is displayed."
   STR_NIGHT_VISION_COLOR: "Select Night Vision colour"
   STR_NIGHT_VISION_COLOR_DESC: "Values from 1 to 15, each representing a different shade colour."
+  STR_AUTO_NIGHT_VISION_THRESHOLD: "Auto Night Vision threshold"
+  STR_AUTO_NIGHT_VISION_THRESHOLD_DESC: "If darker than this threshold, toggle Night Vision on and Personal Lights off automatically."
   STR_AUTO_SELL: "Auto-Sell Manager"
   STR_AUTO_SELL_DESC: "In the battle debriefing sell screen, any item types you sold in previous battles will be automatically marked for selling."
   STR_REMEMBER_DISABLED_CRAFT_WEAPONS: "Remember disabled craft weapons"
   STR_REMEMBER_DISABLED_CRAFT_WEAPONS_DESC: "Craft weapons disabled during a dogfight will stay disabled. They will also not be rearmed at the base."
-  STR_HIGHLIGHT_NEW_TOPICS: "Highlight new topics"
-  STR_HIGHLIGHT_NEW_TOPICS_DESC: "If enabled, new research, manufacture and ufopedia topics are highlighted in different colour."
   STR_GRAPHS_ZOOM_IN: "Zoom In (Graphs)"
   STR_GRAPHS_ZOOM_OUT: "Zoom Out (Graphs)"
   STR_MARK_ALL_AS_SEEN: "Mark All As Seen"
   STR_SELECT_ALL: "Select All"
+  STR_SELECT_ALL_BUT_ONE: "Select All But One"
   STR_DESELECT_ALL: "Deselect All"
   STR_RESET_ALL: "Reset All"
   STR_INVENTORY_ARMOR: "Change Armor (via Inventory)"
@@ -302,6 +313,9 @@ en-GB:
 #UfoTrackerState.cpp
   STR_UFO_TRACKER: "UFO Tracker"
 #=================== Menu ===================
+#MainMenuState.cpp
+  STR_UPDATE: "Update"
+  STR_LATEST_VERSION_INFO: "You are using the latest OpenXcom version."
 #OptionsAdvancedState.cpp
   STR_OXCE: "Extended"
 #OptionsInformExtendedState.cpp

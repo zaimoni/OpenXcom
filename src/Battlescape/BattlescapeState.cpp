@@ -558,35 +558,12 @@ BattlescapeState::BattlescapeState() :
 	_btnStats->onKeyboardPress((ActionHandler)&BattlescapeState::btnNightVisionClick, Options::keyNightVisionToggle);
 
 	// automatic night vision
+	if (_save->getGlobalShade() > Options::oxceAutoNightVisionThreshold)
 	{
-		bool allPlayerUnitTilesVisible = true;
-		for (auto& unit : *_save->getUnits())
-		{
-			if (unit->getOriginalFaction() == FACTION_PLAYER && !unit->isOut())
-			{
-				if (unit->getTile() && unit->getTile()->getShade() >= 12)
-				{
-					allPlayerUnitTilesVisible = false;
-					break;
-				}
-			}
-		}
-		bool atLeastOneStrongPersonalLightAvailable = false;
-		for (auto& unit : *_save->getUnits())
-		{
-			if (unit->getOriginalFaction() == FACTION_PLAYER && !unit->isOut())
-			{
-				if (unit->getArmor()->getPersonalLight() > 5)
-				{
-					atLeastOneStrongPersonalLightAvailable = true;
-					break;
-				}
-			}
-		}
-		if (!allPlayerUnitTilesVisible && !atLeastOneStrongPersonalLightAvailable)
-		{
-			_map->toggleNightVision();
-		}
+		// turn personal lights off
+		_save->getTileEngine()->togglePersonalLighting();
+		// turn night vision on
+		_map->toggleNightVision();
 	}
 
 	SDL_Keycode buttons[] = {Options::keyBattleCenterEnemy1,
@@ -623,7 +600,11 @@ BattlescapeState::BattlescapeState() :
 	_btnToggleNV->onMouseOut((ActionHandler)& BattlescapeState::txtTooltipOut);
 	_btnToggleNV->drawRect(0, 0, 12, 12, 15);
 	_btnToggleNV->drawRect(1, 1, 10, 10, _indicatorBlue);
-	_btnToggleNV->setVisible(_save->getGlobalShade() > Options::oxceNightVisionButtonThreshold);
+#ifdef __ANDROID__
+	_btnToggleNV->setVisible(_save->getGlobalShade() > Options::oxceAutoNightVisionThreshold);
+#else
+	_btnToggleNV->setVisible(false);
+#endif
 
 	_warning->setColor(_game->getMod()->getInterface("battlescape")->getElement("warning")->color2);
 	_warning->setTextColor(_game->getMod()->getInterface("battlescape")->getElement("warning")->color);
@@ -2326,6 +2307,10 @@ void BattlescapeState::handleItemClick(BattleItem *item, bool middleClick)
             }
 #endif
 			popup(new ActionMenuState(_battleGame->getCurrentAction(), _icons->getX(), _icons->getY() + 16));
+			if (item->getRules()->getBattleType() == BT_FIREARM)
+			{
+				_battleGame->playUnitResponseSound(_battleGame->getCurrentAction()->actor, 2); // "select weapon" sound
+			}
 		}
 	}
 }
@@ -2523,6 +2508,14 @@ inline void BattlescapeState::handle(Action *action)
 				{
 					_map->toggleDebugVisionMode();
 				}
+				// "ctrl-x" - mute/unmute unit response sounds
+				else if (key == SDLK_x && ctrlPressed)
+				{
+					if (_game->getMod()->getEnableUnitResponseSounds())
+					{
+						Options::oxceEnableUnitResponseSounds = !Options::oxceEnableUnitResponseSounds;
+					}
+				}
 				// "ctrl-e" - experience log
 				else if (key == SDLK_e && ctrlPressed)
 				{
@@ -2683,7 +2676,7 @@ inline void BattlescapeState::handle(Action *action)
 								unit->setTile(_save->getTile(newPos), _save);
 								unit->setPosition(newPos);
 
-								//free refreash as bonus
+								//free refresh as bonus
 								unit->updateUnitStats(true, false);
 								_save->getTileEngine()->calculateLighting(LL_UNITS);
 								_save->getBattleGame()->handleState();
@@ -2857,7 +2850,7 @@ void BattlescapeState::saveAIMap()
 void BattlescapeState::saveVoxelView()
 {
 	static const unsigned char pal[30]=
-	//			ground		west wall	north wall		object		enem unit						xcom unit	neutr unit
+	//			ground		west wall	north wall		object		enemy unit						xcom unit	neutral unit
 	{0,0,0, 224,224,224,  192,224,255,  255,224,192, 128,255,128, 192,0,255,  0,0,0, 255,255,255,  224,192,0,  255,64,128 };
 
 	BattleUnit * bu = _save->getSelectedUnit();
@@ -3085,7 +3078,13 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
 		{
 			if ((*ufo)->isInBattlescape())
 			{
-				ruleDeploy = _game->getMod()->getDeployment((*ufo)->getRules()->getType());
+				std::string ufoMissionName = (*ufo)->getRules()->getType();
+				if (!_save->getAlienCustomMission().empty())
+				{
+					// fake underwater UFO
+					ufoMissionName = _save->getAlienCustomMission();
+				}
+				ruleDeploy = _game->getMod()->getDeployment(ufoMissionName);
 				break;
 			}
 		}
@@ -3424,7 +3423,7 @@ void BattlescapeState::txtTooltipInExtra(Action *action, bool leftHand, bool spe
 				}
 				else
 				{
-					// cannot use the weapon (medi-kit) on anyone
+					// cannot use the weapon (medikit) on anyone
 					_currentTooltip = action->getSender()->getTooltip();
 					_txtTooltip->setText(tr(_currentTooltip));
 				}
@@ -3432,7 +3431,7 @@ void BattlescapeState::txtTooltipInExtra(Action *action, bool leftHand, bool spe
 		}
 		else
 		{
-			// weapon is not of medi-kit battle type
+			// weapon is not of medikit battle type
 			_currentTooltip = action->getSender()->getTooltip();
 			_txtTooltip->setText(tr(_currentTooltip));
 		}

@@ -134,7 +134,20 @@ void Armor::load(const YAML::Node &node, const ModScript &parsers, Mod *mod)
 	_drawingRoutine = node["drawingRoutine"].as<int>(_drawingRoutine);
 	_drawBubbles = node["drawBubbles"].as<bool>(_drawBubbles);
 	_movementType = (MovementType)node["movementType"].as<int>(_movementType);
+
 	mod->loadSoundOffset(_type, _moveSound, node["moveSound"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _deathSoundMale, node["deathMale"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _deathSoundFemale, node["deathFemale"], "BATTLE.CAT");
+
+	mod->loadSoundOffset(_type, _selectUnitSoundMale, node["selectUnitMale"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _selectUnitSoundFemale, node["selectUnitFemale"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _startMovingSoundMale, node["startMovingMale"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _startMovingSoundFemale, node["startMovingFemale"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _selectWeaponSoundMale, node["selectWeaponMale"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _selectWeaponSoundFemale, node["selectWeaponFemale"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _annoyedSoundMale, node["annoyedMale"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _annoyedSoundFemale, node["annoyedFemale"], "BATTLE.CAT");
+
 	_weight = node["weight"].as<int>(_weight);
 	_visibilityAtDark = node["visibilityAtDark"].as<int>(_visibilityAtDark);
 	_visibilityAtDay = node["visibilityAtDay"].as<int>(_visibilityAtDay);
@@ -738,7 +751,7 @@ bool Armor::getCreatesMeleeThreat(bool def) const
 }
 
 /**
- * Gets how much negative hp is require to gib unit.
+ * Gets how much damage (over the maximum HP) is needed to vaporize/disintegrate a unit.
  * @return Percent of require hp.
  */
 float Armor::getOverKill() const
@@ -795,7 +808,7 @@ int findWithFallback(const std::vector<int> &vec, size_t pos)
 {
 	//if pos == 31 then we test for 31, 15, 7
 	//if pos == 36 then we test for 36, 4
-	//we stop on p < 8 for comatibility reasons.
+	//we stop on p < 8 for compatibility reasons.
 	for (int i = 0; i <= RuleSoldier::LookVariantBits; ++i)
 	{
 		size_t p = (pos & (RuleSoldier::LookTotalMask >> i));
@@ -866,7 +879,7 @@ const std::vector<std::string> &Armor::getUnits() const
 namespace
 {
 
-void getArmorValueScript(Armor *ar, int &ret, int side)
+void getArmorValueScript(const Armor *ar, int &ret, int side)
 {
 	if (ar && 0 <= side && side < SIDE_MAX)
 	{

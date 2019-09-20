@@ -46,6 +46,8 @@
 #include "../Savegame/Ufo.h"
 #include "../Mod/RuleUfo.h"
 #include "../Mod/RuleArcScript.h"
+#include "../Mod/RuleEventScript.h"
+#include "../Mod/RuleEvent.h"
 #include "../Mod/RuleMissionScript.h"
 #include "../Savegame/Waypoint.h"
 #include "../Savegame/Transfer.h"
@@ -102,6 +104,8 @@
 #include "../Mod/RuleAlienMission.h"
 #include "../Savegame/AlienStrategy.h"
 #include "../Savegame/AlienMission.h"
+#include "../Savegame/GeoscapeEvent.h"
+#include "GeoscapeEventState.h"
 #include "../Savegame/SavedBattleGame.h"
 #include "../Battlescape/BattlescapeGenerator.h"
 #include "../Battlescape/BriefingState.h"
@@ -1376,7 +1380,7 @@ bool DetectXCOMBase::operator()(const Ufo *ufo) const
 	if ((ufo->getMission()->getRules().getObjective() != OBJECTIVE_RETALIATION && !Options::aggressiveRetaliation) ||	// only UFOs on retaliation missions actively scan for bases
 		ufo->getTrajectory().getID() == UfoTrajectory::RETALIATION_ASSAULT_RUN || 										// UFOs attacking a base don't detect!
 		ufo->isCrashed() ||																								// Crashed UFOs don't detect!
-		_base.getDistance(ufo) >= Nautical(ufo->getCraftStats().sightRange))											// UFOs have a detection range of 80 XCOM units. - we use a great circle fomrula and nautical miles.
+		_base.getDistance(ufo) >= Nautical(ufo->getCraftStats().sightRange))											// UFOs have a detection range of 80 XCOM units. - we use a great circle formula and nautical miles.
 	{
 		return false;
 	}
@@ -1818,7 +1822,7 @@ void GeoscapeState::time30Minutes()
 		}
 	}
 
-	// can be updated by previons loop
+	// can be updated by previous loop
 	auto crafts = updateActiveCrafts();
 
 	// Handle UFO detection and give aliens points
@@ -1922,6 +1926,38 @@ void GeoscapeState::time30Minutes()
 		[&](MissionSite* site)
 		{
 			return processMissionSite(site);
+		}
+	);
+
+	// Decrease event countdowns and pop up if needed
+	for (auto ge : _game->getSavedGame()->getGeoscapeEvents())
+	{
+		ge->think();
+
+		if (ge->isOver())
+		{
+			bool interrupted = false;
+			if (!ge->getRules().getInterruptResearch().empty())
+			{
+				if (_game->getSavedGame()->isResearched(ge->getRules().getInterruptResearch(), false))
+				{
+					interrupted = true;
+				}
+			}
+			if (!interrupted)
+			{
+				timerReset();
+				popup(new GeoscapeEventState(ge));
+			}
+		}
+	}
+
+	// Remove finished events
+	Collections::deleteIf(
+		_game->getSavedGame()->getGeoscapeEvents(),
+		[](GeoscapeEvent *ge)
+		{
+			return ge->isOver();
 		}
 	);
 }
@@ -3105,6 +3141,7 @@ void GeoscapeState::determineAlienMissions()
 	AlienStrategy &strategy = save->getAlienStrategy();
 	Mod *mod = _game->getMod();
 	int month = _game->getSavedGame()->getMonthsPassed();
+	int currentScore = save->getCurrentScore(); // _monthsPassed was already increased by 1
 	std::vector<RuleMissionScript*> availableMissions;
 	std::map<int, bool> conditions;
 
@@ -3121,6 +3158,8 @@ void GeoscapeState::determineAlienMissions()
 			if (arcScript->getFirstMonth() <= month &&
 				(arcScript->getLastMonth() >= month || arcScript->getLastMonth() == -1) &&
 				// and make sure we satisfy the difficulty restrictions
+				(month < 1 || arcScript->getMinScore() <= currentScore) &&
+				(month < 1 || arcScript->getMaxScore() >= currentScore) &&
 				arcScript->getMinDifficulty() <= save->getDifficulty() &&
 				arcScript->getMaxDifficulty() >= save->getDifficulty())
 			{
@@ -3131,6 +3170,16 @@ void GeoscapeState::determineAlienMissions()
 					triggerHappy = (save->isResearched(trigger.first) == trigger.second);
 					if (!triggerHappy)
 						break;
+				}
+				if (triggerHappy)
+				{
+					// item requirements
+					for (auto &triggerItem : arcScript->getItemTriggers())
+					{
+						triggerHappy = (save->isItemObtained(triggerItem.first) == triggerItem.second);
+						if (!triggerHappy)
+							break;
+					}
 				}
 				// level three condition check: does random chance favour this command's execution?
 				if (triggerHappy && RNG::percent(arcScript->getExecutionOdds()))
@@ -3223,6 +3272,8 @@ void GeoscapeState::determineAlienMissions()
 			// make sure we haven't hit our run limit, if we have one
 			(command->getMaxRuns() == -1 ||	command->getMaxRuns() > strategy.getMissionsRun(command->getVarName())) &&
 			// and make sure we satisfy the difficulty restrictions
+			(month < 1 || command->getMinScore() <= currentScore) &&
+			(month < 1 || command->getMaxScore() >= currentScore) &&
 			command->getMinDifficulty() <= save->getDifficulty())
 		{
 			// level two condition check: make sure we meet any research requirements, if any.
@@ -3230,6 +3281,16 @@ void GeoscapeState::determineAlienMissions()
 			for (std::map<std::string, bool>::const_iterator j = command->getResearchTriggers().begin(); triggerHappy && j != command->getResearchTriggers().end(); ++j)
 			{
 				triggerHappy = (save->isResearched(j->first) == j->second);
+			}
+			if (triggerHappy)
+			{
+				// item requirements
+				for (auto &triggerItem : command->getItemTriggers())
+				{
+					triggerHappy = (save->isItemObtained(triggerItem.first) == triggerItem.second);
+					if (!triggerHappy)
+						break;
+				}
 			}
 			// levels one and two passed: insert this command into the array.
 			if (triggerHappy)
@@ -3284,6 +3345,70 @@ void GeoscapeState::determineAlienMissions()
 		}
 	}
 
+	// after the mission scripts, it's time for the event scripts
+	{
+		std::vector<RuleEventScript *> relevantEventScripts;
+
+		// first we need to build a list of "valid" commands
+		for (auto& scriptName : *mod->getEventScriptList())
+		{
+			RuleEventScript *eventScript = mod->getEventScript(scriptName);
+
+			// level one condition check: make sure we're within our time constraints
+			if (eventScript->getFirstMonth() <= month &&
+				(eventScript->getLastMonth() >= month || eventScript->getLastMonth() == -1) &&
+				// and make sure we satisfy the difficulty restrictions
+				(month < 1 || eventScript->getMinScore() <= currentScore) &&
+				(month < 1 || eventScript->getMaxScore() >= currentScore) &&
+				eventScript->getMinDifficulty() <= save->getDifficulty() &&
+				eventScript->getMaxDifficulty() >= save->getDifficulty())
+			{
+				// level two condition check: make sure we meet any research requirements, if any.
+				bool triggerHappy = true;
+				for (auto& trigger : eventScript->getResearchTriggers())
+				{
+					triggerHappy = (save->isResearched(trigger.first) == trigger.second);
+					if (!triggerHappy)
+						break;
+				}
+				if (triggerHappy)
+				{
+					// item requirements
+					for (auto &triggerItem : eventScript->getItemTriggers())
+					{
+						triggerHappy = (save->isItemObtained(triggerItem.first) == triggerItem.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				// level three condition check: does random chance favour this command's execution?
+				if (triggerHappy && RNG::percent(eventScript->getExecutionOdds()))
+				{
+					relevantEventScripts.push_back(eventScript);
+				}
+			}
+		}
+
+		// now, let's process the relevant event scripts
+		for (auto& eventCommand : relevantEventScripts)
+		{
+			auto eventName = eventCommand->generate(save->getMonthsPassed());
+			auto eventRules = mod->getEvent(eventName);
+			if (eventRules)
+			{
+				GeoscapeEvent *newEvent = new GeoscapeEvent(*eventRules);
+				int minutes = (eventRules->getTimer() + (RNG::generate(0, eventRules->getTimerRandom()))) / 30 * 30;
+				if (minutes < 60) minutes = 60; // just in case
+				newEvent->setSpawnCountdown(minutes);
+				_game->getSavedGame()->getGeoscapeEvents().push_back(newEvent);
+			}
+			else
+			{
+				throw Exception("Error processing event script named: " + eventCommand->getType() + ", event name: " + eventName + " is not defined");
+			}
+		}
+	}
+
 	// Alien base upgrades happen only AFTER the first game month
 	if (month > 0)
 	{
@@ -3302,7 +3427,7 @@ void GeoscapeState::determineAlienMissions()
 
 
 /**
- * Proccesses a directive to start up a mission, if possible.
+ * Processes a directive to start up a mission, if possible.
  * @param command the directive from which to read information.
  * @return whether the command successfully produced a new mission.
  */
@@ -3571,7 +3696,7 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
 	// that way, the modder can fix their mistake
 	if (mod->getRegion(targetRegion) == 0)
 	{
-		throw Exception("Error proccessing mission script named: " + command->getType() + ", region named: " + targetRegion + " is not defined");
+		throw Exception("Error processing mission script named: " + command->getType() + ", region named: " + targetRegion + " is not defined");
 	}
 
 	if (missionType.empty()) // ie: not a terror mission, not targetting a base, or otherwise not already chosen
@@ -3600,7 +3725,7 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
 	// that way, the modder can fix their mistake
 	if (missionRules == 0)
 	{
-		throw Exception("Error proccessing mission script named: " + command->getType() + ", mission type: " + missionType + " is not defined");
+		throw Exception("Error processing mission script named: " + command->getType() + ", mission type: " + missionType + " is not defined");
 	}
 
 	// do i really need to comment this? shouldn't it be obvious what's happening here?
@@ -3615,14 +3740,14 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
 
 	if (missionRace.empty())
 	{
-		throw Exception("Error proccessing mission script named: " + command->getType() + ", mission type: " + missionType + " has no available races");
+		throw Exception("Error processing mission script named: " + command->getType() + ", mission type: " + missionType + " has no available races");
 	}
 
 	// we're bound to end up with typos, so let's throw an exception instead of simply returning false
 	// that way, the modder can fix their mistake
 	if (mod->getAlienRace(missionRace) == 0)
 	{
-		throw Exception("Error proccessing mission script named: " + command->getType() + ", race: " + missionRace + " is not defined");
+		throw Exception("Error processing mission script named: " + command->getType() + ", race: " + missionRace + " is not defined");
 	}
 
 	// ok, we've derived all the variables we need to start up our mission, let's do magic to turn those values into a mission

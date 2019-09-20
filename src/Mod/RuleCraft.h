@@ -142,7 +142,7 @@ class RuleCraft
 public:
 	/// Maximum number of weapon slots on craft.
 	static const int WeaponMax = 4;
-	/// Maximum of diffrernt types in one weapon slot.
+	/// Maximum of different types in one weapon slot.
 	static const int WeaponTypeMax = 4;
 
 private:
@@ -202,8 +202,6 @@ public:
 	int getRentCost() const;
 	/// Gets the craft's value.
 	int getSellCost() const;
-	/// Gets craft type.
-	int getCraftType() const;
 	/// Gets the craft's refuel item.
 	const std::string &getRefuelItem() const;
 	/// Gets the craft's repair rate.

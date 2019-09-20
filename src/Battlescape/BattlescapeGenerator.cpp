@@ -75,7 +75,7 @@ BattlescapeGenerator::BattlescapeGenerator(Game *game) :
 	_craft(0), _craftRules(0), _ufo(0), _base(0), _mission(0), _alienBase(0), _terrain(0), _baseTerrain(0),
 	_mapsize_x(0), _mapsize_y(0), _mapsize_z(0), _worldTexture(0), _worldShade(0),
 	_unitSequence(0), _craftInventoryTile(0), _alienCustomDeploy(0), _alienCustomMission(0), _alienItemLevel(0), _ufoDamagePercentage(0),
-	_baseInventory(false), _generateFuel(true), _craftDeployed(false), _ufoDeployed(false), _craftZ(0), _blocksToDo(0), _dummy(0)
+	_baseInventory(false), _generateFuel(true), _craftDeployed(false), _ufoDeployed(false), _craftZ(0), _craftPos(), _blocksToDo(0), _dummy(0)
 {
 	_allowAutoLoadout = !Options::disableAutoEquip;
 	if (_game->getSavedGame()->getDisableSoldierEquipment())
@@ -221,7 +221,7 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
 
 
 /**
- * Switches an existing battlescapesavegame to a new stage.
+ * Switches an existing battlescape savegame to a new stage.
  */
 void BattlescapeGenerator::nextStage()
 {
@@ -455,7 +455,7 @@ void BattlescapeGenerator::nextStage()
 					// change soldier's armor (needed for inventory view!)
 					(*j)->getGeoscapeSoldier()->setArmor(transformedArmor);
 					// change battleunit's armor
-					(*j)->updateArmorFromSoldier((*j)->getGeoscapeSoldier(), transformedArmor, _save->getDepth(), _game->getMod()->getMaxViewDistance());
+					(*j)->updateArmorFromSoldier(_game->getMod(), (*j)->getGeoscapeSoldier(), transformedArmor, _save->getDepth());
 				}
 			}
 		}
@@ -591,12 +591,13 @@ void BattlescapeGenerator::nextStage()
 }
 
 /**
- * Starts the generator; it fills up the battlescapesavegame with data.
+ * Starts the generator; it fills up the battlescape savegame with data.
  */
 void BattlescapeGenerator::run()
 {
 	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
 
+	// Note: this considers also fake underwater UFO deployment (via _alienCustomMission)
 	const AlienDeployment *ruleDeploy = _alienCustomMission ? _alienCustomMission : _game->getMod()->getDeployment(_ufo?_ufo->getRules()->getType():_save->getMissionType(), true);
 
 	_save->setTurnLimit(ruleDeploy->getTurnLimit());
@@ -666,12 +667,15 @@ void BattlescapeGenerator::run()
 
 	setupObjectives(ruleDeploy);
 
-	RuleStartingCondition* startingCondition = _game->getMod()->getStartingCondition(ruleDeploy->getStartingCondition());
-	RuleEnviroEffects* enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
-	RuleEnviroEffects* temp = _game->getMod()->getEnviroEffects(ruleDeploy->getEnviroEffects());
-	if (temp != 0)
+	RuleStartingCondition *startingCondition = _game->getMod()->getStartingCondition(ruleDeploy->getStartingCondition());
+	if (!startingCondition && _worldTexture)
 	{
-		enviro = temp;
+		startingCondition = _game->getMod()->getStartingCondition(_worldTexture->getStartingCondition());
+	}
+	RuleEnviroEffects *enviro = _game->getMod()->getEnviroEffects(ruleDeploy->getEnviroEffects());
+	if (!enviro && _terrain)
+	{
+		enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
 	}
 	deployXCOM(startingCondition, enviro);
 
@@ -701,7 +705,7 @@ void BattlescapeGenerator::run()
 	}
 
 	setMusic(ruleDeploy, false);
-	// set shade (alien bases are a little darker, sites depend on worldshade)
+	// set shade (alien bases are a little darker, sites depend on world shade)
 	_save->setGlobalShade(_worldShade);
 
 	_save->getTileEngine()->calculateLighting(LL_AMBIENT, TileEngine::invalid, 0, true);
@@ -844,7 +848,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 				{
 					(*i)->clearEquipmentLayout();
 				}
-				BattleUnit *unit = addXCOMUnit(new BattleUnit(*i, _save->getDepth(), _game->getMod()->getMaxViewDistance()));
+				BattleUnit *unit = addXCOMUnit(new BattleUnit(_game->getMod() , *i, _save->getDepth()));
 				if (unit && !_save->getSelectedUnit())
 					_save->setSelectedUnit(unit);
 			}
@@ -904,7 +908,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 					// only put items in the battlescape that make sense (when the item got a sprite, it's probably ok)
 					rule->isInventoryItem() &&
 					// if item can be equip to craft then you should be able to use it in base defense
-					// in some cases we forbid some items from craft but still allow them in base defense if normaly they were avaiable.
+					// in some cases we forbid some items from craft but still allow them in base defense if normally they were available.
 					(rule->isUsefulBattlescapeItem() || rule->canBeEquippedToCraftInventory()) &&
 					// we know how to use this item
 					_game->getSavedGame()->isResearched(rule->getRequirements()))
@@ -1051,7 +1055,7 @@ void BattlescapeGenerator::autoEquip(std::vector<BattleUnit*> units, Mod *mod, s
 BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
 {
 	Unit *rule = v->getRules()->getVehicleUnit();
-	BattleUnit *unit = addXCOMUnit(new BattleUnit(rule, FACTION_PLAYER, _unitSequence++, nullptr, rule->getArmor(), 0, _save->getDepth(), _game->getMod()->getMaxViewDistance()));
+	BattleUnit *unit = addXCOMUnit(new BattleUnit(_game->getMod(), rule, FACTION_PLAYER, _unitSequence++, nullptr, rule->getArmor(), 0, _save->getDepth()));
 	if (unit)
 	{
 		_save->createItemForUnit(v->getRules(), unit, true);
@@ -1072,7 +1076,7 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
 /**
  * Adds a soldier to the game and places him on a free spawnpoint.
  * Spawnpoints are either tiles in case of an XCom craft that landed.
- * Or they are mapnodes in case there's no craft.
+ * Or they are map nodes in case there's no craft.
  * @param soldier Pointer to the Soldier.
  * @return Pointer to the spawned unit.
  */
@@ -1312,7 +1316,7 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  */
 BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outside)
 {
-	BattleUnit *unit = new BattleUnit(rules, FACTION_HOSTILE, _unitSequence++, _save->getEnviroEffects(), rules->getArmor(), _game->getMod()->getStatAdjustment(_game->getSavedGame()->getDifficulty()), _save->getDepth(), _game->getMod()->getMaxViewDistance());
+	BattleUnit *unit = new BattleUnit(_game->getMod(), rules, FACTION_HOSTILE, _unitSequence++, _save->getEnviroEffects(), rules->getArmor(), _game->getMod()->getStatAdjustment(_game->getSavedGame()->getDifficulty()), _save->getDepth());
 	Node *node = 0;
 
 	// safety to avoid index out of bounds errors
@@ -1384,7 +1388,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  */
 BattleUnit *BattlescapeGenerator::addCivilian(Unit *rules)
 {
-	BattleUnit *unit = new BattleUnit(rules, FACTION_NEUTRAL, _unitSequence++, _save->getEnviroEffects(), rules->getArmor(), 0, _save->getDepth(), _game->getMod()->getMaxViewDistance());
+	BattleUnit *unit = new BattleUnit(_game->getMod(), rules, FACTION_NEUTRAL, _unitSequence++, _save->getEnviroEffects(), rules->getArmor(), 0, _save->getDepth());
 	Node *node = _save->getSpawnNode(0, unit);
 
 	if (node)
@@ -1503,8 +1507,8 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
  * @param yoff Mapblock offset in Y direction.
  * @param save Pointer to the current SavedBattleGame.
  * @param terrain Pointer to the Terrain rule.
- * @param discovered Whether or not this mapblock is discovered (eg. landingsite of the XCom plane).
- * @return int Height of the loaded mapblock (this is needed for spawpoint calculation...)
+ * @param discovered Whether or not this mapblock is discovered (eg. landing site of the XCom plane).
+ * @return int Height of the loaded mapblock (this is needed for spawnpoint calculation...)
  * @sa http://www.ufopaedia.org/index.php?title=MAPS
  * @note Y-axis is in reverse order.
  */
@@ -1779,7 +1783,7 @@ int BattlescapeGenerator::loadExtraTerrain(RuleTerrain *terrain)
 	std::map<RuleTerrain*, int>::iterator it = _loadedTerrains.find(terrain);
 	if (it != _loadedTerrains.end())
 	{
-		// Found the terrain in the alread-loaded list, get the offset
+		// Found the terrain in the already-loaded list, get the offset
 		mapDataSetIDOffset = it->second;
 	}
 	else
@@ -1820,7 +1824,7 @@ void BattlescapeGenerator::fuelPowerSources()
 
 
 /**
- * When a UFO crashes, there is a 75% chance for each powersource to explode.
+ * When a UFO crashes, there is a 75% chance for each power source to explode.
  */
 void BattlescapeGenerator::explodePowerSources()
 {
@@ -1963,7 +1967,7 @@ void BattlescapeGenerator::runInventory(Craft *craft)
 	MapData *data = new MapData(set);
 	_craftInventoryTile = _save->getTile(0);
 
-	// ok now generate the battleitems for inventory
+	// ok now generate the battle items for inventory
 	if (craft != 0) setCraft(craft);
 	deployXCOM(nullptr, nullptr);
 	delete data;
@@ -2003,7 +2007,17 @@ void BattlescapeGenerator::loadWeapons(const std::vector<BattleItem*> &itemList)
 void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 {
 	// set our ambient sound
-	_save->setAmbientSound(_terrain->getAmbience());
+	if (_terrain->getAmbience() != -1)
+	{
+		_save->setAmbientSound(_terrain->getAmbience());
+	}
+	else
+	{
+		_save->setAmbienceRandom(_terrain->getAmbienceRandom());
+		_save->setMinAmbienceRandomDelay(_terrain->getMinAmbienceRandomDelay());
+		_save->setMaxAmbienceRandomDelay(_terrain->getMaxAmbienceRandomDelay());
+		_save->resetCurrentAmbienceDelay();
+	}
 	_save->setAmbientVolume(_terrain->getAmbientVolume());
 
 	// set up our map generation vars
@@ -2838,7 +2852,7 @@ RuleTerrain* BattlescapeGenerator::pickTerrain(std::string terrainName)
 		if (!terrain)
 		{
 			// make sure we get a terrain, and put an error in the log, continuing with generation
-			Log(LOG_ERROR) << "Map generator could not find alternate terrain " << terrainName << ", proceding with terrain from alienDeployments or Geoscape texture.";
+			Log(LOG_ERROR) << "Map generator could not find alternate terrain " << terrainName << ", proceeding with terrain from alienDeployments or Geoscape texture.";
 			terrain = _terrain;
 		}
 	}
@@ -3649,7 +3663,7 @@ void BattlescapeGenerator::drillModules(TunnelData* data, const std::vector<SDL_
 							tile->setMapData(0, -1, -1, O_OBJECT);
 							if (floor)
 							{
-								md = terrain->getMapDataSets()->at(floor->set)->getObjects()->at(floor->entry);
+								md = terrain->getMapDataSets()->at(floor->set)->getObject(floor->entry);
 								tile->setMapData(md, floor->entry, floor->set, O_FLOOR);
 							}
 
@@ -3665,7 +3679,7 @@ void BattlescapeGenerator::drillModules(TunnelData* data, const std::vector<SDL_
 
 					if (nWall)
 					{
-						md = terrain->getMapDataSets()->at(nWall->set)->getObjects()->at(nWall->entry);
+						md = terrain->getMapDataSets()->at(nWall->set)->getObject(nWall->entry);
 						tile = _save->getTile(Position((i*10)+9, (j*10)+rect.y, data->level));
 						tile->setMapData(md, nWall->entry, nWall->set, O_NORTHWALL);
 						tile = _save->getTile(Position((i*10)+9, (j*10)+rect.y+rect.h, data->level));
@@ -3674,7 +3688,7 @@ void BattlescapeGenerator::drillModules(TunnelData* data, const std::vector<SDL_
 
 					if (corner)
 					{
-						md = terrain->getMapDataSets()->at(corner->set)->getObjects()->at(corner->entry);
+						md = terrain->getMapDataSets()->at(corner->set)->getObject(corner->entry);
 						tile = _save->getTile(Position((i+1)*10, (j*10)+rect.y, data->level));
 						if (tile->getMapData(O_NORTHWALL) == 0)
 							tile->setMapData(md, corner->entry, corner->set, O_NORTHWALL);
@@ -3697,7 +3711,7 @@ void BattlescapeGenerator::drillModules(TunnelData* data, const std::vector<SDL_
 							tile->setMapData(0, -1, -1, O_OBJECT);
 							if (floor)
 							{
-								md = terrain->getMapDataSets()->at(floor->set)->getObjects()->at(floor->entry);
+								md = terrain->getMapDataSets()->at(floor->set)->getObject(floor->entry);
 								tile->setMapData(md, floor->entry, floor->set, O_FLOOR);
 							}
 
@@ -3713,7 +3727,7 @@ void BattlescapeGenerator::drillModules(TunnelData* data, const std::vector<SDL_
 
 					if (wWall)
 					{
-						md = terrain->getMapDataSets()->at(wWall->set)->getObjects()->at(wWall->entry);
+						md = terrain->getMapDataSets()->at(wWall->set)->getObject(wWall->entry);
 						Tile *tile = _save->getTile(Position((i*10)+rect.x, (j*10)+9, data->level));
 						tile->setMapData(md, wWall->entry, wWall->set, O_WESTWALL);
 						tile = _save->getTile(Position((i*10)+rect.x+rect.w, (j*10)+9, data->level));
@@ -3722,7 +3736,7 @@ void BattlescapeGenerator::drillModules(TunnelData* data, const std::vector<SDL_
 
 					if (corner)
 					{
-						md = terrain->getMapDataSets()->at(corner->set)->getObjects()->at(corner->entry);
+						md = terrain->getMapDataSets()->at(corner->set)->getObject(corner->entry);
 						Tile *tile = _save->getTile(Position((i*10)+rect.x, (j+1)*10, data->level));
 						if (tile->getMapData(O_WESTWALL) == 0)
 							tile->setMapData(md, corner->entry, corner->set, O_WESTWALL);

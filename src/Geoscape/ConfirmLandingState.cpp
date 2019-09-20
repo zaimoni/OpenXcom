@@ -41,6 +41,7 @@
 #include "../Mod/AlienDeployment.h"
 #include "../Mod/AlienRace.h"
 #include "../Mod/Mod.h"
+#include "../Mod/Texture.h"
 
 namespace OpenXcom
 {
@@ -77,7 +78,7 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *texture, int sha
 	centerAllSurfaces();
 
 	// Set up objects
-	_window->setBackground(_game->getMod()->getSurface("BACK15.SCR"));
+	setWindowBackground(_window, "confirmLanding");
 
 	_btnYes->setText(tr("STR_YES"));
 	_btnYes->onMouseClick((ActionHandler)&ConfirmLandingState::btnYesClick);
@@ -163,7 +164,12 @@ std::string ConfirmLandingState::checkStartingCondition()
 	AlienDeployment *ruleDeploy = 0;
 	if (u != 0)
 	{
-		ruleDeploy = _game->getMod()->getDeployment(u->getRules()->getType());
+		std::string ufoMissionName = u->getRules()->getType();
+		if (_texture->isFakeUnderwater())
+		{
+			ufoMissionName = u->getRules()->getType() + "_UNDERWATER";
+		}
+		ruleDeploy = _game->getMod()->getDeployment(ufoMissionName);
 	}
 	else if (m != 0)
 	{
@@ -188,6 +194,10 @@ std::string ConfirmLandingState::checkStartingCondition()
 	}
 
 	RuleStartingCondition *rule = _game->getMod()->getStartingCondition(ruleDeploy->getStartingCondition());
+	if (!rule && _texture)
+	{
+		rule = _game->getMod()->getStartingCondition(_texture->getStartingCondition());
+	}
 	if (rule != 0)
 	{
 		if (!rule->isCraftPermitted(_craft->getRules()->getType()))
@@ -247,7 +257,17 @@ void ConfirmLandingState::btnYesClick(Action *)
 		else
 			bgame->setMissionType("STR_UFO_GROUND_ASSAULT");
 		bgen.setUfo(u);
-		bgen.setAlienCustomDeploy(_game->getMod()->getDeployment(u->getCraftStats().craftCustomDeploy));
+		const AlienDeployment *customWeaponDeploy = _game->getMod()->getDeployment(u->getCraftStats().craftCustomDeploy);
+		if (_texture->isFakeUnderwater())
+		{
+			const std::string ufoUnderwaterMissionName = u->getRules()->getType() + "_UNDERWATER";
+			const AlienDeployment *ufoUnderwaterMission = _game->getMod()->getDeployment(ufoUnderwaterMissionName, true);
+			bgen.setAlienCustomDeploy(customWeaponDeploy, ufoUnderwaterMission);
+		}
+		else
+		{
+			bgen.setAlienCustomDeploy(customWeaponDeploy);
+		}
 		bgen.setAlienRace(u->getAlienRace());
 	}
 	else if (m != 0)

@@ -35,6 +35,7 @@
 #include "../Mod/AlienDeployment.h"
 #include "../Mod/RuleUfo.h"
 #include "../Engine/Options.h"
+#include "../Engine/RNG.h"
 #include "../Engine/Screen.h"
 #include "../Menu/CutsceneState.h"
 
@@ -75,7 +76,13 @@ BriefingState::BriefingState(Craft *craft, Base *base, bool infoOnly) : _infoOnl
 		ufo = dynamic_cast <Ufo*> (craft->getDestination());
 		if (ufo) // landing site or crash site.
 		{
-			deployment = _game->getMod()->getDeployment(ufo->getRules()->getType());
+			std::string ufoMissionName = ufo->getRules()->getType();
+			if (!battleSave->getAlienCustomMission().empty())
+			{
+				// fake underwater UFO
+				ufoMissionName = battleSave->getAlienCustomMission();
+			}
+			deployment = _game->getMod()->getDeployment(ufoMissionName);
 		}
 	}
 
@@ -144,7 +151,30 @@ BriefingState::BriefingState(Craft *craft, Base *base, bool infoOnly) : _infoOnl
 		s = tr("STR_BASE_UC_").arg(base->getName());
 		battleSave->setMissionCraftOrBase(s);
 	}
-	_txtTarget->setText(battleSave->getMissionTarget());
+
+	// random operation names
+	if (craft || base)
+	{
+		if (!_game->getMod()->getOperationNamesFirst().empty())
+		{
+			std::ostringstream ss;
+			int pickFirst = RNG::seedless(0, _game->getMod()->getOperationNamesFirst().size() - 1);
+			ss << _game->getMod()->getOperationNamesFirst().at(pickFirst);
+			if (!_game->getMod()->getOperationNamesLast().empty())
+			{
+				int pickLast = RNG::seedless(0, _game->getMod()->getOperationNamesLast().size() - 1);
+				ss << " " << _game->getMod()->getOperationNamesLast().at(pickLast);
+			}
+			s = ss.str();
+			battleSave->setMissionTarget(s);
+		}
+	}
+
+	if (!_game->getMod()->getOperationNamesFirst().empty())
+		_txtTarget->setText(tr("STR_OPERATION_UC").arg(battleSave->getMissionTarget()));
+	else
+		_txtTarget->setText(battleSave->getMissionTarget());
+
 	_txtCraft->setText(battleSave->getMissionCraftOrBase());
 
 	_txtTitle->setText(tr(title));

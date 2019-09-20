@@ -51,7 +51,7 @@ OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch, ke
 	keyGraphsZoomIn, keyGraphsZoomOut,
 	keyToggleQuickSearch,
 	keyCraftLoadoutSave, keyCraftLoadoutLoad,
-	keyMarkAllAsSeen, keySelectAll, keyDeselectAll, keyResetAll,
+	keyMarkAllAsSeen, keySelectAll, keySelectAllButOne, keyDeselectAll, keyResetAll,
 	keyInventoryArmor, keyInventoryAvatar, keyInventorySave, keyInventoryLoad,
 	keyBattleUseSpecial,
 	keyBattleActionItem1, keyBattleActionItem2, keyBattleActionItem3, keyBattleActionItem4, keyBattleActionItem5,
@@ -59,14 +59,17 @@ OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch, ke
 
 // Extra options (OXCE)
 OPT int oxceStartUpTextMode;
+OPT bool oxceUpdateCheck;
+
 OPT bool oxceUfoLandingAlert;
 OPT int oxceWoundedDefendBaseIf;
 OPT bool oxcePlayBriefingMusicDuringEquipment;
 OPT int oxceNightVisionColor;
 OPT bool oxceAutoSell;
-OPT int oxceNightVisionButtonThreshold;
+OPT int oxceAutoNightVisionThreshold;
 OPT bool oxceRememberDisabledCraftWeapons;
-OPT bool oxceHighlightNewTopics;
+OPT bool oxceHighlightNewTopicsHidden;
+OPT bool oxceEnableUnitResponseSounds;
 OPT std::string password;
 
 // System-specific options

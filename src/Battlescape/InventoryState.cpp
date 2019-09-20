@@ -375,7 +375,7 @@ void InventoryState::init()
 		if (_reloadUnit)
 		{
 			// Step 0: update unit's armor
-			unit->updateArmorFromSoldier(s, s->getArmor(), _battleGame->getDepth(), _game->getMod()->getMaxViewDistance());
+			unit->updateArmorFromSoldier(_game->getMod(), s, s->getArmor(), _battleGame->getDepth());
 
 			// Step 1: remember the unit's equipment (excl. fixed items)
 			_clearInventoryTemplate(_tempInventoryTemplate);
@@ -779,30 +779,12 @@ void InventoryState::btnOkClick(Action *)
 	if (_inv->getSelectedItem() != 0)
 		return;
 	_game->popState();
-	Tile *inventoryTile = _battleGame->getSelectedUnit()->getTile();
 	if (!_tu)
 	{
 		saveEquipmentLayout();
-		_battleGame->resetUnitTiles();
-		if (_battleGame->getTurn() == 1)
+		if (_parent)
 		{
-			_battleGame->randomizeItemLocations(inventoryTile);
-			if (inventoryTile->getUnit())
-			{
-				// make sure we select the unit closest to the ramp.
-				_battleGame->setSelectedUnit(inventoryTile->getUnit());
-			}
-		}
-
-		// initialize xcom units for battle
-		for (std::vector<BattleUnit*>::iterator j = _battleGame->getUnits()->begin(); j != _battleGame->getUnits()->end(); ++j)
-		{
-			if ((*j)->getOriginalFaction() != FACTION_PLAYER || (*j)->isOut())
-			{
-				continue;
-			}
-
-			(*j)->prepareNewTurn(false);
+			_battleGame->startFirstTurn();
 		}
 	}
 }
@@ -1039,7 +1021,7 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 				if (!skipWeapon)
 				{
 					matchedWeapon = groundItem;
-					found = true; // found = true, even if not equiped
+					found = true; // found = true, even if not equipped
 					break;
 				}
 			}
@@ -1086,7 +1068,7 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 			(*templateIt)->getSlotX(),
 			(*templateIt)->getSlotY()))
 		{
-			// move matched item from ground to the appropriate inv slot
+			// move matched item from ground to the appropriate inventory slot
 			matchedWeapon->moveToOwner(unit);
 			matchedWeapon->setSlot(_game->getMod()->getInventory((*templateIt)->getSlot()));
 			matchedWeapon->setSlotX((*templateIt)->getSlotX());
@@ -1461,7 +1443,7 @@ void InventoryState::onMoveGroundInventoryToBase(Action *)
 
 	if (_noCraft)
 	{
-		// pre-equippping in the base, but *without* a craft
+		// pre-equipping in the base, but *without* a craft
 		return;
 	}
 
@@ -1564,7 +1546,7 @@ void InventoryState::handle(Action *action)
 }
 
 /**
- * Cycle throug loaded ammo in hover over item.
+ * Cycle through loaded ammo in hover over item.
  */
 void InventoryState::think()
 {

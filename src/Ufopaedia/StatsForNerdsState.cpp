@@ -37,6 +37,7 @@
 #include "../Mod/RuleCraft.h"
 #include "../Mod/RuleInterface.h"
 #include "../Mod/RuleItem.h"
+#include "../Mod/RuleSoldierBonus.h"
 #include "../Mod/RuleUfo.h"
 #include "../Savegame/SavedGame.h"
 #include "../fmath.h"
@@ -153,7 +154,7 @@ void StatsForNerdsState::buildUI(bool debug, bool ids, bool defaults)
 	centerAllSurfaces();
 
 	// Set up objects
-	_window->setBackground(_game->getMod()->getSurface("BACK05.SCR"));
+	setWindowBackground(_window, "statsForNerds");
 
 	_txtTitle->setBig();
 	_txtTitle->setAlign(ALIGN_CENTER);
@@ -256,7 +257,7 @@ void StatsForNerdsState::cbxAmmoSelect(Action *)
 
 
 /**
- * Refresh the displayed data including/exluding the raw IDs.
+ * Refresh the displayed data including/excluding the raw IDs.
  * @param action Pointer to an action.
  */
 void StatsForNerdsState::btnRefreshClick(Action *)
@@ -355,6 +356,8 @@ void StatsForNerdsState::initLists()
 	case UFOPAEDIA_TYPE_TFTD_USO:
 		initUfoList();
 		break;
+	case UFOPAEDIA_TYPE_UNKNOWN:
+		initSoldierBonusList();
 	default:
 		break;
 	}
@@ -1273,7 +1276,7 @@ void StatsForNerdsState::addRuleStatBonus(std::ostringstream &ss, const RuleStat
 				{
 					ss << numberAbs * 1;
 				}
-				if (item.first == "flatHundred")
+				else if (item.first == "flatHundred")
 				{
 					ss << numberAbs * pow(100, power);
 				}
@@ -1787,7 +1790,10 @@ void StatsForNerdsState::initItemList()
 			endHeading();
 		}
 		addIntegerPercent(ss, itemRule->getSpecialChance(), "specialChance", 100);
-		addSingleString(ss, itemRule->getZombieUnit(), "zombieUnit");
+		addBoolean(ss, !itemRule->getZombieUnitByArmorMaleRaw().empty(), "zombieUnitByArmorMale*", false); // just say if there are any or not
+		addBoolean(ss, !itemRule->getZombieUnitByArmorFemaleRaw().empty(), "zombieUnitByArmorFemale*", false); // just say if there are any or not
+		addBoolean(ss, !itemRule->getZombieUnitByTypeRaw().empty(), "zombieUnitByType*", false); // just say if there are any or not
+		addSingleString(ss, itemRule->getZombieUnit(nullptr), "zombieUnit");
 		addSingleString(ss, itemRule->getSpawnUnit(), "spawnUnit");
 		addInteger(ss, itemRule->getSpawnUnitFaction(), "spawnUnitFaction", -1);
 
@@ -2315,6 +2321,49 @@ void StatsForNerdsState::initArmorList()
 }
 
 /**
+ * Shows the "raw" RuleSoldierBonus data.
+ */
+void StatsForNerdsState::initSoldierBonusList()
+{
+	_lstRawData->clearList();
+	_lstRawData->setIgnoreSeparators(true);
+
+	std::ostringstream ssTopic;
+	ssTopic << tr(_topicId);
+	if (_showIds)
+	{
+		ssTopic << " [" << _topicId << "]";
+	}
+
+	_txtArticle->setText(tr("STR_ARTICLE").arg(ssTopic.str()));
+
+	Mod *mod = _game->getMod();
+	RuleSoldierBonus *bonusRule = mod->getSoldierBonus(_topicId);
+	if (!bonusRule)
+		return;
+
+	_filterOptions.clear();
+	_cbxRelatedStuff->setVisible(false);
+
+	std::ostringstream ss;
+
+	addUnitStatBonus(ss, *bonusRule->getStats(), "stats");
+
+	addInteger(ss, bonusRule->getVisibilityAtDark(), "visibilityAtDark");
+
+	addHeading("recovery");
+	{
+		addRuleStatBonus(ss, *bonusRule->getTimeRecoveryRaw(), "time");
+		addRuleStatBonus(ss, *bonusRule->getEnergyRecoveryRaw(), "energy");
+		addRuleStatBonus(ss, *bonusRule->getMoraleRecoveryRaw(), "morale");
+		addRuleStatBonus(ss, *bonusRule->getHealthRecoveryRaw(), "health");
+		addRuleStatBonus(ss, *bonusRule->getStunRegenerationRaw(), "stun");
+		addRuleStatBonus(ss, *bonusRule->getManaRecoveryRaw(), "mana");
+		endHeading();
+	}
+}
+
+/**
  * Adds a vector of Positions to the table.
  */
 void StatsForNerdsState::addVectorOfPositions(std::ostringstream &ss, const std::vector<Position> &vec, const std::string &propertyName)
@@ -2676,7 +2725,6 @@ void StatsForNerdsState::initCraftList()
 		addInteger(ss, craftRule->getSprite() + 33, "_sprite (Base)", 32);
 		addSpriteResourcePath(ss, mod, "BASEBITS.PCK", craftRule->getSprite() + 33);
 		addInteger(ss, craftRule->getMarker(), "marker", -1);
-		//addSpriteResourcePath(ss, mod, "GlobeMarkers", craftRule->getMarker());
 		addInteger(ss, craftRule->getScore(), "score");
 
 		addSection("{Battlescape}", "", _white);

@@ -178,6 +178,9 @@ void create()
 	_info.push_back(OptionInfo("useAnisotropicScaler", &useAnisotropicScaler, false));
 
 	// advanced option
+#ifdef _WIN32
+	_info.push_back(OptionInfo("oxceUpdateCheck", &oxceUpdateCheck, false, "STR_UPDATE_CHECK", "STR_GENERAL"));
+#endif
 	_info.push_back(OptionInfo("playIntro", &playIntro, true, "STR_PLAYINTRO", "STR_GENERAL"));
 	_info.push_back(OptionInfo("autosave", &autosave, true, "STR_AUTOSAVE", "STR_GENERAL"));
 	_info.push_back(OptionInfo("autosaveFrequency", &autosaveFrequency, 5, "STR_AUTOSAVE_FREQUENCY", "STR_GENERAL"));
@@ -279,14 +282,11 @@ void create()
 	_info.push_back(OptionInfo("oxceWoundedDefendBaseIf", &oxceWoundedDefendBaseIf, 100, "STR_WOUNDED_DEFEND_BASE_IF", "STR_OXCE"));
 	_info.push_back(OptionInfo("oxcePlayBriefingMusicDuringEquipment", &oxcePlayBriefingMusicDuringEquipment, false, "STR_PLAY_BRIEFING_MUSIC_DURING_EQUIPMENT", "STR_OXCE"));
 	_info.push_back(OptionInfo("oxceNightVisionColor", &oxceNightVisionColor, 5, "STR_NIGHT_VISION_COLOR", "STR_OXCE"));
-#ifdef __ANDROID__
-	_info.push_back(OptionInfo("oxceNightVisionButtonThreshold", &oxceNightVisionButtonThreshold, 15, "STR_NV_BUTTON_THRESHOLD", "STR_OXCE"));
-#else
-	_info.push_back(OptionInfo("oxceNightVisionButtonThreshold", &oxceNightVisionButtonThreshold, 15));
-#endif
+	_info.push_back(OptionInfo("oxceAutoNightVisionThreshold", &oxceAutoNightVisionThreshold, 15, "STR_AUTO_NIGHT_VISION_THRESHOLD", "STR_OXCE"));
 	_info.push_back(OptionInfo("oxceAutoSell", &oxceAutoSell, false, "STR_AUTO_SELL", "STR_OXCE"));
 	_info.push_back(OptionInfo("oxceRememberDisabledCraftWeapons", &oxceRememberDisabledCraftWeapons, false, "STR_REMEMBER_DISABLED_CRAFT_WEAPONS", "STR_OXCE"));
-	_info.push_back(OptionInfo("oxceHighlightNewTopics", &oxceHighlightNewTopics, false, "STR_HIGHLIGHT_NEW_TOPICS", "STR_OXCE"));
+	_info.push_back(OptionInfo("oxceHighlightNewTopicsHidden", &oxceHighlightNewTopicsHidden, true));
+	_info.push_back(OptionInfo("oxceEnableUnitResponseSounds", &oxceEnableUnitResponseSounds, true));
 
 	// controls
 	_info.push_back(KeyOptionInfo("keyOk", &keyOk, SDLK_RETURN, "STR_OK", "STR_GENERAL"));
@@ -380,6 +380,7 @@ void create()
 
 	_info.push_back(KeyOptionInfo("keyMarkAllAsSeen", &keyMarkAllAsSeen, SDLK_x, "STR_MARK_ALL_AS_SEEN", "STR_OXCE"));
 	_info.push_back(KeyOptionInfo("keySelectAll", &keySelectAll, SDLK_x, "STR_SELECT_ALL", "STR_OXCE"));
+	_info.push_back(KeyOptionInfo("keySelectAllButOne", &keySelectAllButOne, SDLK_z, "STR_SELECT_ALL_BUT_ONE", "STR_OXCE"));
 	_info.push_back(KeyOptionInfo("keyDeselectAll", &keyDeselectAll, SDLK_x, "STR_DESELECT_ALL", "STR_OXCE"));
 	_info.push_back(KeyOptionInfo("keyResetAll", &keyResetAll, SDLK_x, "STR_RESET_ALL", "STR_OXCE"));
 
@@ -413,7 +414,7 @@ void create()
 // that the *correct* files are there complex.
 static bool _gameIsInstalled(const std::string &gameName)
 {
-	// look for game data in either the data or user directorie
+	// look for game data in either the data or user directories
 	std::string dataGameFolder = CrossPlatform::searchDataFolder(gameName);
 	std::string dataGameZipFile = CrossPlatform::searchDataFile(gameName + ".zip");
 	std::string userGameFolder = _userFolder + gameName;
