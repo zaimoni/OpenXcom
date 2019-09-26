@@ -1728,7 +1728,7 @@ void GeoscapeState::time30Minutes()
 			if (ufo->getSecondsRemaining() >= 30 * 60)
 			{
 				ufo->setSecondsRemaining(ufo->getSecondsRemaining() - 30 * 60);
-				return;
+				continue;
 			}
 			// Marked expired UFOs for removal.
 			ufo->setStatus(Ufo::DESTROYED);
@@ -2359,10 +2359,18 @@ void GeoscapeState::time1Day()
 			{
 				(*j)->heal(absBonus, relBonus);
 			}
-			else if ((*j)->getManaMissing() > 0)
+			else if ((*j)->getManaMissing() > 0 && manaRecoveryPerDay > 0)
 			{
+				// positive mana recovery only when NOT wounded
 				(*j)->replenishMana(manaRecoveryPerDay);
 			}
+
+			if (manaRecoveryPerDay < 0)
+			{
+				// negative mana recovery always
+				(*j)->replenishMana(manaRecoveryPerDay);
+			}
+
 			if ((*j)->isInTraining())
 			{
 				(*j)->trainPhys(_game->getMod()->getCustomTrainingFactor());

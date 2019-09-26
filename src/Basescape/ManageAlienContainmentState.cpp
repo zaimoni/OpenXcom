@@ -379,7 +379,7 @@ void ManageAlienContainmentState::btnCancelClick(Action *)
 */
 void ManageAlienContainmentState::btnTransferClick(Action *)
 {
-	_game->pushState(new TransferBaseState(_base));
+	_game->pushState(new TransferBaseState(_base, nullptr));
 }
 
 /**
