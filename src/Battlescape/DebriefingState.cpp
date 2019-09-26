@@ -62,6 +62,7 @@
 #include "../Engine/Options.h"
 #include "../Engine/RNG.h"
 #include "../Basescape/ManageAlienContainmentState.h"
+#include "../Basescape/TransferBaseState.h"
 #include "../Engine/Screen.h"
 #include "../Basescape/SellState.h"
 #include "../Menu/SaveGameState.h"
@@ -95,6 +96,7 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 	_btnOk = new TextButton(40, 12, 16, 180);
 	_btnStats = new TextButton(60, 12, 244, 180);
 	_btnSell = new TextButton(60, 12, 176, 180);
+	_btnTransfer = new TextButton(80, 12, 88, 180);
 	_txtTitle = new Text(300, 17, 16, 8);
 	_txtItem = new Text(180, 9, 16, 24);
 	_txtQuantity = new Text(60, 9, 200, 24);
@@ -137,6 +139,7 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 	add(_btnOk, "button", "debriefing");
 	add(_btnStats, "button", "debriefing");
 	add(_btnSell, "button", "debriefing");
+	add(_btnTransfer, "button", "debriefing");
 	add(_txtTitle, "heading", "debriefing");
 	add(_txtItem, "text", "debriefing");
 	add(_txtQuantity, "text", "debriefing");
@@ -178,6 +181,8 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 
 	_btnSell->setText(tr("STR_SELL"));
 	_btnSell->onMouseClick((ActionHandler)&DebriefingState::btnSellClick);
+	_btnTransfer->setText(tr("STR_TRANSFER_UC"));
+	_btnTransfer->onMouseClick((ActionHandler)&DebriefingState::btnTransferClick);
 
 	_txtTitle->setBig();
 
@@ -335,9 +340,10 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 				}
 
 				qty -= origBaseItems->getItem(*i);
-				_recoveredItems[rule] = qty;
 				if (qty > 0)
 				{
+					_recoveredItems[rule] = qty;
+
 					std::ostringstream ss;
 					ss << Unicode::TOK_COLOR_FLIP << qty << Unicode::TOK_COLOR_FLIP;
 					std::string item = tr(*i);
@@ -732,6 +738,7 @@ void DebriefingState::applyVisibility()
 
 	// Set text on toggle button accordingly
 	_btnSell->setVisible(showItems && _showSellButton);
+	_btnTransfer->setVisible(showItems && _showSellButton && _game->getSavedGame()->getBases()->size() > 1);
 	if (showScore)
 	{
 		_btnStats->setText(tr("STR_STATS"));
@@ -800,6 +807,18 @@ void DebriefingState::btnSellClick(Action *)
 	if (!_destroyBase)
 	{
 		_game->pushState(new SellState(_base, this, OPT_BATTLESCAPE));
+	}
+}
+
+/**
+ * Opens the Transfer UI (for recovered items ONLY).
+ * @param action Pointer to an action.
+ */
+void DebriefingState::btnTransferClick(Action *)
+{
+	if (!_destroyBase)
+	{
+		_game->pushState(new TransferBaseState(_base, this));
 	}
 }
 
@@ -1478,7 +1497,7 @@ void DebriefingState::prepareDebriefing()
 								const RuleItem *primaryRule = weapon->getRules();
 								const BattleItem *ammoItem = weapon->getAmmoForSlot(0);
 								const auto *compatible = primaryRule->getPrimaryCompatibleAmmo();
-								if (!compatible->empty() && ammoItem != 0 && ammoItem->getAmmoQuantity() > 0)
+								if (primaryRule->getVehicleUnit() && !compatible->empty() && ammoItem != 0 && ammoItem->getAmmoQuantity() > 0)
 								{
 									int total = ammoItem->getAmmoQuantity();
 
@@ -2466,22 +2485,53 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base)
 }
 
 /**
-* Gets the number of recovered items of certain type.
-* @param rule Type of item.
-*/
+ * Gets the number of recovered items of certain type.
+ * @param rule Type of item.
+ */
 int DebriefingState::getRecoveredItemCount(RuleItem *rule)
 {
-	return _recoveredItems[rule];
+	auto it = _recoveredItems.find(rule);
+	if (it != _recoveredItems.end())
+		return it->second;
+
+	return 0;
 }
 
 /**
-* Sets the visibility of the SELL button.
-* @param showSellButton New value.
-*/
-void DebriefingState::setShowSellButton(bool showSellButton)
+ * Gets the total number of recovered items.
+ */
+int DebriefingState::getTotalRecoveredItemCount()
 {
-	_showSellButton = showSellButton;
+	int total = 0;
+	for (auto item : _recoveredItems)
+	{
+		total += item.second;
+	}
+	return total;
+}
+
+/**
+ * Decreases the number of recovered items by the sold/transferred amount.
+ * @param rule Type of item.
+ * @param amount Number of items sold or transferred.
+ */
+void DebriefingState::decreaseRecoveredItemCount(RuleItem *rule, int amount)
+{
+	auto it = _recoveredItems.find(rule);
+	if (it != _recoveredItems.end())
+	{
+		_recoveredItems[rule] = std::max(0, _recoveredItems[rule] - amount);
+	}
+}
+
+/**
+ * Hides the SELL and TRANSFER buttons.
+ */
+void DebriefingState::hideSellTransferButtons()
+{
+	_showSellButton = false;
 	_btnSell->setVisible(_showSellButton);
+	_btnTransfer->setVisible(_showSellButton);
 }
 
 }

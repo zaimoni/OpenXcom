@@ -778,13 +778,12 @@ void Soldier::setManaMissing(int manaMissing)
 
 /**
  * Returns the amount of time until the soldier's mana is fully replenished.
- * @return Number of days.
+ * @return Number of days. -1 represents infinity.
  */
 int Soldier::getManaRecovery(int manaRecoveryPerDay) const
 {
-	// modders always try to break things! let's be one step ahead of them
 	if (manaRecoveryPerDay <= 0)
-		return 0;
+		return -1; // represents infinity
 
 	int days = _manaMissing / manaRecoveryPerDay;
 	if (_manaMissing % manaRecoveryPerDay > 0)
@@ -845,6 +844,11 @@ void Soldier::replenishMana(int manaRecoveryPerDay)
 
 	if (_manaMissing < 0)
 		_manaMissing = 0;
+
+	// maximum amount of mana missing can be up to 2x the current mana pool (WITHOUT armor and bonuses!); at least 100
+	int maxThreshold = std::max(100, _currentStats.mana * 2);
+	if (_manaMissing > maxThreshold)
+		_manaMissing = maxThreshold;
 }
 
 /**
@@ -1325,10 +1329,10 @@ void Soldier::transform(const Mod *mod, RuleSoldierTransformation *transformatio
 	// Award a soldier bonus, if defined
 	if (!transformationRule->getSoldierBonusType().empty())
 	{
-		auto it = _transformationBonuses.find(transformationRule->getSoldierBonusType());
-		if (it != _transformationBonuses.end())
+		auto it2 = _transformationBonuses.find(transformationRule->getSoldierBonusType());
+		if (it2 != _transformationBonuses.end())
 		{
-			it->second += 1;
+			it2->second += 1;
 		}
 		else
 		{

@@ -60,8 +60,12 @@ void GoToMainMenuState::init()
  * Initializes all the elements in the Main Menu window.
  * @param updateCheck Perform update check?
  */
-MainMenuState::MainMenuState(bool updateCheck) : _debugInVisualStudio(false)
+MainMenuState::MainMenuState(bool updateCheck)
 {
+#ifdef _WIN32
+	_debugInVisualStudio = false;
+#endif
+
 	// Create objects
 	_window = new Window(this, 256, 160, 32, 20, POPUP_BOTH);
 	_btnNewGame = new TextButton(92, 20, 64, 90);
@@ -187,7 +191,7 @@ MainMenuState::MainMenuState(bool updateCheck) : _debugInVisualStudio(false)
 	_txtTitle->setBig();
 	std::ostringstream title;
 	title << tr("STR_OPENXCOM") << Unicode::TOK_NL_SMALL;
-	title << OPENXCOM_VERSION_SHORT << OPENXCOM_VERSION_GIT;
+	title << "OpenXcom " << OPENXCOM_VERSION_SHORT << OPENXCOM_VERSION_GIT;
 	_txtTitle->setText(title.str());
 }
 
