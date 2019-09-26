@@ -11,6 +11,12 @@
 		5B0DC8AF22F300E70092A513 /* RuleEnviroEffects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */; };
 		5B0DC8B222F300FA0092A513 /* RuleArcScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */; };
 		5B8049FD226F8E12004E517F /* GlobalManufactureState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */; };
+		5B95F032233D1AA90018C910 /* SoldierBonusState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F026233D1AA80018C910 /* SoldierBonusState.cpp */; };
+		5B95F035233D1ADB0018C910 /* GeoscapeEventState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F033233D1ADB0018C910 /* GeoscapeEventState.cpp */; };
+		5B95F03A233D1B770018C910 /* RuleEventScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F037233D1B770018C910 /* RuleEventScript.cpp */; };
+		5B95F03B233D1B770018C910 /* RuleEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F038233D1B770018C910 /* RuleEvent.cpp */; };
+		5B95F03E233D1B960018C910 /* RuleSoldierBonus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F03D233D1B960018C910 /* RuleSoldierBonus.cpp */; };
+		5B95F041233D1BB20018C910 /* GeoscapeEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F040233D1BB20018C910 /* GeoscapeEvent.cpp */; };
 		5BD0BAD62242E009008E6DFB /* TechTreeSelectState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BAC02242E005008E6DFB /* TechTreeSelectState.cpp */; };
 		5BD0BAD72242E009008E6DFB /* TechTreeViewerState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BAC12242E005008E6DFB /* TechTreeViewerState.cpp */; };
 		5BD0BAD82242E009008E6DFB /* CraftEquipmentLoadState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BAC42242E006008E6DFB /* CraftEquipmentLoadState.cpp */; };
@@ -44,7 +50,6 @@
 		5BD0BB1E2242E079008E6DFB /* UfoTrackerState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB132242E079008E6DFB /* UfoTrackerState.cpp */; };
 		5BD0BB252242E099008E6DFB /* OptionsInformExtendedState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB202242E099008E6DFB /* OptionsInformExtendedState.cpp */; };
 		5BD0BB262242E099008E6DFB /* TestPaletteState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB222242E099008E6DFB /* TestPaletteState.cpp */; };
-		5BD0BB272242E099008E6DFB /* HelloCommanderState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB232242E099008E6DFB /* HelloCommanderState.cpp */; };
 		5BD0BB352242E0C1008E6DFB /* RuleDamageType.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB282242E0BE008E6DFB /* RuleDamageType.cpp */; };
 		5BD0BB362242E0C1008E6DFB /* RuleStartingCondition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB2C2242E0BF008E6DFB /* RuleStartingCondition.cpp */; };
 		5BD0BB372242E0C1008E6DFB /* RuleItemCategory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB2D2242E0BF008E6DFB /* RuleItemCategory.cpp */; };
@@ -497,6 +502,18 @@
 		5B0DC8B122F300FA0092A513 /* RuleArcScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleArcScript.h; sourceTree = "<group>"; };
 		5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GlobalManufactureState.cpp; sourceTree = "<group>"; };
 		5B8049FC226F8E12004E517F /* GlobalManufactureState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GlobalManufactureState.h; sourceTree = "<group>"; };
+		5B95F026233D1AA80018C910 /* SoldierBonusState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoldierBonusState.cpp; sourceTree = "<group>"; };
+		5B95F031233D1AA80018C910 /* SoldierBonusState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoldierBonusState.h; sourceTree = "<group>"; };
+		5B95F033233D1ADB0018C910 /* GeoscapeEventState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GeoscapeEventState.cpp; sourceTree = "<group>"; };
+		5B95F034233D1ADB0018C910 /* GeoscapeEventState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GeoscapeEventState.h; sourceTree = "<group>"; };
+		5B95F036233D1B770018C910 /* RuleEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleEvent.h; sourceTree = "<group>"; };
+		5B95F037233D1B770018C910 /* RuleEventScript.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleEventScript.cpp; sourceTree = "<group>"; };
+		5B95F038233D1B770018C910 /* RuleEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleEvent.cpp; sourceTree = "<group>"; };
+		5B95F039233D1B770018C910 /* RuleEventScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleEventScript.h; sourceTree = "<group>"; };
+		5B95F03C233D1B960018C910 /* RuleSoldierBonus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleSoldierBonus.h; sourceTree = "<group>"; };
+		5B95F03D233D1B960018C910 /* RuleSoldierBonus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleSoldierBonus.cpp; sourceTree = "<group>"; };
+		5B95F03F233D1BB20018C910 /* GeoscapeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GeoscapeEvent.h; sourceTree = "<group>"; };
+		5B95F040233D1BB20018C910 /* GeoscapeEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GeoscapeEvent.cpp; sourceTree = "<group>"; };
 		5BD0BAB42242E004008E6DFB /* CraftPilotSelectState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CraftPilotSelectState.h; sourceTree = "<group>"; };
 		5BD0BABF2242E005008E6DFB /* ChangeHeadquartersState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ChangeHeadquartersState.h; sourceTree = "<group>"; };
 		5BD0BAC02242E005008E6DFB /* TechTreeSelectState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TechTreeSelectState.cpp; sourceTree = "<group>"; };
@@ -563,11 +580,9 @@
 		5BD0BB132242E079008E6DFB /* UfoTrackerState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UfoTrackerState.cpp; sourceTree = "<group>"; };
 		5BD0BB142242E079008E6DFB /* TrainingFinishedState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TrainingFinishedState.h; sourceTree = "<group>"; };
 		5BD0BB152242E079008E6DFB /* TrainingState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TrainingState.h; sourceTree = "<group>"; };
-		5BD0BB1F2242E098008E6DFB /* HelloCommanderState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HelloCommanderState.h; sourceTree = "<group>"; };
 		5BD0BB202242E099008E6DFB /* OptionsInformExtendedState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsInformExtendedState.cpp; sourceTree = "<group>"; };
 		5BD0BB212242E099008E6DFB /* OptionsInformExtendedState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OptionsInformExtendedState.h; sourceTree = "<group>"; };
 		5BD0BB222242E099008E6DFB /* TestPaletteState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestPaletteState.cpp; sourceTree = "<group>"; };
-		5BD0BB232242E099008E6DFB /* HelloCommanderState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HelloCommanderState.cpp; sourceTree = "<group>"; };
 		5BD0BB242242E099008E6DFB /* TestPaletteState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestPaletteState.h; sourceTree = "<group>"; };
 		5BD0BB282242E0BE008E6DFB /* RuleDamageType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleDamageType.cpp; sourceTree = "<group>"; };
 		5BD0BB292242E0BE008E6DFB /* RuleDamageType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleDamageType.h; sourceTree = "<group>"; };
@@ -1387,8 +1402,6 @@
 		B28341D9201F6D9B00BAEC9D /* Menu */ = {
 			isa = PBXGroup;
 			children = (
-				5BD0BB232242E099008E6DFB /* HelloCommanderState.cpp */,
-				5BD0BB1F2242E098008E6DFB /* HelloCommanderState.h */,
 				5BD0BB202242E099008E6DFB /* OptionsInformExtendedState.cpp */,
 				5BD0BB212242E099008E6DFB /* OptionsInformExtendedState.h */,
 				5BD0BB222242E099008E6DFB /* TestPaletteState.cpp */,
@@ -1466,6 +1479,8 @@
 		B283421C201F6D9B00BAEC9D /* Geoscape */ = {
 			isa = PBXGroup;
 			children = (
+				5B95F033233D1ADB0018C910 /* GeoscapeEventState.cpp */,
+				5B95F034233D1ADB0018C910 /* GeoscapeEventState.h */,
 				5BD0BB102242E079008E6DFB /* AllocateTrainingState.cpp */,
 				5BD0BB0C2242E078008E6DFB /* AllocateTrainingState.h */,
 				5BD0BB062242E077008E6DFB /* CraftNotEnoughPilotsState.cpp */,
@@ -1683,6 +1698,8 @@
 		B28342C3201F6D9C00BAEC9D /* Savegame */ = {
 			isa = PBXGroup;
 			children = (
+				5B95F040233D1BB20018C910 /* GeoscapeEvent.cpp */,
+				5B95F03F233D1BB20018C910 /* GeoscapeEvent.h */,
 				5BD0BB3B2242E0DE008E6DFB /* SoldierAvatar.cpp */,
 				5BD0BB3C2242E0DE008E6DFB /* SoldierAvatar.h */,
 				B28342C4201F6D9C00BAEC9D /* SoldierDiary.h */,
@@ -1974,6 +1991,8 @@
 		B28343BD201F6D9D00BAEC9D /* Basescape */ = {
 			isa = PBXGroup;
 			children = (
+				5B95F026233D1AA80018C910 /* SoldierBonusState.cpp */,
+				5B95F031233D1AA80018C910 /* SoldierBonusState.h */,
 				5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */,
 				5B8049FC226F8E12004E517F /* GlobalManufactureState.h */,
 				5BD0BAD52242E008008E6DFB /* ChangeHeadquartersState.cpp */,
@@ -2087,6 +2106,12 @@
 		B283440E201F6D9D00BAEC9D /* Mod */ = {
 			isa = PBXGroup;
 			children = (
+				5B95F03D233D1B960018C910 /* RuleSoldierBonus.cpp */,
+				5B95F03C233D1B960018C910 /* RuleSoldierBonus.h */,
+				5B95F038233D1B770018C910 /* RuleEvent.cpp */,
+				5B95F036233D1B770018C910 /* RuleEvent.h */,
+				5B95F037233D1B770018C910 /* RuleEventScript.cpp */,
+				5B95F039233D1B770018C910 /* RuleEventScript.h */,
 				5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */,
 				5B0DC8B122F300FA0092A513 /* RuleArcScript.h */,
 				5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */,
@@ -2370,6 +2395,7 @@
 			files = (
 				B28344B4201F6D9E00BAEC9D /* scale2x.cpp in Sources */,
 				B283457B201F6D9E00BAEC9D /* SoldierNamePool.cpp in Sources */,
+				5B95F041233D1BB20018C910 /* GeoscapeEvent.cpp in Sources */,
 				B283448C201F6D9D00BAEC9D /* TargetInfoState.cpp in Sources */,
 				5BD0BB032242E05B008E6DFB /* Unicode.cpp in Sources */,
 				B28344E6201F6D9E00BAEC9D /* BattleItem.cpp in Sources */,
@@ -2383,10 +2409,10 @@
 				B2834598201F6D9E00BAEC9D /* RuleCommendations.cpp in Sources */,
 				5BD0BB362242E0C1008E6DFB /* RuleStartingCondition.cpp in Sources */,
 				B2834470201F6D9D00BAEC9D /* OptionsVideoState.cpp in Sources */,
+				5B95F035233D1ADB0018C910 /* GeoscapeEventState.cpp in Sources */,
 				B2834531201F6D9E00BAEC9D /* ArticleStateTFTDFacility.cpp in Sources */,
 				B283450C201F6D9E00BAEC9D /* InfoboxOKState.cpp in Sources */,
 				B28344B7201F6D9E00BAEC9D /* hq2x.cpp in Sources */,
-				5BD0BB272242E099008E6DFB /* HelloCommanderState.cpp in Sources */,
 				B283453A201F6D9E00BAEC9D /* ArticleStateItem.cpp in Sources */,
 				B2834487201F6D9D00BAEC9D /* DogfightState.cpp in Sources */,
 				B2834591201F6D9E00BAEC9D /* RuleVideo.cpp in Sources */,
@@ -2400,6 +2426,7 @@
 				B2834511201F6D9E00BAEC9D /* NextTurnState.cpp in Sources */,
 				B2834516201F6D9E00BAEC9D /* TileEngine.cpp in Sources */,
 				B28344CB201F6D9E00BAEC9D /* Surface.cpp in Sources */,
+				5B95F03B233D1B770018C910 /* RuleEvent.cpp in Sources */,
 				B2834483201F6D9D00BAEC9D /* AbandonGameState.cpp in Sources */,
 				B28344B9201F6D9E00BAEC9D /* hq4x.cpp in Sources */,
 				B2834465201F6D9D00BAEC9D /* ErrorMessageState.cpp in Sources */,
@@ -2409,6 +2436,7 @@
 				B283452E201F6D9E00BAEC9D /* ArticleStateCraft.cpp in Sources */,
 				B283449A201F6D9D00BAEC9D /* NewPossibleResearchState.cpp in Sources */,
 				B2834538201F6D9E00BAEC9D /* ArticleStateTextImage.cpp in Sources */,
+				5B95F03E233D1B960018C910 /* RuleSoldierBonus.cpp in Sources */,
 				B283446A201F6D9D00BAEC9D /* NewBattleState.cpp in Sources */,
 				B28344DC201F6D9E00BAEC9D /* SavedGame.cpp in Sources */,
 				B28344E3201F6D9E00BAEC9D /* ItemContainer.cpp in Sources */,
@@ -2481,6 +2509,7 @@
 				B2834572201F6D9E00BAEC9D /* ManageAlienContainmentState.cpp in Sources */,
 				B2834546201F6D9E00BAEC9D /* ComboBox.cpp in Sources */,
 				B283453D201F6D9E00BAEC9D /* Frame.cpp in Sources */,
+				5B95F032233D1AA90018C910 /* SoldierBonusState.cpp in Sources */,
 				B2834517201F6D9E00BAEC9D /* ExplosionBState.cpp in Sources */,
 				B283459F201F6D9E00BAEC9D /* SoundDefinition.cpp in Sources */,
 				B283456C201F6D9E00BAEC9D /* StoresState.cpp in Sources */,
@@ -2654,6 +2683,7 @@
 				B283446F201F6D9D00BAEC9D /* MainMenuState.cpp in Sources */,
 				B283454C201F6D9E00BAEC9D /* ImageButton.cpp in Sources */,
 				B2834518201F6D9E00BAEC9D /* UnitPanicBState.cpp in Sources */,
+				5B95F03A233D1B770018C910 /* RuleEventScript.cpp in Sources */,
 				B283458C201F6D9E00BAEC9D /* AlienRace.cpp in Sources */,
 				B28344A7201F6D9E00BAEC9D /* CraftPatrolState.cpp in Sources */,
 				B28344CD201F6D9E00BAEC9D /* Palette.cpp in Sources */,
