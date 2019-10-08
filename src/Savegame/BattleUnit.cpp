@@ -1592,7 +1592,18 @@ bool BattleUnit::hasNegativeHealthRegen() const
 {
 	if (_health > 0)
 	{
-		return _armor->getHealthRecovery(this) < 0;
+		int HPRecovery = 0;
+
+		// apply soldier bonuses
+		if (_geoscapeSoldier)
+		{
+			for (auto bonusRule : *_geoscapeSoldier->getBonuses(nullptr, false))
+			{
+				HPRecovery += bonusRule.first->getHealthRecovery(this);
+			}
+		}
+
+		return _armor->getHealthRecovery(this, HPRecovery) < 0;
 	}
 	return false;
 }
@@ -2315,55 +2326,49 @@ void BattleUnit::updateUnitStats(bool tuAndEnergy, bool rest)
 	if (tuAndEnergy)
 	{
 		// snapshot of current stats
-		int TURecovery = _armor->getTimeRecovery(this);
-		int ENRecovery = _armor->getEnergyRecovery(this);
+		int TURecovery = 0;
+		int ENRecovery = 0;
 
 		// apply soldier bonuses
 		if (_geoscapeSoldier)
 		{
 			for (auto bonusRule : *_geoscapeSoldier->getBonuses(nullptr, false))
 			{
-				if (bonusRule.first->getTimeRecoveryRaw()->isModded())
-					TURecovery += bonusRule.first->getTimeRecovery(this);
-				if (bonusRule.first->getEnergyRecoveryRaw()->isModded())
-					ENRecovery += bonusRule.first->getEnergyRecovery(this);
+				TURecovery += bonusRule.first->getTimeRecovery(this);
+				ENRecovery += bonusRule.first->getEnergyRecovery(this);
 			}
 		}
 
 		// update stats
-		prepareTimeUnits(TURecovery);
-		prepareEnergy(ENRecovery);
+		prepareTimeUnits(_armor->getTimeRecovery(this, TURecovery));
+		prepareEnergy(_armor->getEnergyRecovery(this, ENRecovery));
 	}
 
 	if (rest)
 	{
 		// snapshot of current stats
-		int HPRecovery = _armor->getHealthRecovery(this);
-		int MNRecovery = _armor->getManaRecovery(this);
-		int MRRecovery = _armor->getMoraleRecovery(this);
-		int STRecovery = _armor->getStunRegeneration(this);
+		int HPRecovery = 0;
+		int MNRecovery = 0;
+		int MRRecovery = 0;
+		int STRecovery = 0;
 
 		// apply soldier bonuses
 		if (_geoscapeSoldier)
 		{
 			for (auto bonusRule : *_geoscapeSoldier->getBonuses(nullptr, false))
 			{
-				if (bonusRule.first->getHealthRecoveryRaw()->isModded())
-					HPRecovery += bonusRule.first->getHealthRecovery(this);
-				if (bonusRule.first->getManaRecoveryRaw()->isModded())
-					MNRecovery += bonusRule.first->getManaRecovery(this);
-				if (bonusRule.first->getMoraleRecoveryRaw()->isModded())
-					MRRecovery += bonusRule.first->getMoraleRecovery(this);
-				if (bonusRule.first->getStunRegenerationRaw()->isModded())
-					STRecovery += bonusRule.first->getStunRegeneration(this);
+				HPRecovery += bonusRule.first->getHealthRecovery(this);
+				MNRecovery += bonusRule.first->getManaRecovery(this);
+				MRRecovery += bonusRule.first->getMoraleRecovery(this);
+				STRecovery += bonusRule.first->getStunRegeneration(this);
 			}
 		}
 
 		// update stats
-		prepareHealth(HPRecovery);
-		prepareMana(MNRecovery);
-		prepareStun(STRecovery);
-		prepareMorale(MRRecovery);
+		prepareHealth(_armor->getHealthRecovery(this, HPRecovery));
+		prepareMana(_armor->getManaRecovery(this, MNRecovery));
+		prepareMorale(_armor->getMoraleRecovery(this, MRRecovery));
+		prepareStun(_armor->getStunRegeneration(this, STRecovery));
 	}
 }
 
