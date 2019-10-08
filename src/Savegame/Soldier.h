@@ -80,7 +80,7 @@ private:
 	std::string _statString;
 	bool _corpseRecovered;
 	std::map<std::string, int> _previousTransformations, _transformationBonuses;
-	std::map<RuleSoldierBonus*, int> _bonusCache;
+	std::map<const RuleSoldierBonus*, int> _bonusCache;
 	ScriptValues<Soldier> _scriptValues;
 public:
 	/// Creates a new soldier.
@@ -231,9 +231,9 @@ public:
 	/// Performs a transformation on this soldier
 	void transform(const Mod *mod, RuleSoldierTransformation *transformationRule, Soldier *sourceSoldier);
 	/// Calculates how this project changes the soldier's stats
-	UnitStats calculateStatChanges(const Mod *mod, RuleSoldierTransformation *transformationRule, Soldier *sourceSoldier);
+	UnitStats calculateStatChanges(const Mod *mod, RuleSoldierTransformation *transformationRule, Soldier *sourceSoldier, int mode);
 	/// Gets all the soldier bonuses
-	std::map<RuleSoldierBonus*, int> *getBonuses(const Mod *mod, bool rebuild);
+	std::map<const RuleSoldierBonus*, int> *getBonuses(const Mod *mod, bool rebuild);
 
 };
 

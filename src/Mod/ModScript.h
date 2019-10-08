@@ -152,7 +152,7 @@ class ModScript
 	//					bonus stat script
 	////////////////////////////////////////////////////////////
 
-	struct BonusStatsBaseParser : ScriptParserEvents<ScriptOutputArgs<int&>, const BattleUnit*>
+	struct BonusStatsBaseParser : ScriptParserEvents<ScriptOutputArgs<int&>, const BattleUnit*, int>
 	{
 		BonusStatsBaseParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 
@@ -176,6 +176,14 @@ class ModScript
 	struct BonusStatsRecoveryParser : BonusStatsBaseParser
 	{
 		BonusStatsRecoveryParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : BonusStatsBaseParser{ shared, name + "RecoveryBonusStats", mod }
+		{
+			_propertyNodeName = name;
+		}
+	};
+
+	struct BonusSoldierStatsRecoveryParser : BonusStatsBaseParser
+	{
+		BonusSoldierStatsRecoveryParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : BonusStatsBaseParser{ shared, name + "SoldierRecoveryBonusStats", mod }
 		{
 			_propertyNodeName = name;
 		}
@@ -245,12 +253,20 @@ public:
 
 	using PsiDefenceStatBonus = MACRO_NAMED_SCRIPT("psiDefence", BonusStatsParser);
 	using MeleeDodgeStatBonus = MACRO_NAMED_SCRIPT("meleeDodge", BonusStatsParser);
+
 	using TimeRecoveryStatBonus = MACRO_NAMED_SCRIPT("time", BonusStatsRecoveryParser);
 	using EnergyRecoveryStatBonus = MACRO_NAMED_SCRIPT("energy", BonusStatsRecoveryParser);
 	using MoraleRecoveryStatBonus = MACRO_NAMED_SCRIPT("morale", BonusStatsRecoveryParser);
 	using HealthRecoveryStatBonus = MACRO_NAMED_SCRIPT("health", BonusStatsRecoveryParser);
 	using ManaRecoveryStatBonus = MACRO_NAMED_SCRIPT("mana", BonusStatsRecoveryParser);
 	using StunRecoveryStatBonus = MACRO_NAMED_SCRIPT("stun", BonusStatsRecoveryParser);
+
+	using TimeSoldierRecoveryStatBonus = MACRO_NAMED_SCRIPT("time", BonusSoldierStatsRecoveryParser);
+	using EnergySoldierRecoveryStatBonus = MACRO_NAMED_SCRIPT("energy", BonusSoldierStatsRecoveryParser);
+	using MoraleSoldierRecoveryStatBonus = MACRO_NAMED_SCRIPT("morale", BonusSoldierStatsRecoveryParser);
+	using HealthSoldierRecoveryStatBonus = MACRO_NAMED_SCRIPT("health", BonusSoldierStatsRecoveryParser);
+	using ManaSoldierRecoveryStatBonus = MACRO_NAMED_SCRIPT("mana", BonusSoldierStatsRecoveryParser);
+	using StunSoldierRecoveryStatBonus = MACRO_NAMED_SCRIPT("stun", BonusSoldierStatsRecoveryParser);
 
 	using DamageBonusStatBonus = MACRO_NAMED_SCRIPT("damageBonus", BonusStatsParser);
 	using MeleeBonusStatBonus = MACRO_NAMED_SCRIPT("meleeBonus", BonusStatsParser);
@@ -302,12 +318,20 @@ public:
 	using BonusStatsScripts = ScriptGroup<Mod,
 		PsiDefenceStatBonus,
 		MeleeDodgeStatBonus,
+
 		TimeRecoveryStatBonus,
 		EnergyRecoveryStatBonus,
 		MoraleRecoveryStatBonus,
 		HealthRecoveryStatBonus,
 		ManaRecoveryStatBonus,
 		StunRecoveryStatBonus,
+
+		TimeSoldierRecoveryStatBonus,
+		EnergySoldierRecoveryStatBonus,
+		MoraleSoldierRecoveryStatBonus,
+		HealthSoldierRecoveryStatBonus,
+		ManaSoldierRecoveryStatBonus,
+		StunSoldierRecoveryStatBonus,
 
 		DamageBonusStatBonus,
 		MeleeBonusStatBonus,

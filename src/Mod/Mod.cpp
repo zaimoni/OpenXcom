@@ -227,7 +227,7 @@ void Mod::resetGlobalStatics()
 class ModScriptGlobal : public ScriptGlobal
 {
 	size_t _modCurr = 0;
-	std::vector<std::string> _modNames;
+	std::vector<std::pair<std::string, int>> _modNames;
 
 	void loadRuleList(int &value, const YAML::Node &node) const
 	{
@@ -244,11 +244,11 @@ class ModScriptGlobal : public ScriptGlobal
 			}
 			else
 			{
-				for (size_t i = 0; i < _modNames.size(); ++i)
+				for (const auto& p : _modNames)
 				{
-					if (name == _modNames[i])
+					if (name == p.first)
 					{
-						value = (int)i;
+						value = p.second;
 						return;
 					}
 				}
@@ -258,9 +258,13 @@ class ModScriptGlobal : public ScriptGlobal
 	}
 	void saveRuleList(const int &value, YAML::Node &node) const
 	{
-		if ((size_t)value < _modNames.size())
+		for (const auto& p : _modNames)
 		{
-			node = _modNames[value];
+			if (value == p.second)
+			{
+				node = p.first;
+				return;
+			}
 		}
 	}
 
@@ -285,7 +289,7 @@ public:
 	{
 		auto name = "RuleList." + s;
 		addConst(name, (int)i);
-		_modNames.push_back(s);
+		_modNames.push_back(std::make_pair(s, i));
 	}
 	/// Set current mod id.
 	void setMod(int i)
@@ -1240,7 +1244,7 @@ void Mod::loadAll()
 		{
 			throwModOnErrorHelper(modId, "this mod name is already used");
 		}
-		_scriptGlobal->addMod(mods[i].first, (int)offset);
+		_scriptGlobal->addMod(mods[i].first, 1000 * (int)offset);
 		const ModInfo *modInfo = &Options::getModInfos().at(modId);
 		size_t size = modInfo->getReservedSpace();
 		_modData[i].name = modId;
@@ -1267,15 +1271,15 @@ void Mod::loadAll()
 	// vanilla resources load
 	_modCurrent = &_modData.at(0);
 	loadVanillaResources();
-	_surfaceOffsetBasebits = getSurfaceSet("BASEBITS.PCK")->getTotalFrames();
-	_surfaceOffsetBigobs = getRule("BIGOBS.PCK", "Sprite Set", _sets, true)->getTotalFrames(); // no lazy loading here yet
-	_surfaceOffsetFloorob = getSurfaceSet("FLOOROB.PCK")->getTotalFrames();
-	_surfaceOffsetHandob = getSurfaceSet("HANDOB.PCK")->getTotalFrames();
-	_surfaceOffsetHit = getSurfaceSet("HIT.PCK")->getTotalFrames();
-	_surfaceOffsetSmoke = getSurfaceSet("SMOKE.PCK")->getTotalFrames();
+	_surfaceOffsetBasebits = _sets["BASEBITS.PCK"]->getMaxSharedFrames();
+	_surfaceOffsetBigobs = _sets["BIGOBS.PCK"]->getMaxSharedFrames();
+	_surfaceOffsetFloorob = _sets["FLOOROB.PCK"]->getMaxSharedFrames();
+	_surfaceOffsetHandob = _sets["HANDOB.PCK"]->getMaxSharedFrames();
+	_surfaceOffsetHit = _sets["HIT.PCK"]->getMaxSharedFrames();
+	_surfaceOffsetSmoke = _sets["SMOKE.PCK"]->getMaxSharedFrames();
 
-	_soundOffsetBattle = getSoundSet("BATTLE.CAT")->getTotalSounds();
-	_soundOffsetGeo = getSoundSet("GEO.CAT")->getTotalSounds();
+	_soundOffsetBattle = _sounds["BATTLE.CAT"]->getMaxSharedSounds();
+	_soundOffsetGeo = _sounds["GEO.CAT"]->getMaxSharedSounds();
 
 	// load rest rulesets
 	for (size_t i = 0; mods.size() > i; ++i)
@@ -1341,6 +1345,7 @@ void Mod::loadAll()
 	afterLoadHelper("units", this, _units, &Unit::afterLoad);
 	afterLoadHelper("facilities", this, _facilities, &RuleBaseFacility::afterLoad);
 	afterLoadHelper("enviroEffects", this, _enviroEffects, &RuleEnviroEffects::afterLoad);
+	afterLoadHelper("commendations", this, _commendations, &RuleCommendations::afterLoad);
 
 	// fixed user options
 	if (!_fixedUserOptions.empty())
@@ -1775,18 +1780,6 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			}
 			_ufopaediaListOrder += 100;
 			rule->load(*i, _ufopaediaListOrder);
-			if (rule->section != UFOPAEDIA_NOT_AVAILABLE)
-			{
-				if (_ufopaediaSections.find(rule->section) == _ufopaediaSections.end())
-				{
-					_ufopaediaSections[rule->section] = rule->getListOrder();
-					_ufopaediaCatIndex.push_back(rule->section);
-				}
-				else
-				{
-					_ufopaediaSections[rule->section] = std::min(_ufopaediaSections[rule->section], rule->getListOrder());
-				}
-			}
 		}
 		else if ((*i)["delete"])
 		{
@@ -2395,7 +2388,7 @@ SavedGame *Mod::newSave() const
 			if (_commendations.find("STR_MEDAL_ORIGINAL8_NAME") != _commendations.end())
 			{
 				SoldierDiary *diary = soldier->getDiary();
-				diary->awardOriginalEightCommendation();
+				diary->awardOriginalEightCommendation(this);
 				for (std::vector<SoldierCommendations*>::iterator comm = diary->getSoldierCommendations()->begin(); comm != diary->getSoldierCommendations()->end(); ++comm)
 				{
 					(*comm)->makeOld();
@@ -3360,6 +3353,23 @@ struct compareSection
  */
 void Mod::sortLists()
 {
+	for (auto rulePair : _ufopaediaArticles)
+	{
+		auto rule = rulePair.second;
+		if (rule->section != UFOPAEDIA_NOT_AVAILABLE)
+		{
+			if (_ufopaediaSections.find(rule->section) == _ufopaediaSections.end())
+			{
+				_ufopaediaSections[rule->section] = rule->getListOrder();
+				_ufopaediaCatIndex.push_back(rule->section);
+			}
+			else
+			{
+				_ufopaediaSections[rule->section] = std::min(_ufopaediaSections[rule->section], rule->getListOrder());
+			}
+		}
+	}
+
 	std::sort(_itemCategoriesIndex.begin(), _itemCategoriesIndex.end(), compareRule<RuleItemCategory>(this, (compareRule<RuleItemCategory>::RuleLookup)&Mod::getItemCategory));
 	std::sort(_itemsIndex.begin(), _itemsIndex.end(), compareRule<RuleItem>(this, (compareRule<RuleItem>::RuleLookup)&Mod::getItem));
 	std::sort(_craftsIndex.begin(), _craftsIndex.end(), compareRule<RuleCraft>(this, (compareRule<RuleCraft>::RuleLookup)&Mod::getCraft));
@@ -4828,7 +4838,7 @@ void offset(const Mod *m, int &base, int modId)
 	int baseMax = (m->*f);
 	if (base >= baseMax)
 	{
-		base += modId * 1000;
+		base += modId;
 	}
 }
 
