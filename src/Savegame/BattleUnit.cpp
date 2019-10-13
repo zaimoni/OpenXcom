@@ -110,8 +110,8 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 	int visibilityBonus = 0;
 	for (auto bonusRule : *soldier->getBonuses(mod, true))
 	{
-		visibilityBonus += bonusRule.first->getVisibilityAtDark();
-		_stats += *(bonusRule.first->getStats());
+		visibilityBonus += bonusRule->getVisibilityAtDark();
+		_stats += *(bonusRule->getStats());
 	}
 	_maxViewDistanceAtDark = _armor->getVisibilityAtDark() ? _armor->getVisibilityAtDark() : 9;
 	_maxViewDistanceAtDark += visibilityBonus;
@@ -213,8 +213,8 @@ void BattleUnit::updateArmorFromSoldier(const Mod *mod, Soldier *soldier, Armor 
 	int visibilityBonus = 0;
 	for (auto bonusRule : *soldier->getBonuses(nullptr, false))
 	{
-		visibilityBonus += bonusRule.first->getVisibilityAtDark();
-		_stats += *(bonusRule.first->getStats());
+		visibilityBonus += bonusRule->getVisibilityAtDark();
+		_stats += *(bonusRule->getStats());
 	}
 	_maxViewDistanceAtDark = _armor->getVisibilityAtDark() ? _armor->getVisibilityAtDark() : 9;
 	_maxViewDistanceAtDark += visibilityBonus;
@@ -1599,7 +1599,7 @@ bool BattleUnit::hasNegativeHealthRegen() const
 		{
 			for (auto bonusRule : *_geoscapeSoldier->getBonuses(nullptr, false))
 			{
-				HPRecovery += bonusRule.first->getHealthRecovery(this);
+				HPRecovery += bonusRule->getHealthRecovery(this);
 			}
 		}
 
@@ -2334,8 +2334,8 @@ void BattleUnit::updateUnitStats(bool tuAndEnergy, bool rest)
 		{
 			for (auto bonusRule : *_geoscapeSoldier->getBonuses(nullptr, false))
 			{
-				TURecovery += bonusRule.first->getTimeRecovery(this);
-				ENRecovery += bonusRule.first->getEnergyRecovery(this);
+				TURecovery += bonusRule->getTimeRecovery(this);
+				ENRecovery += bonusRule->getEnergyRecovery(this);
 			}
 		}
 
@@ -2357,10 +2357,10 @@ void BattleUnit::updateUnitStats(bool tuAndEnergy, bool rest)
 		{
 			for (auto bonusRule : *_geoscapeSoldier->getBonuses(nullptr, false))
 			{
-				HPRecovery += bonusRule.first->getHealthRecovery(this);
-				MNRecovery += bonusRule.first->getManaRecovery(this);
-				MRRecovery += bonusRule.first->getMoraleRecovery(this);
-				STRecovery += bonusRule.first->getStunRegeneration(this);
+				HPRecovery += bonusRule->getHealthRecovery(this);
+				MNRecovery += bonusRule->getManaRecovery(this);
+				MRRecovery += bonusRule->getMoraleRecovery(this);
+				STRecovery += bonusRule->getStunRegeneration(this);
 			}
 		}
 
@@ -3333,12 +3333,11 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
 	}
 
 	{
-		ModScript::ReturnFromMissionUnit::Output arg{ recovery, healthLoss };
-		ModScript::ReturnFromMissionUnit::Worker work{ this, battle, s, &statsDiff, &statsOld };
-
-		work.execute(getArmor()->getScript<ModScript::ReturnFromMissionUnit>(), arg);
-
-		recovery = arg.getFirst();
+		recovery = ModScript::scriptFunc2<ModScript::ReturnFromMissionUnit>(
+			getArmor(),
+			recovery, healthLoss,
+			this, battle, s, &statsDiff, &statsOld
+		);
 	}
 
 	//after mod execution this value could change
@@ -5069,10 +5068,10 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.add<&getArmorMaxScript>("getArmorMax");
 
 
-	UnitStats::addGetStatsScript<BattleUnit, &BattleUnit::_stats>(bu, "Stats.");
-	UnitStats::addSetStatsWithCurrScript<BattleUnit, &BattleUnit::_stats, &BattleUnit::_tu, &BattleUnit::_energy, &BattleUnit::_health, &BattleUnit::_mana>(bu, "Stats.");
+	UnitStats::addGetStatsScript<&BattleUnit::_stats>(bu, "Stats.");
+	UnitStats::addSetStatsWithCurrScript<&BattleUnit::_stats, &BattleUnit::_tu, &BattleUnit::_energy, &BattleUnit::_health, &BattleUnit::_mana>(bu, "Stats.");
 
-	UnitStats::addGetStatsScript<BattleUnit, &BattleUnit::_exp>(bu, "Exp.", true);
+	UnitStats::addGetStatsScript<&BattleUnit::_exp>(bu, "Exp.", true);
 
 	bu.add<&BattleUnit::getFatalWounds>("getFatalwoundsTotal");
 	bu.add<&BattleUnit::getFatalWound>("getFatalwounds");

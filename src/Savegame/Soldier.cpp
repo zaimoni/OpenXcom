@@ -29,6 +29,7 @@
 #include "SoldierDiary.h"
 #include "../Mod/SoldierNamePool.h"
 #include "../Mod/RuleSoldier.h"
+#include "../Mod/RuleSoldierBonus.h"
 #include "../Mod/Armor.h"
 #include "../Mod/Mod.h"
 #include "../Mod/StatString.h"
@@ -1440,26 +1441,38 @@ UnitStats Soldier::calculateStatChanges(const Mod *mod, RuleSoldierTransformatio
  * Gets all the soldier bonuses
  * @return The map of soldier bonuses
  */
-std::map<const RuleSoldierBonus*, int> *Soldier::getBonuses(const Mod *mod, bool rebuild)
+const std::vector<const RuleSoldierBonus*> *Soldier::getBonuses(const Mod *mod, bool rebuild)
 {
 	if (rebuild && mod)
 	{
 		_bonusCache.clear();
+		auto addSorted = [&](const RuleSoldierBonus* b)
+		{
+			if (!b)
+			{
+				return;
+			}
+
+			auto sort = [](const RuleSoldierBonus* l, const RuleSoldierBonus* r){ return l->getName() < r->getName(); };
+
+			auto p = std::lower_bound(_bonusCache.begin(), _bonusCache.end(), b, sort);
+			if (p == _bonusCache.end() || *p != b)
+			{
+				_bonusCache.insert(p, b);
+			}
+		};
+
 		for (auto bonusName : _transformationBonuses)
 		{
 			auto bonusRule = mod->getSoldierBonus(bonusName.first, false);
-			if (bonusRule)
-			{
-				_bonusCache[bonusRule] += bonusName.second;
-			}
+
+			addSorted(bonusRule);
 		}
 		for (auto commendation : *_diary->getSoldierCommendations())
 		{
 			auto bonusRule = commendation->getRule()->getSoldierBonus(commendation->getDecorationLevelInt());
-			if (bonusRule)
-			{
-				_bonusCache[bonusRule] += 1;
-			}
+
+			addSorted(bonusRule);
 		}
 	}
 
@@ -1536,7 +1549,9 @@ std::string debugDisplayScript(const Soldier* so)
 		s += so->getRules()->getType();
 		s += "\" id: ";
 		s += std::to_string(so->getId());
-		s += ")";
+		s += " name: \"";
+		s += so->getName(false, 0);
+		s += "\")";
 		return s;
 	}
 	else
@@ -1565,8 +1580,8 @@ void Soldier::ScriptRegister(ScriptParserBase* parser)
 	so.add<&getLookVariantScript>("getLookVariant");
 
 
-	UnitStats::addGetStatsScript<Soldier, &Soldier::_currentStats>(so, "Stats.");
-	UnitStats::addSetStatsScript<Soldier, &Soldier::_currentStats>(so, "Stats.");
+	UnitStats::addGetStatsScript<&Soldier::_currentStats>(so, "Stats.");
+	UnitStats::addSetStatsScript<&Soldier::_currentStats>(so, "Stats.");
 
 
 	so.addFunc<getRuleSoldierScript>("getRuleSoldier");
