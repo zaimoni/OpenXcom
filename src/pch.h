@@ -99,7 +99,6 @@
 
 // library headers
 #ifndef __NO_OPENGL
-#define __gl_glext_h_
 #include <SDL_opengl.h>
 #endif
 
@@ -109,7 +108,6 @@
 #include <SDL_image.h>
 //#include <SDL_keysym.h>
 #include <SDL_mixer.h>
-#include <SDL_opengl.h>
 #include <SDL_syswm.h>
 #include <SDL_thread.h>
 #include <SDL_types.h>

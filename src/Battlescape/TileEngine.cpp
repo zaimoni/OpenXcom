@@ -2237,12 +2237,11 @@ bool TileEngine::awardExperience(BattleActionAttack attack, BattleUnit *target, 
 		if (target->getFaction() != FACTION_HOSTILE) expMultiply = 0;
 	}
 
-	ModScript::AwardExperience::Output arg{ expMultiply, expType, };
-	ModScript::AwardExperience::Worker work{ unit, target, weapon, attack.type };
-
-	work.execute(target->getArmor()->getScript<ModScript::AwardExperience>(), arg);
-
-	expMultiply = arg.getFirst();
+	expMultiply = ModScript::scriptFunc2<ModScript::AwardExperience>(
+		target->getArmor(),
+		expMultiply, expType,
+		unit, target, weapon, attack.type
+	);
 
 	for (int i = expMultiply / 100; i > 0; --i)
 	{

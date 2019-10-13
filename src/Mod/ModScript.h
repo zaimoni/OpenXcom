@@ -35,6 +35,7 @@ struct RuleDamageType;
 class RuleTerrain;
 class MapDataSet;
 class RuleSoldier;
+class RuleSoldierBonus;
 class Unit;
 class Armor;
 class RuleInventory;
@@ -203,6 +204,14 @@ class ModScript
 		DetectUfoFromCraftParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 	};
 
+	////////////////////////////////////////////////////////////
+	//				soldier bonus stat script
+	////////////////////////////////////////////////////////////
+
+	struct ApplySoldierBonusesParser : ScriptParserEvents<ScriptOutputArgs<>, BattleUnit*, SavedBattleGame*, const RuleSoldierBonus*>
+	{
+		ApplySoldierBonusesParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
+	};
 
 public:
 	/// Get shared state.
@@ -283,6 +292,12 @@ public:
 	using DetectUfoFromCraft = MACRO_NAMED_SCRIPT("detectUfoFromCraft", DetectUfoFromCraftParser);
 
 	////////////////////////////////////////////////////////////
+	//					soldier bonus stat script
+	////////////////////////////////////////////////////////////
+
+	using ApplySoldierBonuses = MACRO_NAMED_SCRIPT("applySoldierBonuses", ApplySoldierBonusesParser);
+
+	////////////////////////////////////////////////////////////
 	//					groups
 	////////////////////////////////////////////////////////////
 
@@ -346,6 +361,10 @@ public:
 		DetectUfoFromCraft
 	>;
 
+	using SoldierBonusScripts = ScriptGroup<Mod,
+		ApplySoldierBonuses
+	>;
+
 	////////////////////////////////////////////////////////////
 	//					members
 	////////////////////////////////////////////////////////////
@@ -353,6 +372,64 @@ public:
 	BattleItemScripts battleItemScripts = { _shared, _mod, };
 	BonusStatsScripts bonusStatsScripts = { _shared, _mod, };
 	UfoScripts ufoScripts = { _shared, _mod, };
+	SoldierBonusScripts soldierBonusScripts = { _shared, _mod, };
+
+
+	////////////////////////////////////////////////////////////
+	//					helper functions
+	////////////////////////////////////////////////////////////
+
+	/**
+	 * Script helper that call script that do not return any values.
+	 * @param t Obect that hold script data.
+	 * @param args List of additionl parameters.
+	 * @return void
+	 */
+	template<typename ScriptType, typename T, typename... Args>
+	static auto scriptCallback(T* t, Args... args) -> std::enable_if_t<std::is_same<typename ScriptType::Output, ScriptOutputArgs<>>::value, void>
+	{
+		typename ScriptType::Output arg{};
+		typename ScriptType::Worker work{ std::forward<Args>(args)... };
+
+		work.execute(t->template getScript<ScriptType>(), arg);
+	}
+
+	/**
+	 * Script helper that call script that return one value and take one parmeters using `ScriptType::Output`
+	 * @param t Obect that hold script data.
+	 * @param first First parameter of `ScriptType::Output`.
+	 * @param args List of additionl parameters.
+	 * @return final value of first parameter.
+	 */
+	template<typename ScriptType, typename T, typename... Args>
+	static auto scriptFunc1(T* t, int first, Args... args) -> std::enable_if_t<std::is_same<typename ScriptType::Output, ScriptOutputArgs<int&>>::value, int>
+	{
+		typename ScriptType::Output arg{ first };
+		typename ScriptType::Worker work{ std::forward<Args>(args)... };
+
+		work.execute(t->template getScript<ScriptType>(), arg);
+
+		return arg.getFirst();
+	}
+
+	/**
+	 * Script helper that call script that return one value and take two parmeters using `ScriptType::Output`
+	 * @param t Obect that hold script data.
+	 * @param first First parameter of `ScriptType::Output`.
+	 * @param second Second parameter of `ScriptType::Output`.
+	 * @param args List of additionl parameters.
+	 * @return final value of first parameter.
+	 */
+	template<typename ScriptType, typename T, typename... Args>
+	static auto scriptFunc2(T* t, int first, int second, Args... args) -> std::enable_if_t<std::is_same<typename ScriptType::Output, Output>::value, int>
+	{
+		typename ScriptType::Output arg{ first, second };
+		typename ScriptType::Worker work{ std::forward<Args>(args)... };
+
+		work.execute(t->template getScript<ScriptType>(), arg);
+
+		return arg.getFirst();
+	}
 };
 
 }
