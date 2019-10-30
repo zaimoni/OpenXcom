@@ -270,9 +270,15 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 
 	// pilot modifiers
 	const std::vector<Soldier*> pilots = _craft->getPilotList(false);
+
+	for (std::vector<Soldier*>::const_iterator p = pilots.begin(); p != pilots.end(); ++p)
+	{
+		(*p)->prepareStatsWithBonuses(_game->getMod()); // refresh soldier bonuses
+	}
 	_pilotAccuracyBonus = _craft->getPilotAccuracyBonus(pilots, _game->getMod());
 	_pilotDodgeBonus = _craft->getPilotDodgeBonus(pilots, _game->getMod());
 	_pilotApproachSpeedModifier = _craft->getPilotApproachSpeedModifier(pilots, _game->getMod());
+
 	_craftAccelerationBonus = 2; // vanilla
 	if (!pilots.empty())
 	{
@@ -601,7 +607,8 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	if (!_ufo->getEscapeCountdown())
 	{
 		_ufo->setFireCountdown(0);
-		_ufo->setEscapeCountdown(_ufo->getRules()->getBreakOffTime() + RNG::generate(0, _ufo->getRules()->getBreakOffTime()) - 30 * _game->getSavedGame()->getDifficultyCoefficient());
+		int escapeCountdown = _ufo->getRules()->getBreakOffTime() + RNG::generate(0, _ufo->getRules()->getBreakOffTime()) - 30 * _game->getSavedGame()->getDifficultyCoefficient();
+		_ufo->setEscapeCountdown(std::max(1, escapeCountdown));
 	}
 
 	for (int i = 0; i < _weaponNum; ++i)

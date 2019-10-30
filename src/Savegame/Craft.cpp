@@ -17,6 +17,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Craft.h"
+#include <algorithm>
 #include "../fmath.h"
 #include "../Engine/Language.h"
 #include "../Engine/RNG.h"
@@ -29,6 +30,7 @@
 #include "Soldier.h"
 #include "Transfer.h"
 #include "../Mod/RuleSoldier.h"
+#include "../Mod/RuleSoldierBonus.h"
 #include "Base.h"
 #include "Ufo.h"
 #include "Waypoint.h"
@@ -1407,7 +1409,7 @@ int Craft::getPilotAccuracyBonus(const std::vector<Soldier*> &pilots, const Mod 
 	int firingAccuracy = 0;
 	for (std::vector<Soldier*>::const_iterator i = pilots.begin(); i != pilots.end(); ++i)
 	{
-			firingAccuracy += (*i)->getCurrentStats()->firing;
+			firingAccuracy += (*i)->getStatsWithSoldierBonusesOnly()->firing;
 	}
 	firingAccuracy = firingAccuracy / pilots.size(); // average firing accuracy of all pilots
 
@@ -1426,7 +1428,7 @@ int Craft::getPilotDodgeBonus(const std::vector<Soldier*> &pilots, const Mod *mo
 	int reactions = 0;
 	for (std::vector<Soldier*>::const_iterator i = pilots.begin(); i != pilots.end(); ++i)
 	{
-		reactions += (*i)->getCurrentStats()->reactions;
+		reactions += (*i)->getStatsWithSoldierBonusesOnly()->reactions;
 	}
 	reactions = reactions / pilots.size(); // average reactions of all pilots
 
@@ -1445,7 +1447,7 @@ int Craft::getPilotApproachSpeedModifier(const std::vector<Soldier*> &pilots, co
 	int bravery = 0;
 	for (std::vector<Soldier*>::const_iterator i = pilots.begin(); i != pilots.end(); ++i)
 	{
-		bravery += (*i)->getCurrentStats()->bravery;
+		bravery += (*i)->getStatsWithSoldierBonusesOnly()->bravery;
 	}
 	bravery = bravery / pilots.size(); // average bravery of all pilots
 

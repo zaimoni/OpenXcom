@@ -234,6 +234,7 @@ void CraftArmorState::cbxSortByChange(Action *action)
 void CraftArmorState::init()
 {
 	State::init();
+	_base->prepareSoldierStatsWithBonuses(); // refresh stats for sorting
 	initList(_savedScrollPosition);
 
 	int row = 0;
@@ -462,12 +463,14 @@ void CraftArmorState::lstSoldiersClick(Action *action)
 						}
 
 						s->setArmor(a);
+						s->prepareStatsWithBonuses(_game->getMod()); // refresh stats for sorting
 						_lstSoldiers->setCellText(_lstSoldiers->getSelectedRow(), 2, tr(a->getType()));
 					}
 				}
 				else
 				{
 					s->setArmor(a);
+					s->prepareStatsWithBonuses(_game->getMod()); // refresh stats for sorting
 					_lstSoldiers->setCellText(_lstSoldiers->getSelectedRow(), 2, tr(a->getType()));
 				}
 			}
@@ -537,6 +540,7 @@ void CraftArmorState::btnDeequipAllArmorClick(Action *action)
 				}
 
 				(*i)->setArmor(a);
+				(*i)->prepareStatsWithBonuses(_game->getMod()); // refresh stats for sorting
 				_lstSoldiers->setCellText(row, 2, tr(a->getType()));
 			}
 		}

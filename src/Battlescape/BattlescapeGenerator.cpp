@@ -72,8 +72,8 @@ namespace OpenXcom
  */
 BattlescapeGenerator::BattlescapeGenerator(Game *game) :
 	_game(game), _save(game->getSavedGame()->getSavedBattle()), _mod(_game->getMod()),
-	_craft(0), _craftRules(0), _ufo(0), _base(0), _mission(0), _alienBase(0), _terrain(0), _baseTerrain(0),
-	_mapsize_x(0), _mapsize_y(0), _mapsize_z(0), _worldTexture(0), _worldShade(0),
+	_craft(0), _craftRules(0), _ufo(0), _base(0), _mission(0), _alienBase(0), _terrain(0), _baseTerrain(0), _globeTerrain(0),
+	_mapsize_x(0), _mapsize_y(0), _mapsize_z(0), _missionTexture(0), _globeTexture(0), _worldShade(0),
 	_unitSequence(0), _craftInventoryTile(0), _alienCustomDeploy(0), _alienCustomMission(0), _alienItemLevel(0), _ufoDamagePercentage(0),
 	_baseInventory(false), _generateFuel(true), _craftDeployed(false), _ufoDeployed(false), _craftZ(0), _craftPos(), _blocksToDo(0), _dummy(0)
 {
@@ -140,11 +140,13 @@ void BattlescapeGenerator::setUfo(Ufo *ufo)
 
 /**
  * Sets the world texture where a ufo crashed. This is used to determine the terrain.
- * @param texture Texture id of the polygon on the globe.
+ * @param missionTexture Texture id of the polygon on the globe (for UFOs). For mission sites, alien bases, etc. can be something else.
+ * @param globeTexture Texture id of the polygon on the globe.
  */
-void BattlescapeGenerator::setWorldTexture(Texture *texture)
+void BattlescapeGenerator::setWorldTexture(Texture *missionTexture, Texture *globeTexture)
 {
-	_worldTexture = texture;
+	_missionTexture = missionTexture;
+	_globeTexture = globeTexture;
 }
 
 /**
@@ -488,12 +490,15 @@ void BattlescapeGenerator::nextStage()
 
 	int highestSoldierID = 0;
 	bool selectedFirstSoldier = false;
+	int soldiersTotal = 0;
+	int soldiersPlaced = 0;
 	for (std::vector<BattleUnit*>::iterator j = _save->getUnits()->begin(); j != _save->getUnits()->end(); ++j)
 	{
 		if ((*j)->getOriginalFaction() == FACTION_PLAYER)
 		{
 			if (!(*j)->isOut())
 			{
+				++soldiersTotal;
 				(*j)->setTurnsSinceSpotted(255);
 				(*j)->setTurnsLeftSpottedForSnipers(0);
 				if (!selectedFirstSoldier && (*j)->getGeoscapeSoldier())
@@ -504,6 +509,7 @@ void BattlescapeGenerator::nextStage()
 				Node* node = _save->getSpawnNode(NR_XCOM, (*j));
 				if (node || placeUnitNearFriend(*j))
 				{
+					++soldiersPlaced;
 					if (node)
 					{
 						_save->setUnitPosition((*j), node->getPosition());
@@ -525,6 +531,16 @@ void BattlescapeGenerator::nextStage()
 				}
 			}
 		}
+	}
+	if (soldiersPlaced == 0)
+	{
+		throw Exception("Map generator encountered an error: no xcom units could be placed on the map.");
+	}
+	else if (soldiersPlaced < soldiersTotal)
+	{
+		std::ostringstream oss;
+		oss << "Map generator encountered an error: not all xcom units could be placed on the map. Placed: " << soldiersPlaced << " of " << soldiersTotal << ".";
+		throw Exception(oss.str());
 	}
 
 	if (_save->getSelectedUnit() == 0 || _save->getSelectedUnit()->isOut() || _save->getSelectedUnit()->getFaction() != FACTION_PLAYER)
@@ -548,8 +564,6 @@ void BattlescapeGenerator::nextStage()
 
 	_unitSequence = _save->getUnits()->back()->getId() + 1;
 
-	size_t unitCount = _save->getUnits()->size();
-
 	// Let's figure out what race we're up against.
 	_alienRace = ruleDeploy->getRace();
 
@@ -571,6 +585,20 @@ void BattlescapeGenerator::nextStage()
 		}
 	}
 
+	int civilianSpawnNodeRank = ruleDeploy->getCivilianSpawnNodeRank();
+
+	// Special case: deploy civilians before aliens
+	if (civilianSpawnNodeRank > 0)
+	{
+		deployCivilians(civilianSpawnNodeRank, ruleDeploy->getCivilians());
+		for (std::map<std::string, int>::const_iterator i = ruleDeploy->getCiviliansByType().begin(); i != ruleDeploy->getCiviliansByType().end(); ++i)
+		{
+			deployCivilians(civilianSpawnNodeRank, i->second, true, i->first);
+		}
+	}
+
+	size_t unitCount = _save->getUnits()->size();
+
 	deployAliens(_alienCustomDeploy ? _alienCustomDeploy : ruleDeploy);
 
 	if (unitCount == _save->getUnits()->size())
@@ -578,10 +606,14 @@ void BattlescapeGenerator::nextStage()
 		throw Exception("Map generator encountered an error: no alien units could be placed on the map.");
 	}
 
-	deployCivilians(ruleDeploy->getCivilians());
-	for (std::map<std::string, int>::const_iterator i = ruleDeploy->getCiviliansByType().begin(); i != ruleDeploy->getCiviliansByType().end(); ++i)
+	// Normal case: deploy civilians after aliens
+	if (civilianSpawnNodeRank == 0)
 	{
-		deployCivilians(i->second, true, i->first);
+		deployCivilians(civilianSpawnNodeRank, ruleDeploy->getCivilians());
+		for (std::map<std::string, int>::const_iterator i = ruleDeploy->getCiviliansByType().begin(); i != ruleDeploy->getCiviliansByType().end(); ++i)
+		{
+			deployCivilians(civilianSpawnNodeRank, i->second, true, i->first);
+		}
 	}
 
 	_save->setAborted(false);
@@ -609,7 +641,7 @@ void BattlescapeGenerator::run()
 
 	if (_terrain == 0)
 	{
-		if (_worldTexture == 0 || _worldTexture->getTerrain()->empty() || !ruleDeploy->getTerrains().empty())
+		if (_missionTexture == 0 || _missionTexture->getTerrain()->empty() || !ruleDeploy->getTerrains().empty())
 		{
 			if (!ruleDeploy->getTerrains().empty())
 			{
@@ -625,7 +657,7 @@ void BattlescapeGenerator::run()
 		{
 			Target *target = _ufo;
 			if (_mission) target = _mission;
-			_terrain = _game->getMod()->getTerrain(_worldTexture->getRandomTerrain(target), true);
+			_terrain = _game->getMod()->getTerrain(_missionTexture->getRandomTerrain(target), true);
 		}
 	}
 
@@ -668,9 +700,9 @@ void BattlescapeGenerator::run()
 	setupObjectives(ruleDeploy);
 
 	RuleStartingCondition *startingCondition = _game->getMod()->getStartingCondition(ruleDeploy->getStartingCondition());
-	if (!startingCondition && _worldTexture)
+	if (!startingCondition && _missionTexture)
 	{
-		startingCondition = _game->getMod()->getStartingCondition(_worldTexture->getStartingCondition());
+		startingCondition = _game->getMod()->getStartingCondition(_missionTexture->getStartingCondition());
 	}
 	RuleEnviroEffects *enviro = _game->getMod()->getEnviroEffects(ruleDeploy->getEnviroEffects());
 	if (!enviro && _terrain)
@@ -678,6 +710,18 @@ void BattlescapeGenerator::run()
 		enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
 	}
 	deployXCOM(startingCondition, enviro);
+
+	int civilianSpawnNodeRank = ruleDeploy->getCivilianSpawnNodeRank();
+
+	// Special case: deploy civilians before aliens
+	if (civilianSpawnNodeRank > 0)
+	{
+		deployCivilians(civilianSpawnNodeRank, ruleDeploy->getCivilians());
+		for (std::map<std::string, int>::const_iterator i = ruleDeploy->getCiviliansByType().begin(); i != ruleDeploy->getCiviliansByType().end(); ++i)
+		{
+			deployCivilians(civilianSpawnNodeRank, i->second, true, i->first);
+		}
+	}
 
 	size_t unitCount = _save->getUnits()->size();
 
@@ -688,10 +732,14 @@ void BattlescapeGenerator::run()
 		throw Exception("Map generator encountered an error: no alien units could be placed on the map.");
 	}
 
-	deployCivilians(ruleDeploy->getCivilians());
-	for (std::map<std::string, int>::const_iterator i = ruleDeploy->getCiviliansByType().begin(); i != ruleDeploy->getCiviliansByType().end(); ++i)
+	// Normal case: deploy civilians after aliens
+	if (civilianSpawnNodeRank == 0)
 	{
-		deployCivilians(i->second, true, i->first);
+		deployCivilians(civilianSpawnNodeRank, ruleDeploy->getCivilians());
+		for (std::map<std::string, int>::const_iterator i = ruleDeploy->getCiviliansByType().begin(); i != ruleDeploy->getCiviliansByType().end(); ++i)
+		{
+			deployCivilians(civilianSpawnNodeRank, i->second, true, i->first);
+		}
 	}
 
 	if (_generateFuel)
@@ -1386,10 +1434,10 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  * @param rules Pointer to the Unit which holds info about the civilian.
  * @return Pointer to the created unit.
  */
-BattleUnit *BattlescapeGenerator::addCivilian(Unit *rules)
+BattleUnit *BattlescapeGenerator::addCivilian(Unit *rules, int nodeRank)
 {
 	BattleUnit *unit = new BattleUnit(_game->getMod(), rules, FACTION_NEUTRAL, _unitSequence++, _save->getEnviroEffects(), rules->getArmor(), 0, _save->getDepth());
-	Node *node = _save->getSpawnNode(0, unit);
+	Node *node = _save->getSpawnNode(nodeRank, unit);
 
 	if (node)
 	{
@@ -1871,7 +1919,7 @@ void BattlescapeGenerator::explodePowerSources()
  * Spawns civilians on a terror mission.
  * @param max Maximum number of civilians to spawn.
  */
-void BattlescapeGenerator::deployCivilians(int max, bool roundUp, const std::string &civilianType)
+void BattlescapeGenerator::deployCivilians(int nodeRank, int max, bool roundUp, const std::string &civilianType)
 {
 	if (max)
 	{
@@ -1907,7 +1955,7 @@ void BattlescapeGenerator::deployCivilians(int max, bool roundUp, const std::str
 					size_t pick = RNG::generate(0, _terrain->getCivilianTypes().size() - 1);
 					rule = _game->getMod()->getUnit(_terrain->getCivilianTypes().at(pick), true);
 				}
-				BattleUnit* civ = addCivilian(rule);
+				BattleUnit* civ = addCivilian(rule, nodeRank);
 				if (civ)
 				{
 					size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0,9)));
@@ -2067,6 +2115,18 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 	RuleTerrain* ufoTerrain = 0;
 	// lets generate the map now and store it inside the tile objects
 
+	// determine globe terrain from globe texture
+	_globeTerrain = _terrain;
+	if (_globeTexture && _craft)
+	{
+		// TODO (cosmetic): multiple attempts (e.g. several attacks on the same alien base) may generate different terrains from the same globe texture
+		auto tmpTerrain  = _game->getMod()->getTerrain(_globeTexture->getRandomTerrain(_craft), false);
+		if (tmpTerrain)
+		{
+			_globeTerrain = tmpTerrain;
+		}
+	}
+
 	// this mission type is "hard-coded" in terms of map layout
 	uint64_t seed = RNG::getSeed();
 	_baseTerrain = _terrain;
@@ -2090,7 +2150,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 			uint64_t baseSeed = baseLon * baseLat * 1e6;
 			RNG::setSeed(baseSeed);
 
-			_baseTerrain = _game->getMod()->getTerrain(_worldTexture->getRandomBaseTerrain(target), true);
+			_baseTerrain = _game->getMod()->getTerrain(_missionTexture->getRandomBaseTerrain(target), true);
 			generateBaseMap();
 		}
 		else
@@ -2859,6 +2919,10 @@ RuleTerrain* BattlescapeGenerator::pickTerrain(std::string terrainName)
 	if (terrainName == "baseTerrain")
 	{
 		terrain = _baseTerrain;
+	}
+	else if (terrainName == "globeTerrain")
+	{
+		terrain = _globeTerrain;
 	}
 	else if (terrainName != "")
 	{

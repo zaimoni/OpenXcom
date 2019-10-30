@@ -64,10 +64,9 @@ private:
 	Base *_base;
 	MissionSite *_mission;
 	AlienBase *_alienBase;
-	RuleTerrain *_terrain;
-	RuleTerrain *_baseTerrain;
+	RuleTerrain *_terrain, *_baseTerrain, *_globeTerrain;
 	int _mapsize_x, _mapsize_y, _mapsize_z;
-	Texture *_worldTexture;
+	Texture *_missionTexture, *_globeTexture;
 	int _worldShade;
 	int _unitSequence;
 	Tile *_craftInventoryTile;
@@ -101,7 +100,7 @@ private:
 	/// Adds an alien to the game.
 	BattleUnit *addAlien(Unit *rules, int alienRank, bool outside);
 	/// Adds a civilian to the game.
-	BattleUnit *addCivilian(Unit *rules);
+	BattleUnit *addCivilian(Unit *rules, int nodeRank);
 	/// Places an item on a soldier based on equipment layout.
 	bool placeItemByLayout(BattleItem *item, const std::vector<BattleItem*> &itemList);
 	/// Loads an XCom MAP file.
@@ -121,7 +120,7 @@ private:
 	/// Deploys the aliens, according to the alien deployment rules.
 	void deployAliens(const AlienDeployment *deployment);
 	/// Spawns civilians on a terror mission.
-	void deployCivilians(int max, bool roundUp = false, const std::string &civilianType = "");
+	void deployCivilians(int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
 	/// Finds a spot near a friend to spawn at.
 	bool placeUnitNearFriend(BattleUnit *unit);
 	/// Load all Xcom weapons.
@@ -166,7 +165,7 @@ public:
 	/// Sets the ufo.
 	void setUfo(Ufo* ufo);
 	/// Sets the polygon texture.
-	void setWorldTexture(Texture *texture);
+	void setWorldTexture(Texture *missionTexture, Texture *globeTexture);
 	/// Sets the polygon shade.
 	void setWorldShade(int shade);
 	/// Sets the alien race.

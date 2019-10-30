@@ -118,6 +118,15 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 	_nationality = node["nationality"].as<int>(_nationality);
 	_initialStats = node["initialStats"].as<UnitStats>(_initialStats);
 	_currentStats = node["currentStats"].as<UnitStats>(_currentStats);
+
+	// re-roll mana stats when upgrading saves
+	if (_currentStats.mana == 0 && _rules->getMaxStats().mana > 0)
+	{
+		int reroll = RNG::generate(_rules->getMinStats().mana, _rules->getMaxStats().mana);
+		_currentStats.mana = reroll;
+		_initialStats.mana = reroll;
+	}
+
 	_rank = (SoldierRank)node["rank"].as<int>();
 	_gender = (SoldierGender)node["gender"].as<int>();
 	_look = (SoldierLook)node["look"].as<int>();
@@ -1292,6 +1301,22 @@ void Soldier::transform(const Mod *mod, RuleSoldierTransformation *transformatio
 					break;
 				}
 			}
+
+			// clamp (and randomize) nationality if needed
+			{
+				const std::vector<SoldierNamePool *> &names = _rules->getNames();
+				if (!names.empty())
+				{
+					if ((size_t)_nationality >= _rules->getNames().size())
+					{
+						_nationality = RNG::generate(0, names.size() - 1);
+					}
+				}
+				else
+				{
+					_nationality = 0;
+				}
+			}
 		}
 
 		// change stats
@@ -1441,9 +1466,9 @@ UnitStats Soldier::calculateStatChanges(const Mod *mod, RuleSoldierTransformatio
  * Gets all the soldier bonuses
  * @return The map of soldier bonuses
  */
-const std::vector<const RuleSoldierBonus*> *Soldier::getBonuses(const Mod *mod, bool rebuild)
+const std::vector<const RuleSoldierBonus*> *Soldier::getBonuses(const Mod *mod)
 {
-	if (rebuild && mod)
+	if (mod)
 	{
 		_bonusCache.clear();
 		auto addSorted = [&](const RuleSoldierBonus* b)
@@ -1477,6 +1502,54 @@ const std::vector<const RuleSoldierBonus*> *Soldier::getBonuses(const Mod *mod, 
 	}
 
 	return &_bonusCache;
+}
+
+/**
+ * Get pointer to current stats with soldier bonuses, but without armor bonuses.
+ */
+UnitStats *Soldier::getStatsWithSoldierBonusesOnly()
+{
+	return &_tmpStatsWithSoldierBonuses;
+}
+
+/**
+ * Get pointer to current stats with armor and soldier bonuses.
+ */
+UnitStats *Soldier::getStatsWithAllBonuses()
+{
+	return &_tmpStatsWithAllBonuses;
+}
+
+/**
+ * Pre-calculates soldier stats with various bonuses.
+ */
+bool Soldier::prepareStatsWithBonuses(const Mod *mod)
+{
+	bool hasSoldierBonus = false;
+
+	// 1. current stats
+	UnitStats tmp = _currentStats;
+
+	// 2. refresh soldier bonuses
+	auto bonuses = getBonuses(mod); // this is the only place where bonus cache is rebuilt
+
+	// 3. apply soldier bonuses
+	for (auto bonusRule : *bonuses)
+	{
+		hasSoldierBonus = true;
+		tmp += *(bonusRule->getStats());
+	}
+
+	// 4. stats with soldier bonuses, but without armor bonuses
+	_tmpStatsWithSoldierBonuses = UnitStats::obeyFixedMinimum(tmp);
+
+	// 5. apply armor bonus
+	tmp += *_armor->getStats();
+
+	// 6. stats with all bonuses
+	_tmpStatsWithAllBonuses = UnitStats::obeyFixedMinimum(tmp);
+
+	return hasSoldierBonus;
 }
 
 

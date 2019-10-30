@@ -328,6 +328,7 @@ void CraftSoldiersState::initList(size_t scrl)
 void CraftSoldiersState::init()
 {
 	State::init();
+	_base->prepareSoldierStatsWithBonuses(); // refresh stats for sorting
 	initList(0);
 
 }
