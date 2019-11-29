@@ -10,6 +10,7 @@
 		5B0DC8AC22F300BD0092A513 /* md5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AB22F300BC0092A513 /* md5.cpp */; };
 		5B0DC8AF22F300E70092A513 /* RuleEnviroEffects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */; };
 		5B0DC8B222F300FA0092A513 /* RuleArcScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */; };
+		5B5F680D2391B9A100D2D740 /* OptionsFoldersState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */; };
 		5B8049FD226F8E12004E517F /* GlobalManufactureState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */; };
 		5B95F032233D1AA90018C910 /* SoldierBonusState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F026233D1AA80018C910 /* SoldierBonusState.cpp */; };
 		5B95F035233D1ADB0018C910 /* GeoscapeEventState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F033233D1ADB0018C910 /* GeoscapeEventState.cpp */; };
@@ -500,6 +501,8 @@
 		5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleEnviroEffects.cpp; sourceTree = "<group>"; };
 		5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleArcScript.cpp; sourceTree = "<group>"; };
 		5B0DC8B122F300FA0092A513 /* RuleArcScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleArcScript.h; sourceTree = "<group>"; };
+		5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsFoldersState.cpp; sourceTree = "<group>"; };
+		5B5F680C2391B9A000D2D740 /* OptionsFoldersState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OptionsFoldersState.h; sourceTree = "<group>"; };
 		5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GlobalManufactureState.cpp; sourceTree = "<group>"; };
 		5B8049FC226F8E12004E517F /* GlobalManufactureState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GlobalManufactureState.h; sourceTree = "<group>"; };
 		5B95F026233D1AA80018C910 /* SoldierBonusState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoldierBonusState.cpp; sourceTree = "<group>"; };
@@ -1402,6 +1405,8 @@
 		B28341D9201F6D9B00BAEC9D /* Menu */ = {
 			isa = PBXGroup;
 			children = (
+				5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */,
+				5B5F680C2391B9A000D2D740 /* OptionsFoldersState.h */,
 				5BD0BB202242E099008E6DFB /* OptionsInformExtendedState.cpp */,
 				5BD0BB212242E099008E6DFB /* OptionsInformExtendedState.h */,
 				5BD0BB222242E099008E6DFB /* TestPaletteState.cpp */,
@@ -2631,6 +2636,7 @@
 				B283447E201F6D9D00BAEC9D /* ListLoadOriginalState.cpp in Sources */,
 				B2834575201F6D9E00BAEC9D /* MapBlock.cpp in Sources */,
 				B283457A201F6D9E00BAEC9D /* MapScript.cpp in Sources */,
+				5B5F680D2391B9A100D2D740 /* OptionsFoldersState.cpp in Sources */,
 				B2834474201F6D9D00BAEC9D /* OptionsGeoscapeState.cpp in Sources */,
 				B28344EE201F6D9E00BAEC9D /* Waypoint.cpp in Sources */,
 				B2834507201F6D9E00BAEC9D /* PathfindingOpenSet.cpp in Sources */,
