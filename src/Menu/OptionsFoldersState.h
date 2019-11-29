@@ -1,6 +1,6 @@
 #pragma once
 /*
- * Copyright 2010-2016 OpenXcom Developers.
+ * Copyright 2010-2019 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,11 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "OptionsBaseState.h"
 
-#define OPENXCOM_VERSION_SHORT "Extended 6.2"
-#define OPENXCOM_VERSION_LONG "6.2.0.0"
-#define OPENXCOM_VERSION_NUMBER 6,2,0,0
+namespace OpenXcom
+{
 
-#ifndef OPENXCOM_VERSION_GIT
-#define OPENXCOM_VERSION_GIT " (v2019-11-29)"
-#endif
+class Text;
+
+/**
+ * Screen that shows the user various folders used by OpenXcom.
+ */
+class OptionsFoldersState : public OptionsBaseState
+{
+private:
+	Text *_txtDataFolder, *_txtUserFolder, *_txtSaveFolder, *_txtConfigFolder;
+	Text *_txtDataFolderPath, *_txtUserFolderPath, *_txtSaveFolderPath, *_txtConfigFolderPath;
+public:
+	/// Creates the Folders Options state.
+	OptionsFoldersState(OptionsOrigin origin);
+	/// Cleans up the Folders Options state.
+	~OptionsFoldersState();
+};
+
+}

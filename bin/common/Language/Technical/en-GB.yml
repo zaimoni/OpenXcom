@@ -228,7 +228,9 @@ en-GB:
   armor: "Armor"
 #
   medikitType: "Medikit type"
-  allowSelfHeal: "Apply to self?"
+  medikitTargetSelf: "Medikit on self?"
+  medikitTargetImmune: "Medikit on bleed immune?"
+  medikitTargetMatrix: "Medikit targets"
   isConsumable: "Consumable?"
   painKiller: "Painkiller uses"
   heal: "Heal uses"

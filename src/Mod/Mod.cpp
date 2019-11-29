@@ -143,6 +143,8 @@ std::string Mod::DEBRIEF_MUSIC_BAD;
 int Mod::DIFFICULTY_COEFFICIENT[5];
 int Mod::DIFFICULTY_BASED_RETAL_DELAY[5];
 int Mod::UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
+bool Mod::EXTENDED_ITEM_RELOAD_COST;
+bool Mod::EXTENDED_RUNNING_COST;
 
 /// Predefined name for first loaded mod that have all original data
 const std::string ModNameMaster = "master";
@@ -219,6 +221,9 @@ void Mod::resetGlobalStatics()
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[1] = 100; // start moving
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[2] = 100; // select weapon
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[3] = 20;  // annoyed
+
+	EXTENDED_ITEM_RELOAD_COST = false;
+	EXTENDED_RUNNING_COST = false;
 }
 
 /**
@@ -1174,7 +1179,7 @@ static void afterLoadHelper(const char* name, Mod* mod, std::map<std::string, T*
 		}
 		catch (Exception &e)
 		{
-			throw Exception("Error linking '" + rule.first + "' in " + name + ": " + e.what());
+			throw Exception("Error processing '" + rule.first + "' in " + name + ": " + e.what());
 		}
 	}
 }
@@ -1531,6 +1536,8 @@ void Mod::loadConstants(const YAML::Node &node)
 	}
 	DEBRIEF_MUSIC_GOOD = node["goodDebriefingMusic"].as<std::string>(DEBRIEF_MUSIC_GOOD);
 	DEBRIEF_MUSIC_BAD = node["badDebriefingMusic"].as<std::string>(DEBRIEF_MUSIC_BAD);
+	EXTENDED_ITEM_RELOAD_COST = node["extendedItemReloadCost"].as<bool>(EXTENDED_ITEM_RELOAD_COST);
+	EXTENDED_RUNNING_COST = node["extendedRunningCost"].as<bool>(EXTENDED_RUNNING_COST);
 }
 
 /**
