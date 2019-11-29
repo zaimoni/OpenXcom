@@ -927,7 +927,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 		// add items that are in the craft
 		for (std::map<std::string, int>::iterator i = _craft->getItems()->getContents()->begin(); i != _craft->getItems()->getContents()->end(); ++i)
 		{
-			if (startingCondition != 0 && !startingCondition->isItemPermitted(i->first, _game->getMod()))
+			if (startingCondition != 0 && !startingCondition->isItemPermitted(i->first, _game->getMod(), _craft))
 			{
 				// send disabled items back to base
 				_base->getStorageItems()->addItem(i->first, i->second);
@@ -1857,11 +1857,7 @@ int BattlescapeGenerator::loadExtraTerrain(RuleTerrain *terrain)
 
 		for (const auto& i : *terrain->getMapDataSets())
 		{
-			i->loadData();
-			if (_game->getMod()->getMCDPatch(i->getName()))
-			{
-				_game->getMod()->getMCDPatch(i->getName())->modifyData(i);
-			}
+			i->loadData(_game->getMod()->getMCDPatch(i->getName()));
 			_save->getMapDataSets()->push_back(i);
 		}
 
@@ -2101,11 +2097,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 	// Load in the default terrain data
 	for (std::vector<MapDataSet*>::iterator i = _terrain->getMapDataSets()->begin(); i != _terrain->getMapDataSets()->end(); ++i)
 	{
-		(*i)->loadData();
-		if (_game->getMod()->getMCDPatch((*i)->getName()))
-		{
-			_game->getMod()->getMCDPatch((*i)->getName())->modifyData(*i);
-		}
+		(*i)->loadData(_game->getMod()->getMCDPatch((*i)->getName()));
 		_save->getMapDataSets()->push_back(*i);
 		mapDataSetIDOffset++;
 	}
@@ -2536,11 +2528,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 	{
 		for (std::vector<MapDataSet*>::iterator i = ufoTerrain->getMapDataSets()->begin(); i != ufoTerrain->getMapDataSets()->end(); ++i)
 		{
-			(*i)->loadData();
-			if (_game->getMod()->getMCDPatch((*i)->getName()))
-			{
-				_game->getMod()->getMCDPatch((*i)->getName())->modifyData(*i);
-			}
+			(*i)->loadData(_game->getMod()->getMCDPatch((*i)->getName()));
 			_save->getMapDataSets()->push_back(*i);
 			craftDataSetIDOffset++;
 		}
@@ -2563,11 +2551,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 	{
 		for (std::vector<MapDataSet*>::iterator i = _craftRules->getBattlescapeTerrainData()->getMapDataSets()->begin(); i != _craftRules->getBattlescapeTerrainData()->getMapDataSets()->end(); ++i)
 		{
-			(*i)->loadData();
-			if (_game->getMod()->getMCDPatch((*i)->getName()))
-			{
-				_game->getMod()->getMCDPatch((*i)->getName())->modifyData(*i);
-			}
+			(*i)->loadData(_game->getMod()->getMCDPatch((*i)->getName()));
 			_save->getMapDataSets()->push_back(*i);
 		}
 		loadMAP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, _craftRules->getBattlescapeTerrainData(), mapDataSetIDOffset + craftDataSetIDOffset, _craftRules->isMapVisible(), true);

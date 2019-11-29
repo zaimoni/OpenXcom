@@ -91,6 +91,7 @@ en-US:
   STR_SOLDIER_BONUSES_FOR: "SOLDIER BONUSES FOR{NEWLINE}{0}"
 #SoldierInfoState.cpp
   STR_MANA_RECOVERY: "MANA RECOVERY> {ALT}{0}"
+  STR_BONUSES_BUTTON: " "
 #SoldierDiaryOverviewState.cpp
   STR_KILLER_AND_WEAPON: "{0}, {1}"
 #SoldiersState.h
@@ -230,10 +231,14 @@ en-US:
   STR_GRAPHS_ZOOM_IN: "Zoom In (Graphs)"
   STR_GRAPHS_ZOOM_OUT: "Zoom Out (Graphs)"
   STR_MARK_ALL_AS_SEEN: "Mark All As Seen"
-  STR_SELECT_ALL: "Select All"
-  STR_SELECT_ALL_BUT_ONE: "Select All But One"
-  STR_DESELECT_ALL: "Deselect All"
-  STR_RESET_ALL: "Reset All"
+  STR_SELL_ALL: "Sell All"
+  STR_SELL_ALL_BUT_ONE: "Sell All But One"
+  STR_REMOVE_SOLDIERS_FROM_ALL_CRAFTS: "Remove Soldiers From All Crafts"
+  STR_REMOVE_SOLDIERS_FROM_CRAFT: "Remove Soldiers From Craft"
+  STR_REMOVE_EQUIPMENT_FROM_CRAFT: "Remove Equipment From Craft"
+  STR_REMOVE_ARMOR_FROM_ALL_CRAFTS: "Remove Armor From All Crafts"
+  STR_REMOVE_ARMOR_FROM_CRAFT: "Remove Armor From Craft"
+  STR_REMOVE_SOLDIERS_FROM_TRAINING: "Remove Soldiers From Training"
   STR_INVENTORY_ARMOR: "Change Armor (via Inventory)"
   STR_INVENTORY_AVATAR: "Change Avatar (via Inventory)"
   STR_ACTION_ITEM_1: "Item Action 1 (Aim/Use)"
@@ -320,6 +325,18 @@ en-US:
   STR_LATEST_VERSION_INFO: "You are using the latest OpenXcom version."
 #OptionsAdvancedState.cpp
   STR_OXCE: "Extended"
+#OptionsBaseState.cpp
+  STR_FOLDERS: "FOLDERS"
+#OptionsFoldersState.cpp
+  STR_CURRENT_WORKING_DIRECTORY: "<current working directory>"
+  STR_DATA_FOLDER: "Data Folder (original resources)"
+  STR_USER_FOLDER: "User Folder (mods, openxcom.log)"
+  STR_SAVE_FOLDER: "Save Folder (saved games)"
+  STR_CONFIG_FOLDER: "Config Folder (options.cfg)"
+  STR_DATA_FOLDER_DESC: "This is where OpenXcom looks for the original game resources (UFO and/or TFTD) and also where the OpenXcom built-in mods are stored."
+  STR_USER_FOLDER_DESC: "The log file ('openxcom.log') is stored here. All custom mods belong here too (in the 'mods' sub-folder)."
+  STR_SAVE_FOLDER_DESC: "Your saved games are located here. Also, the mission generator settings ('battle.cfg') can be found here."
+  STR_CONFIG_FOLDER_DESC: "This is where OpenXcom settings ('option.cfg') are stored. Normally the same as the User Folder."
 #OptionsInformExtendedState.cpp
   STR_VERSION_REQUIRED_QUESTION: "This mod requires OXCE v{0} to run correctly. Enable this mod?"
 #OptionsVideoState.cpp

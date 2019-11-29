@@ -23,7 +23,6 @@
     <ProjectGuid>{D8F55ED4-1A4E-4111-8E83-153CF91FE25A}</ProjectGuid>
     <RootNamespace>OpenXcom</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -103,6 +102,7 @@
       </ForcedIncludeFiles>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8</AdditionalOptions>
+      <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
       <AdditionalDependencies>yaml-cppd.lib;SDL2_image.lib;SDL2_mixer.lib;SDL_gfx.lib;SDL2main.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -140,6 +140,7 @@
       </ForcedIncludeFiles>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8</AdditionalOptions>
+      <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
       <AdditionalDependencies>yaml-cppd.lib;SDL2_image.lib;SDL2_mixer.lib;SDL_gfx.lib;SDL2main.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -176,6 +177,7 @@
       </ForcedIncludeFiles>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8</AdditionalOptions>
+      <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
       <AdditionalDependencies>yaml-cpp.lib;SDL2_image.lib;SDL2_mixer.lib;SDL_gfx.lib;SDL2main.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -214,6 +216,7 @@
       </ForcedIncludeFiles>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8</AdditionalOptions>
+      <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
       <AdditionalDependencies>yaml-cpp.lib;SDL2_image.lib;SDL2_mixer.lib;SDL_gfx.lib;SDL2main.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -467,6 +470,7 @@
     <ClCompile Include="Menu\OptionsAudioState.cpp" />
     <ClCompile Include="Menu\OptionsConfirmState.cpp" />
     <ClCompile Include="Menu\OptionsDefaultsState.cpp" />
+    <ClCompile Include="Menu\OptionsFoldersState.cpp" />
     <ClCompile Include="Menu\OptionsGeoscapeState.cpp" />
     <ClCompile Include="Menu\MainMenuState.cpp" />
     <ClCompile Include="Menu\NewBattleState.cpp" />
@@ -855,6 +859,7 @@
     <ClInclude Include="Menu\OptionsAudioState.h" />
     <ClInclude Include="Menu\OptionsConfirmState.h" />
     <ClInclude Include="Menu\OptionsDefaultsState.h" />
+    <ClInclude Include="Menu\OptionsFoldersState.h" />
     <ClInclude Include="Menu\OptionsGeoscapeState.h" />
     <ClInclude Include="Menu\MainMenuState.h" />
     <ClInclude Include="Menu\NewBattleState.h" />
@@ -1000,6 +1005,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="OpenXcom.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="yaml-cpp.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

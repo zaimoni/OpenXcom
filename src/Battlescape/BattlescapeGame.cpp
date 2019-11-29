@@ -528,40 +528,43 @@ void BattlescapeGame::endTurn()
 		bool exploded = false;
 
 		// check for hot grenades on the ground
-		for (BattleItem *item : *_save->getItems())
+		if (_save->getSide() != FACTION_NEUTRAL)
 		{
-			const RuleItem *rule = item->getRules();
-			const Tile *tile = item->getTile();
-			BattleUnit *unit = item->getOwner();
-			if (!tile && unit && rule->isExplodingInHands())
+			for (BattleItem *item : *_save->getItems())
 			{
-				tile = unit->getTile();
-			}
-			if (tile)
-			{
-				if (item->fuseEndTurnEffect())
+				const RuleItem *rule = item->getRules();
+				const Tile *tile = item->getTile();
+				BattleUnit *unit = item->getOwner();
+				if (!tile && unit && rule->isExplodingInHands())
 				{
-					if (rule->getBattleType() == BT_GRENADE) // it's a grenade to explode now
+					tile = unit->getTile();
+				}
+				if (tile)
+				{
+					if (item->fuseEndTurnEffect())
 					{
-						Position p = tile->getPosition().toVoxel() + Position(8, 8, - tile->getTerrainLevel() + (unit ? unit->getHeight() / 2 : 0));
-						statePushNext(new ExplosionBState(this, p, BattleActionAttack{ BA_NONE, unit, item, item, }));
-						exploded = true;
-					}
-					else
-					{
-						forRemoval.push_back(item);
+						if (rule->getBattleType() == BT_GRENADE) // it's a grenade to explode now
+						{
+							Position p = tile->getPosition().toVoxel() + Position(8, 8, -tile->getTerrainLevel() + (unit ? unit->getHeight() / 2 : 0));
+							statePushNext(new ExplosionBState(this, p, BattleActionAttack{ BA_NONE, unit, item, item, }));
+							exploded = true;
+						}
+						else
+						{
+							forRemoval.push_back(item);
+						}
 					}
 				}
 			}
-		}
-		for (BattleItem *item : forRemoval)
-		{
-			_save->removeItem(item);
-		}
-		if (exploded)
-		{
-			statePushBack(0);
-			return;
+			for (BattleItem *item : forRemoval)
+			{
+				_save->removeItem(item);
+			}
+			if (exploded)
+			{
+				statePushBack(0);
+				return;
+			}
 		}
 	}
 
@@ -1864,7 +1867,7 @@ void BattlescapeGame::primaryAction(Position pos)
 				}
 			}
 			// if running or shifting, ignore spotted enemies (i.e. don't stop)
-			_currentAction.ignoreSpottedEnemies = _currentAction.run || isShiftPressed;
+			_currentAction.ignoreSpottedEnemies = (_currentAction.run && Mod::EXTENDED_RUNNING_COST) || isShiftPressed;
 
 			if (bPreviewed && !_save->getPathfinding()->previewPath() && _save->getPathfinding()->getStartDirection() != -1)
 			{
@@ -2627,7 +2630,7 @@ bool BattlescapeGame::takeItem(BattleItem* item, BattleAction *action)
 			if (slot != -1)
 			{
 				BattleActionCost cost{ unit };
-				cost.Time += i->getSlot()->getCost(weapon->getSlot());
+				cost.Time += Mod::EXTENDED_ITEM_RELOAD_COST ? i->getSlot()->getCost(weapon->getSlot()) : 0;
 				cost.Time += weapon->getRules()->getTULoad(slot);
 				if (cost.haveTU() && !weapon->getAmmoForSlot(slot))
 				{

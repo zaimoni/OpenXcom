@@ -209,6 +209,7 @@ private:
 	int _pilotBraveryThresholds[3];
 	int _performanceBonusFactor;
 	bool _useCustomCategories, _showDogfightDistanceInKm, _showFullNameInAlienInventory;
+	int _alienInventoryOffsetX, _alienInventoryOffsetBigUnit;
 	bool _hidePediaInfoButton, _extraNerdyPediaInfo;
 	bool _giveScoreAlsoForResearchedArtifacts, _statisticalBulletConservation, _stunningImprovesMorale;
 	int _tuRecoveryWakeUpNewTurn;
@@ -323,6 +324,9 @@ public:
 	static int DIFFICULTY_COEFFICIENT[5];
 	static int DIFFICULTY_BASED_RETAL_DELAY[5];
 	static int UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
+	static bool EXTENDED_ITEM_RELOAD_COST;
+	static bool EXTENDED_RUNNING_COST;
+
 	// reset all the statics in all classes to default values
 	static void resetGlobalStatics();
 
@@ -623,6 +627,10 @@ public:
 	bool getShowDogfightDistanceInKm() const { return _showDogfightDistanceInKm; }
 	/// Should alien inventory show full name (e.g. Sectoid Leader) or just the race (e.g. Sectoid)?
 	bool getShowFullNameInAlienInventory() const { return _showFullNameInAlienInventory; }
+	/// Gets the offset for alien inventory paperdoll and hand slots
+	int getAlienInventoryOffsetX() const { return _alienInventoryOffsetX; }
+	/// Gets the extra offset for alien inventory hand slots for 2x2 units
+	int getAlienInventoryOffsetBigUnit() const { return _alienInventoryOffsetBigUnit; }
 	/// Show the INFO button (where applicable) or not?
 	bool getShowPediaInfoButton() const { return !_hidePediaInfoButton; }
 	/// Display extra item info (accuracy modifier and power bonus) in the main pedia article?
