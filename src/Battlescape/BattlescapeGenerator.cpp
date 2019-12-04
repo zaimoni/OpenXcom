@@ -484,7 +484,7 @@ void BattlescapeGenerator::nextStage()
 		unit->clearVisibleUnits();
 	}
 
-	generateMap(script);
+	generateMap(script, ruleDeploy->getCustomUfoName());
 
 	setupObjectives(ruleDeploy);
 
@@ -695,7 +695,7 @@ void BattlescapeGenerator::run()
 		throw Exception("Map generator encountered an error: " + _terrain->getScript() + " script not found.");
 	}
 
-	generateMap(script);
+	generateMap(script, ruleDeploy->getCustomUfoName());
 
 	setupObjectives(ruleDeploy);
 
@@ -1644,7 +1644,7 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 			}
 		}
 
-		_save->getTile(Position(x, y, z))->setDiscovered((discovered || mapblock->isFloorRevealed(z)), 2);
+		_save->getTile(Position(x, y, z))->setDiscovered((discovered || mapblock->isFloorRevealed(z)), O_FLOOR);
 
 		x++;
 
@@ -2063,8 +2063,9 @@ void BattlescapeGenerator::loadWeapons(const std::vector<BattleItem*> &itemList)
 /**
  * Generates a map (set of tiles) for a new battlescape game.
  * @param script the script to use to build the map.
+ * @param customUfoName custom UFO name to use for the dummy/blank 'addUFO' mapscript command.
  */
-void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
+void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, const std::string &customUfoName)
 {
 	// set our ambient sound
 	if (_terrain->getAmbience() != -1)
@@ -2350,6 +2351,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 					{
 						ufoTerrain = _ufo->getRules()->getBattlescapeTerrainData();
 					}
+					else if (!customUfoName.empty())
+					{
+						auto customUfoRule = _game->getMod()->getUfo(customUfoName, true); // crash if it doesn't exist, let the modder know what's going on
+						ufoTerrain = customUfoRule->getBattlescapeTerrainData();
+					}
 
 					if (ufoTerrain)
 					{
@@ -2424,7 +2430,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 						{
 							// fill area will succeed if even one block is added
 							success = addBlock(x, y, block, terrain) || success;
-							
+
 							// Add to a list of rects for fill area to be able to do verticalLevels
 							SDL_Rect blockRect;
 							blockRect.x = x;
@@ -2571,7 +2577,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script)
 				{
 					if (_save->getTile(Position(i, j, k)))
 					{
-						_save->getTile(Position(i, j, k))->setDiscovered(_craftRules->isMapVisible(), 2);
+						_save->getTile(Position(i, j, k))->setDiscovered(_craftRules->isMapVisible(), O_FLOOR);
 					}
 				}
 			}
@@ -2657,7 +2663,7 @@ void BattlescapeGenerator::generateBaseMap()
 					throw Exception("Map generator encountered an error: facility " + (*i)->getRules()->getType() + " has no block on first verticalLevel.");
 				}
 			}
-			
+
 			for (int y = (*i)->getY(); y <= yLimit; ++y)
 			{
 				for (int x = (*i)->getX(); x <= xLimit; ++x)
@@ -2665,7 +2671,7 @@ void BattlescapeGenerator::generateBaseMap()
 					// lots of crazy stuff here, which is for the hangars (or other large base facilities one may create)
 					// TODO: clean this mess up, make the mapNames a vector in the base module defs
 					// also figure out how to do the terrain sets on a per-block basis.
-					
+
 					// Only use the mapName if we didn't load the map by verticalLevels
 					if ((*i)->getRules()->getVerticalLevels().size() == 0)
 					{
@@ -2999,7 +3005,7 @@ void BattlescapeGenerator::loadVerticalLevels(MapScript *command, bool repopulat
 			++currentLevel;
 		}
 
-		// Reserve the space for the ceiling level	
+		// Reserve the space for the ceiling level
 		MapBlock *ceilingBlock = 0;
 		RuleTerrain *ceilingTerrain = terrain;
 		if (_verticalLevels.back().levelType == VLT_CEILING)
@@ -3583,7 +3589,7 @@ bool BattlescapeGenerator::addLine(MapDirection direction, const std::vector<SDL
 		if (_blocks[roadX][roadY] == 0)
 		{
 			addBlock(roadX, roadY, terrain->getRandomMapBlock(10, 10, typeToAdd), terrain);
-			
+
 			SDL_Rect blockRect;
 			blockRect.x = roadX;
 			blockRect.y = roadY;
@@ -3602,7 +3608,7 @@ bool BattlescapeGenerator::addLine(MapDirection direction, const std::vector<SDL
 			_blocks[roadX][roadY] = terrain->getRandomMapBlock(10, 10, MT_CROSSING);
 			clearModule(roadX * 10, roadY * 10, 10, 10);
 			loadMAP(_blocks[roadX][roadY], roadX * 10, roadY * 10, 0, terrain, 0);
-			
+
 			SDL_Rect blockRect;
 			blockRect.x = roadX;
 			blockRect.y = roadY;
