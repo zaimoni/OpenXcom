@@ -2754,7 +2754,7 @@ void BattlescapeState::saveAIMap()
 			Tile *t = _save->getTile(tilePos);
 
 			if (!t) continue;
-			if (!t->isDiscovered(2)) continue;
+			if (!t->isDiscovered(O_FLOOR)) continue;
 
 		}
 	}
@@ -2768,7 +2768,7 @@ void BattlescapeState::saveAIMap()
 			Tile *t = _save->getTile(tilePos);
 
 			if (!t) continue;
-			if (!t->isDiscovered(2)) continue;
+			if (!t->isDiscovered(O_FLOOR)) continue;
 
 			r.x = x * r.w;
 			r.y = y * r.h;
@@ -2892,9 +2892,9 @@ void BattlescapeState::saveVoxelView()
 			{
 				tile = _save->getTile(_trajectory.at(0).toTile());
 				if (_debug
-					|| (tile->isDiscovered(0) && test == 2)
-					|| (tile->isDiscovered(1) && test == 3)
-					|| (tile->isDiscovered(2) && (test == 1 || test == 4))
+					|| (tile->isDiscovered(O_WESTWALL) && test == 2)
+					|| (tile->isDiscovered(O_NORTHWALL) && test == 3)
+					|| (tile->isDiscovered(O_FLOOR) && (test == 1 || test == 4))
 					|| test==5
 					)
 				{

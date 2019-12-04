@@ -935,13 +935,13 @@ void TileEngine::calculateTilesInFOV(BattleUnit *unit, const Position eventPos, 
 										{
 											unit->addToVisibleTiles(_save->getTile(posVisited));
 											_save->getTile(posVisited)->setVisible(+1);
-											_save->getTile(posVisited)->setDiscovered(true, 2);
+											_save->getTile(posVisited)->setDiscovered(true, O_FLOOR);
 
 											// walls to the east or south of a visible tile, we see that too
 											Tile* t = _save->getTile(Position(posVisited.x + 1, posVisited.y, posVisited.z));
-											if (t) t->setDiscovered(true, 0);
+											if (t) t->setDiscovered(true, O_WESTWALL);
 											t = _save->getTile(Position(posVisited.x, posVisited.y + 1, posVisited.z));
-											if (t) t->setDiscovered(true, 1);
+											if (t) t->setDiscovered(true, O_NORTHWALL);
 										}
 									}
 								}
@@ -3394,7 +3394,7 @@ std::pair<int, Position> TileEngine::checkAdjacentDoors(Position pos, TilePart p
 	{
 		offset = westSide ? Position(0,i,0):Position(i,0,0);
 		Tile *tile = _save->getTile(pos + offset);
-		if (tile && tile->getMapData(part) && tile->getMapData(part)->isUFODoor())
+		if (tile && tile->isUfoDoor(part))
 		{
 			int doorAdj = tile->openDoor(part);
 			if (doorAdj == 1) //only expecting ufo doors
@@ -3409,7 +3409,7 @@ std::pair<int, Position> TileEngine::checkAdjacentDoors(Position pos, TilePart p
 	{
 		offset = westSide ? Position(0,i,0):Position(i,0,0);
 		Tile *tile = _save->getTile(pos + offset);
-		if (tile && tile->getMapData(part) && tile->getMapData(part)->isUFODoor())
+		if (tile && tile->isUfoDoor(part))
 		{
 			int doorAdj = tile->openDoor(part);
 			if (doorAdj == 1)
