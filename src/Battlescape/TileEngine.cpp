@@ -1737,7 +1737,7 @@ bool TileEngine::checkReactionFire(BattleUnit *unit, const BattleAction &origina
 		// start iterating through the possible reactors until the current unit is the one with the highest score.
 		while (reactor != 0)
 		{
-			if (!tryReaction(reactor->unit, unit, reactor->attackType, originalAction))
+			if (!tryReaction(reactor, unit, originalAction))
 			{
 				for (std::vector<ReactionScore>::iterator i = spotters.begin(); i != spotters.end(); ++i)
 				{
@@ -1832,7 +1832,7 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit* 
 					{
 						if (rs.attackType == BA_SNAPSHOT && Options::battleUFOExtenderAccuracy)
 						{
-							BattleItem *weapon = (*i)->getMainHandWeapon((*i)->getFaction() != FACTION_PLAYER);
+							BattleItem *weapon = rs.weapon;
 							int accuracy = (*i)->getFiringAccuracy(rs.attackType, weapon, _save->getBattleGame()->getMod());
 							int distance = Position::distance2d((*i)->getPosition(), unit->getPosition());
 							int upperLimit = weapon->getRules()->getSnapRange();
@@ -1906,39 +1906,53 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
 	ReactionScore reaction =
 	{
 		unit,
+		nullptr,
 		BA_NONE,
 		unit->getReactionScore(),
 		0,
 	};
+
+	auto setReaction = [](ReactionScore& re, BattleActionType type, BattleItem* weapon)
+	{
+		re.attackType = type;
+		re.weapon = weapon;
+		re.reactionReduction = 1.0 * BattleActionCost(type, re.unit, weapon).Time * re.unit->getBaseStats()->reactions / re.unit->getBaseStats()->tu;
+	};
+
 	// prioritize melee
 	BattleItem *meleeWeapon = unit->getUtilityWeapon(BT_MELEE);
+	// has a melee weapon and is in melee range
 	if (_save->canUseWeapon(meleeWeapon, unit, false) &&
-		// has a melee weapon and is in melee range
 		validMeleeRange(unit, target, unit->getDirection()) &&
+		meleeWeapon->getAmmoForAction(BA_HIT) &&
 		BattleActionCost(BA_HIT, unit, meleeWeapon).haveTU())
 	{
-		reaction.attackType = BA_HIT;
-		reaction.reactionReduction = 1.0 * BattleActionCost(BA_HIT, unit, meleeWeapon).Time * unit->getBaseStats()->reactions / unit->getBaseStats()->tu;
+		setReaction(reaction, BA_HIT, meleeWeapon);
 		return reaction;
 	}
 
 	// has a weapon
 	BattleItem *weapon = unit->getMainHandWeapon(unit->getFaction() != FACTION_PLAYER);
-	if (_save->canUseWeapon(weapon, unit, false) &&
-		Position::distance2d(unit->getPosition(), target->getPosition()) < weapon->getRules()->getMaxRange() &&
-		(	// has a melee weapon and is in melee range
-			(weapon->getRules()->getBattleType() == BT_MELEE &&
-				weapon->getAmmoForAction(BA_HIT) &&
-				validMeleeRange(unit, target, unit->getDirection()) &&
-				BattleActionCost(BA_HIT, unit, weapon).haveTU()) ||
-			// has a gun capable of snap shot with ammo
-			(weapon->getRules()->getBattleType() == BT_FIREARM &&
-				weapon->getAmmoForAction(BA_SNAPSHOT) &&
-				BattleActionCost(BA_SNAPSHOT, unit, weapon).haveTU())))
+	if (_save->canUseWeapon(weapon, unit, false))
 	{
-		reaction.attackType = BA_SNAPSHOT;
-		reaction.reactionReduction = 1.0 * BattleActionCost(BA_SNAPSHOT, unit, weapon).Time * unit->getBaseStats()->reactions / unit->getBaseStats()->tu;
-		return reaction;
+		// has a weapon capable of melee and is in melee range
+		if (validMeleeRange(unit, target, unit->getDirection()) &&
+			weapon->getAmmoForAction(BA_HIT) &&
+			BattleActionCost(BA_HIT, unit, weapon).haveTU())
+		{
+			setReaction(reaction, BA_HIT, weapon);
+			return reaction;
+		}
+
+		// has a gun capable of snap shot with ammo
+		if (weapon->getRules()->getBattleType() == BT_FIREARM &&
+			Position::distance2d(unit->getPosition(), target->getPosition()) < weapon->getRules()->getMaxRange() &&
+			weapon->getAmmoForAction(BA_SNAPSHOT) &&
+			BattleActionCost(BA_SNAPSHOT, unit, weapon).haveTU())
+		{
+			setReaction(reaction, BA_SNAPSHOT, weapon);
+			return reaction;
+		}
 	}
 
 	return reaction;
@@ -1950,30 +1964,24 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
  * @param target The unit to check sight TO.
  * @return True if the action should (theoretically) succeed.
  */
-bool TileEngine::tryReaction(BattleUnit *unit, BattleUnit *target, BattleActionType attackType, const BattleAction &originalAction)
+bool TileEngine::tryReaction(ReactionScore *reaction, BattleUnit *target, const BattleAction &originalAction)
 {
 	BattleAction action;
 	action.cameraPosition = _save->getBattleState()->getMap()->getCamera()->getMapOffset();
-	action.actor = unit;
-	if (attackType == BA_HIT)
-	{
-		action.weapon = unit->getUtilityWeapon(BT_MELEE);
-	}
-	else
-	{
-		action.weapon = unit->getMainHandWeapon(unit->getFaction() != FACTION_PLAYER);
-	}
+	action.actor = reaction->unit;
+	action.weapon = reaction->weapon;
 
 	if (!_save->canUseWeapon(action.weapon, action.actor, false))
 	{
 		return false;
 	}
 
-	action.type = attackType;
+	action.type = reaction->attackType;
 	action.target = target->getPosition();
 	action.updateTU();
 
-	auto ammo = action.weapon->getAmmoForAction(attackType);
+	auto unit = action.actor;
+	auto ammo = action.weapon->getAmmoForAction(action.type);
 	if (ammo && action.haveTU())
 	{
 		action.targeting = true;
@@ -1990,7 +1998,7 @@ bool TileEngine::tryReaction(BattleUnit *unit, BattleUnit *target, BattleActionT
 			}
 
 			int radius = ammo->getRules()->getExplosionRadius(unit);
-			if (radius > 0 &&
+			if (action.type != BA_HIT && radius > 0 &&
 				ai->explosiveEfficacy(action.target, unit, radius, -1) == 0)
 			{
 				action.targeting = false;
@@ -2017,11 +2025,7 @@ bool TileEngine::tryReaction(BattleUnit *unit, BattleUnit *target, BattleActionT
 
 			if (RNG::percent(arg.getFirst()))
 			{
-				// start new hit log
-				_save->hitLog.str("");
-				_save->hitLog.clear();
-				// log weapon?
-				_save->hitLog << _save->getBattleState()->tr("STR_HIT_LOG_REACTION_FIRE") << "\n\n";
+				_save->appendToHitLog(HITLOG_REACTION_FIRE, unit->getFaction());
 
 				if (action.type == BA_HIT)
 				{
@@ -2286,15 +2290,15 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
 		const int damagePercent = (totalDamage * 100) / target->getBaseStats()->health;
 		if (damagePercent <= 0)
 		{
-			_save->hitLog << _save->getBattleState()->tr("STR_HIT_LOG_NO_DAMAGE");
+			_save->appendToHitLog(HITLOG_NO_DAMAGE, attack.attacker->getFaction());
 		}
 		else if (damagePercent <= 20)
 		{
-			_save->hitLog << _save->getBattleState()->tr("STR_HIT_LOG_SMALL_DAMAGE");
+			_save->appendToHitLog(HITLOG_SMALL_DAMAGE, attack.attacker->getFaction());
 		}
 		else
 		{
-			_save->hitLog << _save->getBattleState()->tr("STR_HIT_LOG_BIG_DAMAGE");
+			_save->appendToHitLog(HITLOG_BIG_DAMAGE, attack.attacker->getFaction());
 		}
 	}
 
@@ -3924,6 +3928,8 @@ bool TileEngine::meleeAttack(BattleActionAttack attack, BattleUnit *victim)
 	else
 	{
 		hitChance = attack.attacker->getFiringAccuracy(BA_HIT, attack.weapon_item, _save->getBattleGame()->getMod());
+		// hit log - new melee attack
+		_save->appendToHitLog(HITLOG_NEW_SHOT, attack.attacker->getFaction());
 	}
 
 	if (victim)
@@ -3935,8 +3941,6 @@ bool TileEngine::meleeAttack(BattleActionAttack attack, BattleUnit *victim)
 			hitChance -= victim->getArmor()->getMeleeDodge(victim) * penalty;
 		}
 	}
-	// hit log - new melee attack
-	_save->hitLog << _save->getBattleState()->tr("STR_HIT_LOG_NEW_BULLET");
 	if (!RNG::percent(hitChance))
 	{
 		return false;

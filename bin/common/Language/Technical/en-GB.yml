@@ -13,6 +13,9 @@ en-GB:
   STR_SCRIPT_TAGS: "Script tag export"
   STR_SCRIPT_TAGS_DESC: "Exports script tags in CSV format."
 #
+  STR_MAP_RESOURCES: "Map resources check"
+  STR_MAP_RESOURCES_DESC: "Checks for missing and unused map-related files and ruleset."
+#
   STR_CHECKING_TERRAIN: "Checking terrain..."
   STR_CHECKING_UFOS: "Checking UFOs..."
   STR_CHECKING_CRAFT: "Checking craft..."
@@ -427,3 +430,17 @@ en-GB:
   HB_FLEE: "flee when losing"
   HB_KAMIKAZE: "fight until destroyed"
   HB_RANDOM: "random"
+#
+  tractorBeamPower: "Tractor beam power"
+  damage: "Damage"
+  shieldDamageModifier: "Shield damage modifier"
+  accuracy: "Accuracy"
+  reloadCautious: "Reload (Cautious)"
+  reloadStandard: "Reload (Standard)"
+  reloadAggressive: "Reload (Aggressive)"
+  launcher: "Launcher item"
+  weaponType: "Weapon type"
+  clip: "Clip item"
+  ammoMax: "Rounds"
+  rearmRate: "Rearm rate"
+  _averageTotalDamage: "Average total damage"

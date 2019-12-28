@@ -176,6 +176,35 @@ namespace OpenXcom
 namespace FileMap
 {
 
+static inline std::string concatPaths(const std::string& basePath, const std::string& relativePath)
+{
+	if(basePath.size() == 0) throw Exception("Need correct basePath");
+	if(relativePath.size() == 0) throw Exception("Need correct relativePath");
+	if (basePath[basePath.size() - 1] == '/')
+	{
+		return basePath + relativePath;
+	}
+	else
+	{
+		return basePath + "/" + relativePath;
+	}
+}
+static inline std::string concatOptionalPaths(const std::string& basePath, const std::string& relativePath)
+{
+	if (basePath.size() == 0)
+	{
+		return relativePath;
+	}
+	else if (relativePath.size() == 0)
+	{
+		return basePath;
+	}
+	else
+	{
+		return concatPaths(basePath, relativePath);
+	}
+}
+
 FileRecord::FileRecord() : fullpath(""), zip(NULL), findex(0) { }
 
 SDL_RWops *FileRecord::getRWops() const
@@ -301,14 +330,14 @@ static std::string hexDumpBogusData(const std::string& bogus) {
 /* recursively list a directory */
 typedef std::vector<std::pair<std::string, std::string>> dirlist_t; // <dirname, basename>
 static bool ls_r(const std::string &basePath, const std::string &relPath, dirlist_t& dlist) {
-	auto fullDir = basePath + (relPath.length() ? "/" + relPath : "");
+	auto fullDir = concatOptionalPaths(basePath, relPath);
 	auto files = CrossPlatform::getFolderContents(fullDir);
 	//Log(LOG_VERBOSE) << "ls_r: listing "<<fullDir<<" count="<<files.size();
 	for (auto i = files.begin(); i != files.end(); ++i) {
 		if (std::get<1>(*i)) { // it's a subfolder
-			auto fullpath = fullDir + "/" + std::get<0>(*i);
+			auto fullpath = concatPaths(fullDir, std::get<0>(*i));
 			if (CrossPlatform::folderExists(fullpath)) {
-				auto nextRelPath = (relPath.length() ? relPath + "/" : "" ) + std::get<0>(*i);
+				auto nextRelPath = concatOptionalPaths(relPath, std::get<0>(*i));
 				ls_r(basePath, nextRelPath, dlist);
 				continue;
 			}
@@ -456,7 +485,7 @@ struct VFSLayer {
 				relfname = fname.substr(prefixlen, fname.npos);
 			}
 			frec.findex = fi;
-			frec.fullpath = fullpath + "/" + fname;
+			frec.fullpath = concatPaths(fullpath, fname);
 
 			if (isRuleset(relfname) && ignore_ruls) { continue; }
 			insert(relfname, frec);
@@ -482,8 +511,8 @@ struct VFSLayer {
 		std::string relpath;
 		int mapped_count = 0;
 		for (auto i = dlist.cbegin(); i != dlist.cend(); ++i) {
-			relpath = (i->first.length() ? i->first + "/" : "")  + i->second;
-			frec.fullpath = fullpath + "/" + relpath;
+			relpath = concatOptionalPaths(i->first, i->second);
+			frec.fullpath = concatPaths(fullpath, relpath);
 			if (isRuleset(i->second) && ignore_ruls) { continue; }
 			insert(relpath, frec);
 			mapped_count ++;
@@ -836,7 +865,7 @@ static bool mapExtResources(ModRecord *mrec, const std::string& basename, bool e
  */
 static void mapZippedMod(mz_zip_archive *zip, const std::string& zipfname, const std::string& prefix) {
 	std::string log_ctx = "mapZippedMod(" + zipfname + ", '" + prefix + "'): ";
-	auto layer = new VFSLayer(zipfname + "/" + prefix);
+	auto layer = new VFSLayer(concatPaths(zipfname, prefix));
 	if (!layer->mapZip(zip, zipfname, prefix)) {
 		Log(LOG_WARNING) << log_ctx << "Failed to map, skipping.";
 		delete layer;
@@ -848,7 +877,7 @@ static void mapZippedMod(mz_zip_archive *zip, const std::string& zipfname, const
 		delete layer;
 		return;
 	}
-	auto modpath = zipfname + (prefix.length() > 0 ? "/" + prefix : "");
+	auto modpath = concatOptionalPaths(zipfname, prefix);
 	auto doc = frec->getYAML();
 	if (!doc.IsMap()) {
 		Log(LOG_WARNING) << log_ctx << "Bad metadata.yml found, skipping.";
@@ -912,6 +941,69 @@ void scanModZip(const std::string& fullpath) {
 		return;
 	}
 	scanModZipRW(rwops, fullpath);
+}
+/**
+ * Extracts a single file to an ConstMem RWops object
+ * @param rwops - .zip file
+ * @param fullpath - what to extract, case and slash - insensitive
+ */
+SDL_RWops *zipGetFileByName(const std::string& zipfile, const std::string& fullpath) {
+	std::string log_ctx = "zipGetFileByName(rwops, " + zipfile + ", " + fullpath + "): ";
+	std::string sanpath = fullpath;
+	if (!sanitizeZipEntryName(sanpath)) {
+		Log(LOG_ERROR) << log_ctx << "Bogus fullpath given: '" << fullpath << "': " << hexDumpBogusData(sanpath);
+		return NULL;
+	}
+	Unicode::lowerCase(sanpath);
+	SDL_RWops *rwops = SDL_RWFromFile(zipfile.c_str(), "rb");
+	if (!rwops) {
+		Log(LOG_ERROR) << log_ctx << "SDL_RWFromFile(): " << SDL_GetError();
+		return NULL;
+	}
+	mz_zip_archive *mzip = (mz_zip_archive *) SDL_malloc(sizeof(mz_zip_archive));
+	if (!mzip) {
+		Log(LOG_FATAL) << log_ctx << ": " << SDL_GetError();
+		throw Exception("Out of memory");
+	}
+	if (!mz_zip_reader_init_rwops(mzip, rwops)) {
+		Log(LOG_ERROR) << log_ctx << "Bad zip: " << mz_zip_get_error_string(mz_zip_get_last_error(mzip));
+		SDL_RWclose(rwops);
+		SDL_free(mzip);
+		return NULL;
+	}
+	mz_uint filecount = mz_zip_reader_get_num_files(mzip);
+	for (mz_uint fi = 0; fi < filecount; ++fi) {
+		mz_zip_archive_file_stat fistat;
+		mz_zip_reader_file_stat (mzip, fi, &fistat);
+		if (fistat.m_is_encrypted || !fistat.m_is_supported) {
+			continue;
+		}
+		if (fistat.m_is_directory) {
+			continue;    // skip directories
+		}
+		std::string somepath = fistat.m_filename;
+		if ( !sanitizeZipEntryName ( somepath ) ) {
+			Log(LOG_WARNING) << "Bogus filename '" << somepath << "' "
+							 << hexDumpBogusData(somepath) << " in the .zip, ignoring.";
+			continue;
+		}
+		Unicode::lowerCase(somepath);
+		if (sanpath == somepath) { // gotcha
+			SDL_RWops *rv = SDL_RWFromMZ(mzip, fi);
+			if (!rv) {
+				Log(LOG_ERROR) << log_ctx << "Unzip failed: " << SDL_GetError();
+			}
+			mz_zip_reader_end(mzip);
+			SDL_RWclose(rwops);
+			SDL_free(mzip);
+			return rv;
+		}
+	}
+	Log ( LOG_ERROR ) << log_ctx << "File not found in the .zip";
+	mz_zip_reader_end(mzip);
+	SDL_RWclose(rwops);
+	SDL_free(mzip);
+	return NULL;
 }
 /**
  * this scans a mod dir.
@@ -1014,12 +1106,12 @@ void scanModDir(const std::string& dirname, const std::string& basename, bool pr
 			Log(LOG_ERROR) << "Invalid standard mod '" << std::get<0>(*zi) << "', skipping.";
 			continue;
 		}
-		auto subpath =  fullname + "/" + std::get<0>(*zi);
+		auto subpath = concatPaths(fullname, std::get<0>(*zi));
 		scanModZip(subpath);
 	}
 	for (auto di = dirlist.begin(); di != dirlist.end(); ++di) {
 		auto mp_basename = *di;
-		auto modpath = fullname + "/" + mp_basename;
+		auto modpath = concatPaths(fullname, mp_basename);
 		// map dat dir! (if it has metadata.yml, naturally)
 		auto layer = new VFSLayer(modpath);
 		if (!layer->mapPlainDir(modpath)) {
@@ -1151,13 +1243,17 @@ std::map<std::string, ModInfo> getModInfos() {
 
 const FileRecord* getModRuleFile(const ModInfo* modInfo, const std::string& relpath)
 {
-	auto fullPath = modInfo->getPath() + "/" + relpath;
-	for (auto& r : ModsAvailable.at(modInfo->getId())->stack.rulesets)
+	if (!relpath.empty())
 	{
-		if (r.fullpath == fullPath)
+		auto fullPath = concatPaths(modInfo->getPath(), relpath);
+		for (auto& r : ModsAvailable.at(modInfo->getId())->stack.rulesets)
 		{
-			return &r;
+			if (r.fullpath == fullPath)
+			{
+				return &r;
+			}
 		}
+		Log(LOG_WARNING) << "mod " << modInfo->getId() << ": unknown rulefile '" << relpath <<"'.";
 	}
 	return nullptr;
 }

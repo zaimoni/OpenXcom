@@ -163,7 +163,7 @@ ActionMenuState::ActionMenuState(BattleAction *action, int x, int y) : _action(a
 	// special items
 	if (weapon->getBattleType() == BT_MEDIKIT)
 	{
-		addItem(BA_USE, "STR_USE_MEDI_KIT", &id, Options::keyBattleActionItem1);
+		addItem(BA_USE, weapon->getMedikitActionName(), &id, Options::keyBattleActionItem1);
 	}
 	else if (weapon->getBattleType() == BT_SCANNER)
 	{
@@ -267,7 +267,7 @@ void ActionMenuState::btnActionMenuItemClick(Action *action)
 	const RuleItem *weapon = _action->weapon->getRules();
 
 	// got to find out which button was pressed
-	for (size_t i = 0; i < sizeof(_actionMenu)/sizeof(_actionMenu[0]) && btnID == -1; ++i)
+	for (size_t i = 0; i < std::size(_actionMenu) && btnID == -1; ++i)
 	{
 		if (action->getSender() == _actionMenu[i])
 		{
@@ -497,11 +497,7 @@ void ActionMenuState::btnActionMenuItemClick(Action *action)
 
 		if (newHitLog)
 		{
-			// start new hit log
-			_game->getSavedGame()->getSavedBattle()->hitLog.str("");
-			_game->getSavedGame()->getSavedBattle()->hitLog.clear();
-			// log weapon
-			_game->getSavedGame()->getSavedBattle()->hitLog << tr("STR_HIT_LOG_WEAPON") << ": " << tr(weapon->getType()) << "\n\n";
+			_game->getSavedGame()->getSavedBattle()->appendToHitLog(HITLOG_PLAYER_FIRING, FACTION_PLAYER, tr(weapon->getType()));
 		}
 	}
 	action->getDetails()->type = SDL_FIRSTEVENT;

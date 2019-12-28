@@ -2519,7 +2519,7 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 
 	// tanks and aliens don't care about weight or multiple items,
 	// their loadouts are defined in the rulesets and more or less set in stone.
-	if (getFaction() == FACTION_PLAYER && hasInventory())
+	if (getFaction() == FACTION_PLAYER && hasInventory() && !isSummonedPlayerUnit())
 	{
 		weight = getCarriedWeight() + item->getTotalWeight();
 		// allow all weapons to be loaded by avoiding this check,
@@ -4975,6 +4975,47 @@ void setBaseStatRangeScript(BattleUnit *bu, int val)
 	}
 }
 
+/**
+ * Get the X part of the tile coordinate of this unit.
+ * @return X Position.
+ */
+void getPositionXScript(const BattleUnit *bu, int &ret)
+{
+	if (bu)
+	{
+		ret = bu->getPosition().x;
+		return;
+	}
+	ret = 0;
+}
+
+/**
+ * Get the Y part of the tile coordinate of this unit.
+ * @return Y Position.
+ */
+void getPositionYScript(const BattleUnit *bu, int &ret)
+{
+	if (bu)
+	{
+		ret = bu->getPosition().y;
+		return;
+	}
+	ret = 0;
+}
+/**
+ * Get the Z part of the tile coordinate of this unit.
+ * @return Z Position.
+ */
+void getPositionZScript(const BattleUnit *bu, int &ret)
+{
+	if (bu)
+	{
+		ret = bu->getPosition().z;
+		return;
+	}
+	ret = 0;
+}
+
 std::string debugDisplayScript(const BattleUnit* bu)
 {
 	if (bu)
@@ -5095,7 +5136,11 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.addFunc<reduceByBraveryScript>("reduceByBravery");
 	bu.addFunc<reduceByResistanceScript>("reduceByResistance");
 
-
+	bu.add<&getPositionXScript>("getPosition.getX");
+	bu.add<&getPositionYScript>("getPosition.getY");
+	bu.add<&getPositionZScript>("getPosition.getZ");
+	bu.add<&BattleUnit::getTurnsSinceSpotted>("getTurnsSinceSpotted");
+	
 	bu.addScriptValue<&BattleUnit::_scriptValues>();
 	bu.addDebugDisplay<&debugDisplayScript>();
 
