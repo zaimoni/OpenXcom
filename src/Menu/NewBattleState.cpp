@@ -166,7 +166,22 @@ NewBattleState::NewBattleState() : _craft(0)
 
 	_txtAlienTech->setText(tr("STR_ALIEN_TECH_LEVEL"));
 
-	_missionTypes = _game->getMod()->getDeploymentsList();
+	if (Options::debug)
+	{
+		_missionTypes = _game->getMod()->getDeploymentsList();
+	}
+	else
+	{
+		_missionTypes.reserve(_game->getMod()->getDeploymentsList().size());
+		for (auto &deploymentName : _game->getMod()->getDeploymentsList())
+		{
+			auto depl = _game->getMod()->getDeployment(deploymentName);
+			if (depl && !depl->isHidden())
+			{
+				_missionTypes.push_back(deploymentName);
+			}
+		}
+	}
 	_cbxMission->setOptions(_missionTypes, true);
 	_cbxMission->onChange((ActionHandler)&NewBattleState::cbxMissionChange);
 
@@ -379,7 +394,7 @@ void NewBattleState::initSave()
 	const Mod *mod = _game->getMod();
 	SavedGame *save = new SavedGame();
 	Base *base = new Base(mod);
-	const YAML::Node &starter = _game->getMod()->getStartingBase();
+	const YAML::Node &starter = _game->getMod()->getDefaultStartingBase();
 	base->load(starter, save, true, true);
 	save->getBases()->push_back(base);
 
@@ -468,7 +483,7 @@ void NewBattleState::btnOkClick(Action *)
 		return;
 	}
 
-	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod());
+	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
 	_game->getSavedGame()->setBattleGame(bgame);
 	bgame->setMissionType(_missionTypes[_cbxMission->getSelected()]);
 	BattlescapeGenerator bgen = BattlescapeGenerator(_game);

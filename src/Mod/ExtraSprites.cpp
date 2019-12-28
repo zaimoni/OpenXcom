@@ -160,7 +160,7 @@ bool ExtraSprites::isImageFile(const std::string &filename)
 {
 	static const std::string exts[] = { "PNG", "GIF", "BMP", "LBM", "IFF", "PCX", "TGA", "TIF", "TIFF" };
 
-	for (size_t i = 0; i < sizeof(exts) / sizeof(exts[0]); ++i)
+	for (size_t i = 0; i < std::size(exts); ++i)
 	{
 		if (CrossPlatform::compareExt(filename, exts[i]))
 			return true;
@@ -294,6 +294,12 @@ Surface *ExtraSprites::getFrame(SurfaceSet *set, int index) const
 			throw Exception(err.str());
 		}
 		indexWithOffset += _current->offset;
+	}
+	else if (indexWithOffset < 0)
+	{
+		std::ostringstream err;
+		err << "ExtraSprites '" << _type << "' frame '" << indexWithOffset << "' in mod '" << _current->name << "' is not allowed.";
+		throw Exception(err.str());
 	}
 
 	Surface *frame = set->getFrame(indexWithOffset);

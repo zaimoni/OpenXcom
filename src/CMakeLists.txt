@@ -110,6 +110,7 @@ set ( battlescape_src
   Battlescape/ScannerState.cpp
   Battlescape/ScannerView.cpp
   Battlescape/TileEngine.cpp
+  Battlescape/TurnDiaryState.cpp
   Battlescape/UnitDieBState.cpp
   Battlescape/UnitFallBState.cpp
   Battlescape/UnitInfoState.cpp
@@ -343,6 +344,7 @@ set ( savegame_src
   Savegame/EquipmentLayoutItem.cpp
   Savegame/GameTime.cpp
   Savegame/GeoscapeEvent.cpp
+  Savegame/HitLog.cpp
   Savegame/ItemContainer.cpp
   Savegame/MissionSite.cpp
   Savegame/MovingTarget.cpp
@@ -408,7 +410,7 @@ set ( cxx_src
 set ( c_src
   ../libs/miniz/miniz.c
 )
-#set_property ( SOURCE ${c_src} APPEND PROPERTY COMPILE_DEFINITIONS MINIZ_NO_STDIO )
+set_property ( SOURCE ${c_src} APPEND PROPERTY COMPILE_DEFINITIONS MINIZ_NO_STDIO )
 set_property ( SOURCE Engine/Scalers/xbrz.cpp APPEND_STRING PROPERTY COMPILE_FLAGS -Wno-unused\ )
 
 set ( data_install_dir bin )
@@ -467,6 +469,9 @@ if ( MSVC )
   if ( FATAL_WARNING )
     add_definitions ( /WX )
   endif ( FATAL_WARNING )
+  set ( CMAKE_EXE_LINKER_FLAGS "/manifest:no" )
+  set ( CMAKE_MODULE_LINKER_FLAGS "/manifest:no" )
+  set ( CMAKE_SHARED_LINKER_FLAGS="/manifest:no" )
 endif ()
 
 if ( DUMP_CORE )

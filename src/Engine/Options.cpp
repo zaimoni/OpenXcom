@@ -172,6 +172,7 @@ void create()
 #endif
 	_info.push_back(OptionInfo("rootWindowedMode", &rootWindowedMode, false));
 	_info.push_back(OptionInfo("rawScreenShots", &rawScreenShots, false));
+	_info.push_back(OptionInfo("backgroundMute", &backgroundMute, false));
 	// SDL2 scaler options
 	_info.push_back(OptionInfo("useNearestScaler", &useNearestScaler, false));
 	_info.push_back(OptionInfo("useLinearScaler", &useLinearScaler, true));

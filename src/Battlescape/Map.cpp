@@ -383,7 +383,7 @@ int getShadePulseForFrame(int shade, int frame)
  * @param obstacleShade
  * @param topLayer
  */
-void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer)
+void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, bool checkUpperUnit)
 {
 	const int tileFoorWidth = 32;
 	const int tileFoorHeight = 16;
@@ -396,12 +396,26 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
 	BattleUnit* bu = unitTile->getOverlappingUnit(_save, TUO_ALWAYS);
 	Position unitOffset;
 	bool unitFromBelow = false;
+	bool unitFromAbove = false;
 	if (bu)
 	{
 		if (bu != unitTile->getUnit())
 		{
 			unitFromBelow = true;
 		}
+	}
+	else if (checkUpperUnit && unitTile == currTile)
+	{
+		auto upperTile = _save->getAboveTile(unitTile);
+		if (upperTile && upperTile->hasNoFloor(_save))
+		{
+			bu = upperTile->getUnit();
+		}
+		if (!bu)
+		{
+			return;
+		}
+		unitFromAbove = true;
 	}
 	else
 	{
@@ -553,7 +567,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
 	}
 
 	Position tileScreenPosition;
-	_camera->convertMapToScreen(unitTile->getPosition() + Position(0,0, unitFromBelow ? -1 : 0), &tileScreenPosition);
+	_camera->convertMapToScreen(unitTile->getPosition() + Position(0,0, (-unitFromBelow) + (+unitFromAbove)), &tileScreenPosition);
 	tileScreenPosition += _camera->getMapOffset();
 
 	//get shade helpers
@@ -576,7 +590,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
 			shadeUpper = getTileShade(_save->getAboveTile(tile));
 		}
 
-		return ((Position::TileZ + heightOffset) * shadeLower + (-heightOffset) * shadeUpper) / Position::TileZ;
+		return Interpolate(shadeLower, shadeUpper, -heightOffset, Position::TileZ);
 	};
 
 	// draw unit
@@ -589,7 +603,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
 		const auto minLevel = std::min(start.z, end.z);
 		const auto startShade = getMixedTileShade(_save->getTile(start), start.z == minLevel ? offsets.TerrainLevelOffset : 0, false);
 		const auto endShade = getMixedTileShade(_save->getTile(end), end.z == minLevel ? offsets.TerrainLevelOffset : 0, false);
-		shade = (startShade * (16 - offsets.NormalizedMovePhase) + endShade * offsets.NormalizedMovePhase) / 16;
+		shade = Interpolate(startShade, endShade, offsets.NormalizedMovePhase, 16);
 	}
 	else
 	{
@@ -778,6 +792,7 @@ void Map::drawTerrain(Surface *surface)
 				if (screenPosition.x > -_spriteWidth && screenPosition.x < surface->getWidth() + _spriteWidth &&
 					screenPosition.y > -_spriteHeight && screenPosition.y < surface->getHeight() + _spriteHeight )
 				{
+					auto isUnitMovingNearby = movingUnit && positionInRangeXY(movingUnitPosition, mapPosition, 2);
 
 					if (tile->isDiscovered(O_FLOOR))
 					{
@@ -840,18 +855,17 @@ void Map::drawTerrain(Surface *surface)
 						}
 					}
 
-					if (movingUnit && positionInRangeXY(movingUnitPosition, mapPosition, 2))
+					if (isUnitMovingNearby)
 					{
 						// special handling for a moving unit in background of tile.
-						const int backPosSize = 3;
-						Position backPos[backPosSize] =
+						Position backPos[] =
 						{
 							Position(0, -1, 0),
 							Position(-1, -1, 0),
 							Position(-1, 0, 0),
 						};
 
-						for (int b = 0; b < backPosSize; ++b)
+						for (size_t b = 0; b < std::size(backPos); ++b)
 						{
 							drawUnit(unitSprite, _save->getTile(mapPosition + backPos[b]), tile, screenPosition, topLayer);
 						}
@@ -1033,14 +1047,13 @@ void Map::drawTerrain(Surface *surface)
 						}
 					}
 					unit = tile->getUnit();
-					// Draw soldier from this tile or below
-					drawUnit(unitSprite, tile, tile, screenPosition, topLayer);
+					// Draw soldier from this tile, below or above
+					drawUnit(unitSprite, tile, tile, screenPosition, topLayer, isUnitMovingNearby);
 
-					if (movingUnit && positionInRangeXY(movingUnitPosition, mapPosition, 2))
+					if (isUnitMovingNearby)
 					{
 						// special handling for a moving unit in foreground of tile.
-						const int frontPosSize = 5;
-						Position frontPos[frontPosSize] =
+						Position frontPos[] =
 						{
 							Position(-1, +1, 0),
 							Position(0, +1, 0),
@@ -1049,7 +1062,7 @@ void Map::drawTerrain(Surface *surface)
 							Position(+1, -1, 0),
 						};
 
-						for (int f = 0; f < frontPosSize; ++f)
+						for (size_t f = 0; f < std::size(frontPos); ++f)
 						{
 							drawUnit(unitSprite, _save->getTile(mapPosition + frontPos[f]), tile, screenPosition, topLayer);
 						}
@@ -1518,7 +1531,7 @@ void Map::drawTerrain(Surface *surface)
 		{
 			offset.y += 4;
 		}
-		offset.y += Position::TileZ - unit->getHeight();
+		offset.y += Position::TileZ - (unit->getHeight() + unit->getFloatHeight());
 		if (unit->isKneeled())
 		{
 			offset.y -= 2;
@@ -1879,8 +1892,6 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
 	result.ScreenOffset.x = 0;
 	result.ScreenOffset.y = 0;
 
-	result.NormalizedMovePhase = endphase == 16 ? phase : phase * 2;
-
 	if (size > 1)
 	{
 		if (dir < 1 || dir > 5)
@@ -1911,6 +1922,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
 		}
 	}
 
+	result.NormalizedMovePhase = endphase == 16 ? phase : phase * 2;
+
 	// If we are walking in between tiles, interpolate it's terrain level.
 	if (unit->getStatus() == STATUS_WALKING || unit->getStatus() == STATUS_FLYING)
 	{
@@ -1928,7 +1941,7 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
 				// going up a level, so toLevel 0 becomes -24, -8 becomes -16
 				toLevel = -Position::TileZ*(unit->getDestination().z - unit->getPosition().z) + abs(toLevel);
 			}
-			result.TerrainLevelOffset = ((fromLevel * (endphase - phase)) / endphase) + ((toLevel * (phase)) / endphase);
+			result.TerrainLevelOffset = Interpolate(fromLevel, toLevel, phase, endphase);
 		}
 		else
 		{
@@ -1946,7 +1959,7 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
 				// going up a level, so fromLevel 0 becomes +24, -8 becomes 16
 				fromLevel = Position::TileZ*(unit->getDestination().z - unit->getLastPosition().z) - abs(fromLevel);
 			}
-			result.TerrainLevelOffset = ((fromLevel * (endphase - phase)) / endphase) + ((toLevel * (phase)) / endphase);
+			result.TerrainLevelOffset = Interpolate(fromLevel, toLevel, phase, endphase);
 		}
 	}
 	else

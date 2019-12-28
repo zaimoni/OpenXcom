@@ -25,6 +25,7 @@
 #include "../Engine/Options.h"
 #include "../Engine/FileMap.h"
 #include "../Savegame/GameTime.h"
+#include "../Savegame/SavedGame.h"
 #include "RuleDamageType.h"
 #include "Unit.h"
 #include "RuleAlienMission.h"
@@ -217,7 +218,7 @@ private:
 	int _defeatScore, _defeatFunds;
 	std::pair<std::string, int> _alienFuel;
 	std::string _fontName, _finalResearch, _psiUnlockResearch, _destroyedFacility;
-	YAML::Node _startingBase;
+	YAML::Node _startingBaseDefault, _startingBaseBeginner, _startingBaseExperienced, _startingBaseVeteran, _startingBaseGenius, _startingBaseSuperhuman;
 	GameTime _startingTime;
 	int _startingDifficulty;
 	int _baseDefenseMapFromLocation;
@@ -388,7 +389,7 @@ public:
 	/// Loads a list of mods.
 	void loadAll();
 	/// Generates the starting saved game.
-	SavedGame *newSave() const;
+	SavedGame *newSave(GameDifficulty diff) const;
 	/// Gets the ruleset for a country type.
 	RuleCountry *getCountry(const std::string &id, bool error = false) const;
 	/// Gets the available countries.
@@ -668,7 +669,7 @@ public:
 	/// Gets the list of all soldier transformation projects.
 	const std::vector<std::string> &getSoldierTransformationList() const;
 	/// Gets facilities for custom bases.
-	std::vector<RuleBaseFacility*> getCustomBaseFacilities() const;
+	std::vector<RuleBaseFacility*> getCustomBaseFacilities(GameDifficulty diff) const;
 	/// Gets a specific UfoTrajectory.
 	const UfoTrajectory *getUfoTrajectory(const std::string &id, bool error = false) const;
 	/// Gets the ruleset for a specific alien mission.
@@ -680,7 +681,8 @@ public:
 	/// Gets the alien item level table.
 	const std::vector<std::vector<int> > &getAlienItemLevels() const;
 	/// Gets the player starting base.
-	const YAML::Node &getStartingBase() const;
+	const YAML::Node &getDefaultStartingBase() const;
+	const YAML::Node &getStartingBase(GameDifficulty diff) const;
 	/// Gets the game starting time.
 	const GameTime &getStartingTime() const;
 	/// Gets the game starting difficulty.
@@ -724,6 +726,7 @@ public:
 	/// Gets the list of transparency colors,
 	const std::vector<SDL_Color> *getTransparencies() const;
 	const std::vector<MapScript*> *getMapScript(const std::string& id) const;
+	const std::map<std::string, std::vector<MapScript*> > &getMapScriptsRaw() const { return _mapScripts; }
 	/// Gets a video for intro/outro etc.
 	RuleVideo *getVideo(const std::string &id, bool error = false) const;
 	const std::map<std::string, RuleMusic *> *getMusic() const;

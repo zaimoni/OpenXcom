@@ -53,7 +53,7 @@ const double Game::VOLUME_GRADIENT = 10.0;
  * creates the display screen and sets up the cursor.
  * @param title Title of the game window.
  */
-Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0), _mod(0), _quit(false), _init(false), _mouseActive(true)
+Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0), _mod(0), _quit(false), _init(false), _update(false),  _mouseActive(true)
 {
 	Options::reload = false;
 	Options::mute = false;
@@ -368,17 +368,37 @@ void Game::run()
 #if 0
 				// SDL2 handles things differently, so this is basically commented out for historical purposes.
 				case SDL_ACTIVEEVENT:
-					switch (reinterpret_cast<SDL_ActiveEvent*>(&_event)->state)
+					// An event other than SDL_APPMOUSEFOCUS change happened.
+					if (reinterpret_cast<SDL_ActiveEvent*>(&_event)->state & ~SDL_APPMOUSEFOCUS)
 					{
-						case SDL_APPACTIVE:
-							runningState = reinterpret_cast<SDL_ActiveEvent*>(&_event)->gain ? RUNNING : stateRun[Options::pauseMode];
-							break;
-						case SDL_APPMOUSEFOCUS:
-							// We consciously ignore it.
-							break;
-						case SDL_APPINPUTFOCUS:
-							runningState = reinterpret_cast<SDL_ActiveEvent*>(&_event)->gain ? RUNNING : kbFocusRun[Options::pauseMode];
-							break;
+						Uint8 currentState = SDL_GetAppState();
+						// Game is minimized
+						if (!(currentState & SDL_APPACTIVE))
+						{
+							runningState = stateRun[Options::pauseMode];
+							if (Options::backgroundMute)
+							{
+								setVolume(0, 0, 0);
+							}
+						}
+						// Game is not minimized but has no keyboard focus.
+						else if (!(currentState & SDL_APPINPUTFOCUS))
+						{
+							runningState = kbFocusRun[Options::pauseMode];
+							if (Options::backgroundMute)
+							{
+								setVolume(0, 0, 0);
+							}
+						}
+						// Game has keyboard focus.
+						else
+						{
+							runningState = RUNNING;
+							if (Options::backgroundMute)
+							{
+								setVolume(Options::soundVolume, Options::musicVolume, Options::uiVolume);
+							}
+						}
 					}
 					break;
 				case SDL_VIDEORESIZE:
