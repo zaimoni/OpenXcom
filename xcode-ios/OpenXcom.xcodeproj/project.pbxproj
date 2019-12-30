@@ -11,6 +11,8 @@
 		5B0DC8AF22F300E70092A513 /* RuleEnviroEffects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */; };
 		5B0DC8B222F300FA0092A513 /* RuleArcScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */; };
 		5B5F680D2391B9A100D2D740 /* OptionsFoldersState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */; };
+		5B7C32DB23BA240A0070A6D9 /* HitLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B7C32CF23BA240A0070A6D9 /* HitLog.cpp */; };
+		5B7C32DE23BA241C0070A6D9 /* TurnDiaryState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B7C32DC23BA241B0070A6D9 /* TurnDiaryState.cpp */; };
 		5B8049FD226F8E12004E517F /* GlobalManufactureState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */; };
 		5B95F032233D1AA90018C910 /* SoldierBonusState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F026233D1AA80018C910 /* SoldierBonusState.cpp */; };
 		5B95F035233D1ADB0018C910 /* GeoscapeEventState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B95F033233D1ADB0018C910 /* GeoscapeEventState.cpp */; };
@@ -503,6 +505,10 @@
 		5B0DC8B122F300FA0092A513 /* RuleArcScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleArcScript.h; sourceTree = "<group>"; };
 		5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsFoldersState.cpp; sourceTree = "<group>"; };
 		5B5F680C2391B9A000D2D740 /* OptionsFoldersState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OptionsFoldersState.h; sourceTree = "<group>"; };
+		5B7C32CF23BA240A0070A6D9 /* HitLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HitLog.cpp; sourceTree = "<group>"; };
+		5B7C32DA23BA240A0070A6D9 /* HitLog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HitLog.h; sourceTree = "<group>"; };
+		5B7C32DC23BA241B0070A6D9 /* TurnDiaryState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TurnDiaryState.cpp; sourceTree = "<group>"; };
+		5B7C32DD23BA241B0070A6D9 /* TurnDiaryState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TurnDiaryState.h; sourceTree = "<group>"; };
 		5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GlobalManufactureState.cpp; sourceTree = "<group>"; };
 		5B8049FC226F8E12004E517F /* GlobalManufactureState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GlobalManufactureState.h; sourceTree = "<group>"; };
 		5B95F026233D1AA80018C910 /* SoldierBonusState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoldierBonusState.cpp; sourceTree = "<group>"; };
@@ -1703,6 +1709,8 @@
 		B28342C3201F6D9C00BAEC9D /* Savegame */ = {
 			isa = PBXGroup;
 			children = (
+				5B7C32CF23BA240A0070A6D9 /* HitLog.cpp */,
+				5B7C32DA23BA240A0070A6D9 /* HitLog.h */,
 				5B95F040233D1BB20018C910 /* GeoscapeEvent.cpp */,
 				5B95F03F233D1BB20018C910 /* GeoscapeEvent.h */,
 				5BD0BB3B2242E0DE008E6DFB /* SoldierAvatar.cpp */,
@@ -1784,6 +1792,8 @@
 		B283430A201F6D9C00BAEC9D /* Battlescape */ = {
 			isa = PBXGroup;
 			children = (
+				5B7C32DC23BA241B0070A6D9 /* TurnDiaryState.cpp */,
+				5B7C32DD23BA241B0070A6D9 /* TurnDiaryState.h */,
 				5BD0BAED2242E02A008E6DFB /* AlienInventory.cpp */,
 				5BD0BAEE2242E02A008E6DFB /* AlienInventory.h */,
 				5BD0BAEF2242E02A008E6DFB /* AlienInventoryState.cpp */,
@@ -2472,6 +2482,7 @@
 				B2834523201F6D9E00BAEC9D /* UnitFallBState.cpp in Sources */,
 				B2834535201F6D9E00BAEC9D /* ArticleStateUfo.cpp in Sources */,
 				B283447B201F6D9D00BAEC9D /* CutsceneState.cpp in Sources */,
+				5B7C32DB23BA240A0070A6D9 /* HitLog.cpp in Sources */,
 				B28344D1201F6D9E00BAEC9D /* Renderer.cpp in Sources */,
 				B2834503201F6D9E00BAEC9D /* PsiAttackBState.cpp in Sources */,
 				B2834540201F6D9E00BAEC9D /* ScrollBar.cpp in Sources */,
@@ -2531,6 +2542,7 @@
 				B283456A201F6D9E00BAEC9D /* DismantleFacilityState.cpp in Sources */,
 				B28344DA201F6D9E00BAEC9D /* Node.cpp in Sources */,
 				B283449B201F6D9D00BAEC9D /* GraphsState.cpp in Sources */,
+				5B7C32DE23BA241C0070A6D9 /* TurnDiaryState.cpp in Sources */,
 				5BD0BAF42242E02A008E6DFB /* BriefingLightState.cpp in Sources */,
 				B283453F201F6D9E00BAEC9D /* NumberText.cpp in Sources */,
 				5B8049FD226F8E12004E517F /* GlobalManufactureState.cpp in Sources */,
