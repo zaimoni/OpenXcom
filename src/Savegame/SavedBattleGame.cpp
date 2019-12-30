@@ -2584,48 +2584,6 @@ bool SavedBattleGame::isBeforeGame() const
 	return _beforeGame;
 }
 
-
-namespace
-{
-
-void randomChanceScript(SavedBattleGame* sbg, int& val)
-{
-	if (sbg)
-	{
-		val = RNG::percent(val);
-	}
-	else
-	{
-		val = 0;
-	}
-}
-
-void randomRangeScript(SavedBattleGame* sbg, int& val, int min, int max)
-{
-	if (sbg && max >= min)
-	{
-		val = RNG::generate(min, max);
-	}
-	else
-	{
-		val = 0;
-	}
-}
-
-void difficultyLevelScript(const SavedBattleGame* sbg, int& val)
-{
-	if (sbg)
-	{
-		val = sbg->getGeoscapeSave()->getDifficulty();
-	}
-	else
-	{
-		val = 0;
-	}
-}
-
-} // namespace
-
 /**
  * Randomly chooses hidden movement background.
  */
@@ -2679,32 +2637,6 @@ const HitLog *SavedBattleGame::getHitLog() const
 }
 
 /**
- * Register Armor in script parser.
- * @param parser Script parser.
- */
-void SavedBattleGame::ScriptRegister(ScriptParserBase* parser)
-{
-	Bind<SavedBattleGame> sbg = { parser };
-
-	sbg.add<&SavedBattleGame::getTurn>("getTurn");
-	sbg.add<&SavedBattleGame::getAnimFrame>("getAnimFrame");
-
-	sbg.add<&randomChanceScript>("randomChance");
-	sbg.add<&randomRangeScript>("randomRange");
-
-	sbg.add<&difficultyLevelScript>("difficultyLevel");
-
-	sbg.addScriptValue<&SavedBattleGame::_scriptValues>(true);
-
-
-	sbg.addCustomConst("DIFF_BEGINNER", DIFF_BEGINNER);
-	sbg.addCustomConst("DIFF_EXPERIENCED", DIFF_EXPERIENCED);
-	sbg.addCustomConst("DIFF_VETERAN", DIFF_VETERAN);
-	sbg.addCustomConst("DIFF_GENIUS", DIFF_GENIUS);
-	sbg.addCustomConst("DIFF_SUPERHUMAN", DIFF_SUPERHUMAN);
-}
-
-/**
  * Resets all unit hit state flags.
  */
 void SavedBattleGame::resetUnitHitStates()
@@ -2713,6 +2645,127 @@ void SavedBattleGame::resetUnitHitStates()
 	{
 		(*i)->resetHitState();
 	}
+}
+
+////////////////////////////////////////////////////////////
+//					Script binding
+////////////////////////////////////////////////////////////
+
+namespace
+{
+
+void randomChanceScript(SavedBattleGame* sbg, int& val)
+{
+	if (sbg)
+	{
+		val = RNG::percent(val);
+	}
+	else
+	{
+		val = 0;
+	}
+}
+
+void randomRangeScript(SavedBattleGame* sbg, int& val, int min, int max)
+{
+	if (sbg && max >= min)
+	{
+		val = RNG::generate(min, max);
+	}
+	else
+	{
+		val = 0;
+	}
+}
+
+void difficultyLevelScript(const SavedBattleGame* sbg, int& val)
+{
+	if (sbg)
+	{
+		val = sbg->getGeoscapeSave()->getDifficulty();
+	}
+	else
+	{
+		val = 0;
+	}
+}
+
+void getGeoscapeSaveScript(const SavedBattleGame* sbg, const SavedGame*& val)
+{
+	if (sbg)
+	{
+		val = sbg->getGeoscapeSave();
+	}
+	else
+	{
+		val = nullptr;
+	}
+}
+
+void getGeoscapeSaveScript(SavedBattleGame* sbg, SavedGame*& val)
+{
+	if (sbg)
+	{
+		val = sbg->getGeoscapeSave();
+	}
+	else
+	{
+		val = nullptr;
+	}
+}
+
+std::string debugDisplayScript(const SavedBattleGame* p)
+{
+	if (p)
+	{
+		std::string s;
+		s += "BattleGame";
+		s += "(missionType: \"";
+		s += p->getMissionType();
+		s += "\" missionTarget: \"";
+		s += p->getMissionTarget();
+		s += "\" turn: ";
+		s += std::to_string(p->getTurn());
+		s += ")";
+		return s;
+	}
+	else
+	{
+		return "null";
+	}
+}
+
+} // namespace
+
+/**
+ * Register Armor in script parser.
+ * @param parser Script parser.
+ */
+void SavedBattleGame::ScriptRegister(ScriptParserBase* parser)
+{
+	parser->registerPointerType<SavedGame>();
+
+	Bind<SavedBattleGame> sbg = { parser };
+
+	sbg.add<&SavedBattleGame::getTurn>("getTurn");
+	sbg.add<&SavedBattleGame::getAnimFrame>("getAnimFrame");
+
+	sbg.addPair<SavedGame, &getGeoscapeSaveScript, &getGeoscapeSaveScript>("getGeoscapeGame");
+
+	sbg.add<&randomChanceScript>("randomChance");
+	sbg.add<&randomRangeScript>("randomRange");
+
+	sbg.add<&difficultyLevelScript>("difficultyLevel");
+
+	sbg.addScriptValue<&SavedBattleGame::_scriptValues>(true);
+
+	sbg.addDebugDisplay<&debugDisplayScript>();
+
+	sbg.addCustomConst("DIFF_BEGINNER", DIFF_BEGINNER);
+	sbg.addCustomConst("DIFF_EXPERIENCED", DIFF_EXPERIENCED);
+	sbg.addCustomConst("DIFF_VETERAN", DIFF_VETERAN);
+	sbg.addCustomConst("DIFF_GENIUS", DIFF_GENIUS);
+	sbg.addCustomConst("DIFF_SUPERHUMAN", DIFF_SUPERHUMAN);
 }
 
 }
