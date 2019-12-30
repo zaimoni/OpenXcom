@@ -25,7 +25,6 @@
 #include "../Engine/Options.h"
 #include "../Engine/FileMap.h"
 #include "../Savegame/GameTime.h"
-#include "../Savegame/SavedGame.h"
 #include "RuleDamageType.h"
 #include "Unit.h"
 #include "RuleAlienMission.h"
@@ -97,6 +96,8 @@ class ModScriptGlobal;
 class ScriptParserBase;
 class ScriptGlobal;
 struct StatAdjustment;
+
+enum GameDifficulty : int;
 
 /**
  * Mod data used when loading resources
