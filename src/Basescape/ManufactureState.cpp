@@ -245,6 +245,9 @@ void ManufactureState::lstManufactureClickMiddle(Action *)
 void ManufactureState::lstManufactureMousePress(Action *action)
 {
 	/*
+	if (_lstManufacture->isScrollbarVisible())
+		return;
+
 	int change = 1;
 	if (SDL_GetModState() & KMOD_CTRL)
 		change = 10;
