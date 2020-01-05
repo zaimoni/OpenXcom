@@ -1353,6 +1353,11 @@ int TextList::getScrollbarColor()
 	return _scrollbar->getColor();
 }
 
+bool TextList::isScrollbarVisible() const
+{
+	return _scrollbar->getVisible();
+}
+
 void TextList::setFlooding(bool flooding)
 {
 	_flooding = flooding;
