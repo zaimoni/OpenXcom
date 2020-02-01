@@ -167,6 +167,13 @@ void ResearchState::lstResearchMousePress(Action *action)
 	if (_lstResearch->isScrollbarVisible())
 		return;
 
+	// 175 +/- 20
+	if (action->getAbsoluteXMouse() < (_txtAllocated->getX() - 5) ||
+		action->getAbsoluteXMouse() > (_txtAllocated->getX() + 35))
+	{
+		return;
+	}
+
 	int change = 1;
 	if (SDL_GetModState() & KMOD_CTRL)
 		change = 10;

@@ -1976,7 +1976,7 @@ void BattleUnit::clearVisibleTiles()
  * @param item Psi-Amp.
  * @return Attack bonus.
  */
-int BattleUnit::getPsiAccuracy(BattleActionType actionType, BattleItem *item)
+int BattleUnit::getPsiAccuracy(BattleActionType actionType, const BattleItem *item) const
 {
 	int psiAcc = 0;
 	if (actionType == BA_MINDCONTROL)
@@ -4353,7 +4353,7 @@ void BattleUnit::goToTimeOut()
 void BattleUnit::setSpecialWeapon(SavedBattleGame *save)
 {
 	const Mod *mod = save->getMod();
-	RuleItem *item = 0;
+	const RuleItem *item = 0;
 	int i = 0;
 
 	if (getUnitRules())
@@ -4385,6 +4385,17 @@ void BattleUnit::setSpecialWeapon(SavedBattleGame *save)
 		if (item && i < SPEC_WEAPON_MAX)
 		{
 			_specWeapon[i++] = save->createItemForUnitBuildin(item, this);
+		}
+	}
+	if (getGeoscapeSoldier())
+	{
+		item = getGeoscapeSoldier()->getRules()->getSpecialWeapon();
+		if (item)
+		{
+			if (i < SPEC_WEAPON_MAX)
+			{
+				_specWeapon[i++] = save->createItemForUnitBuildin(item, this);
+			}
 		}
 	}
 }
@@ -4632,7 +4643,6 @@ bool BattleUnit::isSummonedPlayerUnit() const
 {
 	return _summonedPlayerUnit;
 }
-
 ////////////////////////////////////////////////////////////
 //					Script binding
 ////////////////////////////////////////////////////////////
@@ -4969,6 +4979,16 @@ void setBaseStatRangeScript(BattleUnit *bu, int val)
 		(bu->*StatCurr) = Clamp(val, Min, Max);
 	}
 }
+	
+void getVisibleUnitsCountScript(BattleUnit *bu, int &ret)
+{
+	if (bu)
+	{
+		
+		auto visibleUnits = bu->getVisibleUnits();
+		ret = visibleUnits->size();
+	}
+}
 
 /**
  * Get the X part of the tile coordinate of this unit.
@@ -5009,6 +5029,16 @@ void getPositionZScript(const BattleUnit *bu, int &ret)
 		return;
 	}
 	ret = 0;
+}
+
+void getFactionScript(const BattleUnit *bu, int &faction)
+{
+	if (bu)
+	{
+		faction = (int)bu->getFaction();
+		return;
+	}
+	faction = 0;
 }
 
 std::string debugDisplayScript(const BattleUnit* bu)
@@ -5117,6 +5147,9 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 
 	UnitStats::addGetStatsScript<&BattleUnit::_exp>(bu, "Exp.", true);
 
+	bu.add<&getVisibleUnitsCountScript>("getVisibleUnitsCount");
+	bu.add<&getFactionScript>("getFaction");
+	
 	bu.add<&BattleUnit::getFatalWounds>("getFatalwoundsTotal");
 	bu.add<&BattleUnit::getFatalWound>("getFatalwounds");
 	bu.add<&BattleUnit::getOverKillDamage>("getOverKillDamage");
@@ -5231,6 +5264,9 @@ void battleActionImpl(BindBase& b)
 	b.addCustomConst("battle_action_walk", BA_WALK);
 	b.addCustomConst("battle_action_hit", BA_HIT);
 	b.addCustomConst("battle_action_throw", BA_THROW);
+	b.addCustomConst("battle_action_use", BA_USE);
+	b.addCustomConst("battle_action_mindcontrol", BA_MINDCONTROL);
+	b.addCustomConst("battle_action_panic", BA_PANIC);
 }
 
 void moveTypesImpl(BindBase& b)
@@ -5238,6 +5274,13 @@ void moveTypesImpl(BindBase& b)
 	b.addCustomConst("move_normal", BAM_NORMAL);
 	b.addCustomConst("move_run", BAM_RUN);
 	b.addCustomConst("move_strafe", BAM_STRAFE);
+}
+
+void medikitBattleActionImpl(BindBase& b)
+{
+	b.addCustomConst("medikit_action_heal", BMA_HEAL);
+	b.addCustomConst("medikit_action_stimulant", BMA_STIMULANT);
+	b.addCustomConst("medikit_action_painkiller", BMA_PAINKILLER);
 }
 
 }
@@ -5351,6 +5394,22 @@ ModScript::DamageUnitParser::DamageUnitParser(ScriptGlobal* shared, const std::s
 	setEmptyReturn();
 }
 
+ModScript::TryPsiAttackUnitParser::TryPsiAttackUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"psi_attack_success",
+	"item",
+	"attacker",
+	"victim",
+	"attack_strength",
+	"defense_strength",
+	"battle_action" }
+{
+	BindBase b { this };
+	
+	b.addCustomPtr<const Mod>("rules", mod);
+	
+	battleActionImpl(b);
+}
+
 ModScript::HitUnitParser::HitUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
 	"power",
 	"part",
@@ -5363,6 +5422,32 @@ ModScript::HitUnitParser::HitUnitParser(ScriptGlobal* shared, const std::string&
 	b.addCustomPtr<const Mod>("rules", mod);
 
 	battleActionImpl(b);
+}
+
+ModScript::HealUnitParser::HealUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"medikit_action_type",
+	"body_part",
+	"wound_recovery",
+	"health_recovery",
+	"energy_recovery",
+	"stun_recovery",
+	"mana_recovery",
+	"morale_recovery",
+	"painkiller_recovery",
+	"actor",
+	"item",
+	"battle_game",
+	"target", "battle_action"}
+{
+	BindBase b { this };
+
+	b.addCustomPtr<const Mod>("rules", mod);
+
+	battleActionImpl(b);
+
+	medikitBattleActionImpl(b);
+
+	setEmptyReturn();
 }
 
 ModScript::CreateUnitParser::CreateUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name, "unit", "battle_game", "turn", }

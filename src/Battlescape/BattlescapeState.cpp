@@ -492,6 +492,7 @@ BattlescapeState::BattlescapeState() :
 	_btnAbort->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
 
 	_btnStats->onMouseClick((ActionHandler)&BattlescapeState::btnStatsClick);
+	_btnStats->onMouseClick((ActionHandler)&BattlescapeState::btnStatsClick, SDL_BUTTON_RIGHT);
 	_btnStats->onKeyboardPress((ActionHandler)&BattlescapeState::btnStatsClick, Options::keyBattleStats);
 	_btnStats->setTooltip("STR_UNIT_STATS");
 	_btnStats->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
@@ -1516,8 +1517,16 @@ void BattlescapeState::btnStatsClick(Action *action)
 		}
 		if (!scroll)
 		{
-			_battleGame->cancelAllActions();
-			popup(new UnitInfoState(_save->getSelectedUnit(), this, false, false));
+			if (SDL_BUTTON_RIGHT == action->getDetails()->button.button)
+			{
+				_save->setNameDisplay(!_save->isNameDisplay());
+				updateSoldierInfo();
+			}
+			else
+			{
+				_battleGame->cancelAllActions();
+				popup(new UnitInfoState(_save->getSelectedUnit(), this, false, false));
+			}
 		}
 	}
 }
@@ -1969,6 +1978,10 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 	Soldier *soldier = battleUnit->getGeoscapeSoldier();
 	if (soldier != 0)
 	{
+		if (soldier->hasCallsign() && !_save->isNameDisplay())
+		{
+			_txtName->setText(soldier->getCallsign());
+		}
 		// presence of custom background determines what should happen
 		Surface *customBg = _game->getMod()->getSurface("AvatarBackground", false);
 		if (customBg == 0)

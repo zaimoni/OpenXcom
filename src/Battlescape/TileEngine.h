@@ -195,7 +195,7 @@ public:
 	/// Checks the vertical blockage of a tile.
 	int verticalBlockage(Tile *startTile, Tile *endTile, ItemDamageType type, bool skipObject = false);
 	/// Calculate success rate of psi attack.
-	int psiAttackCalculate(BattleActionType type, BattleUnit *attacker, BattleUnit *victim, BattleItem *weapon);
+	int psiAttackCalculate(BattleActionType type, const BattleUnit *attacker, const BattleUnit *victim, const BattleItem *weapon);
 	/// Attempts a panic or mind control action.
 	bool psiAttack(BattleActionAttack attack, BattleUnit *victim);
 	/// Attempts a melee attack action.
@@ -203,12 +203,9 @@ public:
 	/// Remove the medikit from the game if consumable and empty.
 	void medikitRemoveIfEmpty(BattleAction *action);
 	/// Try using medikit heal ability.
-	void medikitHeal(BattleAction *action, BattleUnit *target, int bodyPart);
-	/// Try using medikit stimulant ability.
-	void medikitStimulant(BattleAction *action, BattleUnit *target);
-	/// Try using medikit pain killer ability.
-	void medikitPainKiller(BattleAction *action, BattleUnit *target);
-
+	bool medikitUse(BattleAction *action, BattleUnit *target, BattleMediKitAction medikitAction, int bodyPart);
+	/// Try to conceal a unit.
+	bool tryConcealUnit(BattleUnit* unit);
 	/// Applies gravity to anything that occupy this tile.
 	Tile *applyGravity(Tile *t);
 
@@ -264,6 +261,7 @@ public:
 	void setDangerZone(Position pos, int radius, BattleUnit *unit);
 	/// Checks if a position is valid for a unit, used for spawning and forced movement.
 	bool isPositionValidForUnit(Position &position, BattleUnit *unit, bool checkSurrounding = false, int startSurroundingCheckDirection = 0);
+	void updateGameStateAfterScript(BattleActionAttack battleActionAttack, Position pos);
 
 };
 

@@ -48,6 +48,7 @@
 #include "../Mod/RuleSoldier.h"
 #include "../Mod/RuleSoldierBonus.h"
 #include "../fallthrough.h"
+#include "../Engine/Language.h"
 
 namespace OpenXcom
 {
@@ -58,7 +59,7 @@ namespace OpenXcom
 SavedBattleGame::SavedBattleGame(Mod *rule, Language *lang) :
 	_battleState(0), _rule(rule), _mapsize_x(0), _mapsize_y(0), _mapsize_z(0), _selectedUnit(0),
 	_lastSelectedUnit(0), _pathfinding(0), _tileEngine(0), _enviroEffects(nullptr), _ecEnabledFriendly(false), _ecEnabledHostile(false), _ecEnabledNeutral(false),
-	_globalShade(0), _side(FACTION_PLAYER), _turn(0), _bughuntMinTurn(20), _animFrame(0),
+	_globalShade(0), _side(FACTION_PLAYER), _turn(0), _bughuntMinTurn(20), _animFrame(0), _nameDisplay(false),
 	_debugMode(false), _bughuntMode(false), _aborted(false), _itemId(0), _objectiveType(-1), _objectivesDestroyed(0), _objectivesNeeded(0), _unitsFalling(false),
 	_cheating(false), _tuReserved(BA_NONE), _kneelReserved(false), _depth(0),
 	_ambience(-1), _ambientVolume(0.5), _minAmbienceRandomDelay(20), _maxAmbienceRandomDelay(60), _currentAmbienceDelay(0),
@@ -140,6 +141,7 @@ void SavedBattleGame::load(const YAML::Node &node, Mod *mod, SavedGame* savedGam
 		std::string enviroEffectsType = node["enviroEffectsType"].as<std::string>();
 		_enviroEffects = mod->getEnviroEffects(enviroEffectsType);
 	}
+	_nameDisplay = node["nameDisplay"].as<bool>(_nameDisplay);
 	_ecEnabledFriendly = node["ecEnabledFriendly"].as<bool>(_ecEnabledFriendly);
 	_ecEnabledHostile = node["ecEnabledHostile"].as<bool>(_ecEnabledHostile);
 	_ecEnabledNeutral = node["ecEnabledNeutral"].as<bool>(_ecEnabledNeutral);
@@ -450,6 +452,7 @@ YAML::Node SavedBattleGame::save() const
 	{
 		node["enviroEffectsType"] = _enviroEffects->getType();
 	}
+	node["nameDisplay"] = _nameDisplay;
 	node["ecEnabledFriendly"] = _ecEnabledFriendly;
 	node["ecEnabledHostile"] = _ecEnabledHostile;
 	node["ecEnabledNeutral"] = _ecEnabledNeutral;
@@ -976,11 +979,28 @@ UnitFaction SavedBattleGame::getSide() const
  * @param unit
  * @return Unit can shoot/use it.
  */
-bool SavedBattleGame::canUseWeapon(const BattleItem* weapon, const BattleUnit* unit, bool isBerserking) const
+bool SavedBattleGame::canUseWeapon(const BattleItem* weapon, const BattleUnit* unit, bool isBerserking, BattleActionType actionType, std::string* message) const
 {
 	if (!weapon || !unit) return false;
 
 	const RuleItem *rule = weapon->getRules();
+
+	const BattleItem* ammoItem;
+	if (actionType != BA_NONE)
+	{
+		// Applies to:
+		// 1. action type selected by the player from the UI
+		// 2. leeroy jenkins AI
+		// 3. all reaction fire
+		// 4. all unit berserking
+		ammoItem = weapon->getAmmoForAction(actionType);
+	}
+	else
+	{
+		// Applies to:
+		// 5. standard AI - action type (and thus ammoItem) is unknown when the check is done
+		ammoItem = nullptr;
+	}
 
 	if (unit->getFaction() == FACTION_HOSTILE && getTurn() < rule->getAIUseDelay(getMod()))
 	{
@@ -1001,16 +1021,25 @@ bool SavedBattleGame::canUseWeapon(const BattleItem* weapon, const BattleUnit* u
 			return false;
 		}
 	}
-	if (getDepth() == 0 && rule->isWaterOnly())
+	if (getDepth() == 0)
 	{
-		return false;
+		if (rule->isWaterOnly() || (ammoItem && ammoItem->getRules()->isWaterOnly()) )
+		{
+			if (message) *message = "STR_UNDERWATER_EQUIPMENT";
+			return false;
+		}
 	}
-	if (getDepth() != 0 && rule->isLandOnly())
+	else // if (getDepth() != 0)
 	{
-		return false;
+		if (rule->isLandOnly() || (ammoItem && ammoItem->getRules()->isLandOnly()) )
+		{
+			if (message) *message = "STR_LAND_EQUIPMENT";
+			return false;
+		}
 	}
 	if (rule->isBlockingBothHands() && unit->getFaction() == FACTION_PLAYER && !isBerserking && unit->getLeftHandWeapon() != 0 && unit->getRightHandWeapon() != 0)
 	{
+		if (message) *message = "STR_MUST_USE_BOTH_HANDS";
 		return false;
 	}
 	return true;
@@ -1501,7 +1530,7 @@ BattleItem *SavedBattleGame::createItemForUnit(const RuleItem *rule, BattleUnit 
 /**
  * Create new built-in item for unit.
  */
-BattleItem *SavedBattleGame::createItemForUnitBuildin(RuleItem *rule, BattleUnit *unit)
+BattleItem *SavedBattleGame::createItemForUnitBuildin(const RuleItem *rule, BattleUnit *unit)
 {
 	BattleItem *item = new BattleItem(rule, getCurrentItemId());
 	item->setOwner(unit);
@@ -1530,6 +1559,24 @@ BattleItem *SavedBattleGame::createItemForTile(RuleItem *rule, Tile *tile)
 	_items.push_back(item);
 	initItem(item);
 	return item;
+}
+
+/**
+ * Returns whether the battlescape should display the names of the soldiers or their callsigns.
+ * @return True, if the battlescape should show player names + statstrings (default behaviour), or false, if the battlescape should display callsigns.
+ */
+bool SavedBattleGame::isNameDisplay() const
+{
+	return _nameDisplay;
+}
+
+/**
+ * Sets whether the player names (true) or their callsigns (false) are displayed
+ * @param displayName True, if the battlescape should show player names + statstrings (default behaviour), or false, if the battlescape should display callsigns.
+ */
+void SavedBattleGame::setNameDisplay(bool displayName)
+{
+	_nameDisplay = displayName;
 }
 
 /**
@@ -2652,7 +2699,19 @@ void SavedBattleGame::resetUnitHitStates()
 
 namespace
 {
-
+template<typename... Args>
+void flashMessageVariadicScriptImpl(SavedBattleGame* sbg, ScriptText message, Args... args)
+{
+	if (!sbg)
+	{
+		return;
+	}
+	const Language *lang = sbg->getBattleState()->getGame()->getLanguage();
+	LocalizedText translated = lang->getString(message);
+	(translated.arg(args), ...);
+	sbg->getBattleState()->warning(translated);
+}
+	
 void randomChanceScript(SavedBattleGame* sbg, int& val)
 {
 	if (sbg)
@@ -2689,6 +2748,18 @@ void difficultyLevelScript(const SavedBattleGame* sbg, int& val)
 	}
 }
 
+void turnSideScript(const SavedBattleGame* sbg, int& val)
+{
+	if (sbg)
+	{
+		val = sbg->getSide();
+	}
+	else
+	{
+		val = 0;
+	}
+}
+
 void getGeoscapeSaveScript(const SavedBattleGame* sbg, const SavedGame*& val)
 {
 	if (sbg)
@@ -2713,6 +2784,14 @@ void getGeoscapeSaveScript(SavedBattleGame* sbg, SavedGame*& val)
 	}
 }
 
+void tryConcealUnitScript(SavedBattleGame* sbg, BattleUnit* bu, int& val)
+{
+	if (sbg && bu)
+	{
+		val = sbg->getTileEngine()->tryConcealUnit(bu);
+	}
+}
+	
 std::string debugDisplayScript(const SavedBattleGame* p)
 {
 	if (p)
@@ -2751,8 +2830,20 @@ void SavedBattleGame::ScriptRegister(ScriptParserBase* parser)
 
 	sbg.addPair<SavedGame, &getGeoscapeSaveScript, &getGeoscapeSaveScript>("getGeoscapeGame");
 
+	sbg.add<void(*)(SavedBattleGame*, ScriptText), &flashMessageVariadicScriptImpl>("flashMessage");
+	sbg.add<void(*)(SavedBattleGame*, ScriptText, int), &flashMessageVariadicScriptImpl>("flashMessage");
+	sbg.add<void(*)(SavedBattleGame*, ScriptText, int, int), &flashMessageVariadicScriptImpl>("flashMessage");
+	sbg.add<void(*)(SavedBattleGame*, ScriptText, int, int, int), &flashMessageVariadicScriptImpl>("flashMessage");
+	sbg.add<void(*)(SavedBattleGame*, ScriptText, int, int, int, int), &flashMessageVariadicScriptImpl>("flashMessage");
+	
 	sbg.add<&randomChanceScript>("randomChance");
 	sbg.add<&randomRangeScript>("randomRange");
+	sbg.add<&turnSideScript>("getTurnSide", "Return the faction whose turn it is.");
+	sbg.addCustomConst("FACTION_PLAYER", FACTION_PLAYER);
+	sbg.addCustomConst("FACTION_HOSTILE", FACTION_HOSTILE);
+	sbg.addCustomConst("FACTION_NEUTRAL", FACTION_NEUTRAL);
+	
+	sbg.add<&tryConcealUnitScript>("tryConcealUnit");
 
 	sbg.add<&difficultyLevelScript>("difficultyLevel");
 
