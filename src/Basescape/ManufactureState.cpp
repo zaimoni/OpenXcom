@@ -248,6 +248,13 @@ void ManufactureState::lstManufactureMousePress(Action *action)
 	if (_lstManufacture->isScrollbarVisible())
 		return;
 
+	// 140 +/- 20
+	if (action->getAbsoluteXMouse() < (_txtAllocated->getX() - 40) ||
+		action->getAbsoluteXMouse() > _txtAllocated->getX())
+	{
+		return;
+	}
+
 	int change = 1;
 	if (SDL_GetModState() & KMOD_CTRL)
 		change = 10;

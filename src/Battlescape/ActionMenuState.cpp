@@ -278,6 +278,7 @@ void ActionMenuState::btnActionMenuItemClick(Action *action)
 	if (btnID != -1)
 	{
 		bool newHitLog = false;
+		std::string actionResult = "STR_UNKNOWN"; // needs a non-empty default/fall-back !
 
 		_action->type = _actionMenu[btnID]->getAction();
 		_action->updateTU();
@@ -289,25 +290,9 @@ void ActionMenuState::btnActionMenuItemClick(Action *action)
 			_game->popState();
 		}
 		else if (_action->type != BA_THROW &&
-			!_game->getSavedGame()->getSavedBattle()->canUseWeapon(_action->weapon, _action->actor, false))
+			!_game->getSavedGame()->getSavedBattle()->canUseWeapon(_action->weapon, _action->actor, false, _action->type, &actionResult))
 		{
-			if (weapon->isBlockingBothHands())
-			{
-				_action->result = "STR_MUST_USE_BOTH_HANDS";
-			}
-			else if (weapon->isWaterOnly())
-			{
-				_action->result = "STR_UNDERWATER_EQUIPMENT";
-			}
-			else if (weapon->isLandOnly())
-			{
-				_action->result = "STR_LAND_EQUIPMENT";
-			}
-			else
-			{
-				// Needs a default! Otherwise expect nasty side effects and crashes, if someone changes the validation and forgets to add an action result
-				_action->result = "STR_UNKNOWN";
-			}
+			_action->result = actionResult;
 			_game->popState();
 		}
 		else if (_action->type == BA_PRIME)
@@ -395,7 +380,7 @@ void ActionMenuState::btnActionMenuItemClick(Action *action)
 									{
 										if (targetUnit->getFatalWound(i))
 										{
-											tileEngine->medikitHeal(_action, targetUnit, i);
+											tileEngine->medikitUse(_action, targetUnit, BMA_HEAL, i);
 											tileEngine->medikitRemoveIfEmpty(_action);
 											break;
 										}
@@ -403,16 +388,16 @@ void ActionMenuState::btnActionMenuItemClick(Action *action)
 								}
 								else
 								{
-									tileEngine->medikitHeal(_action, targetUnit, BODYPART_TORSO);
+									tileEngine->medikitUse(_action, targetUnit, BMA_HEAL, BODYPART_TORSO);
 									tileEngine->medikitRemoveIfEmpty(_action);
 								}
 								break;
 							case BMT_STIMULANT:
-								tileEngine->medikitStimulant(_action, targetUnit);
+								tileEngine->medikitUse(_action, targetUnit, BMA_STIMULANT, BODYPART_TORSO);
 								tileEngine->medikitRemoveIfEmpty(_action);
 								break;
 							case BMT_PAINKILLER:
-								tileEngine->medikitPainKiller(_action, targetUnit);
+								tileEngine->medikitUse(_action, targetUnit, BMA_PAINKILLER, BODYPART_TORSO);
 								tileEngine->medikitRemoveIfEmpty(_action);
 								break;
 							case BMT_NORMAL:

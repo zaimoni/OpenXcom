@@ -78,6 +78,7 @@ Soldier::Soldier(RuleSoldier *rules, Armor *armor, int id) :
 		{
 			_nationality = RNG::generate(0, names.size() - 1);
 			_name = names.at(_nationality)->genName(&_gender, rules->getFemaleFrequency());
+			_callsign = generateCallsign(rules->getNames());
 			_look = (SoldierLook)names.at(_nationality)->genLook(4); // Once we add the ability to mod in extra looks, this will need to reference the ruleset for the maximum amount of looks.
 		}
 		else
@@ -87,6 +88,7 @@ Soldier::Soldier(RuleSoldier *rules, Armor *armor, int id) :
 			_look = (SoldierLook)RNG::generate(0,3);
 			_name = (_gender == GENDER_FEMALE) ? "Jane" : "John";
 			_name += " Doe";
+			_callsign = "";
 		}
 	}
 	_lookVariant = RNG::seedless(0, RuleSoldier::LookVariantMax - 1);
@@ -115,6 +117,10 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 {
 	_id = node["id"].as<int>(_id);
 	_name = node["name"].as<std::string>();
+	if (node["callsign"])
+	{
+		_callsign = node["callsign"].as<std::string>();
+	}
 	_nationality = node["nationality"].as<int>(_nationality);
 	_initialStats = node["initialStats"].as<UnitStats>(_initialStats);
 	_currentStats = node["currentStats"].as<UnitStats>(_currentStats);
@@ -199,6 +205,10 @@ YAML::Node Soldier::save(const ScriptGlobal *shared) const
 	node["type"] = _rules->getType();
 	node["id"] = _id;
 	node["name"] = _name;
+	if (!_callsign.empty())
+	{
+		node["callsign"] = _callsign;
+	}
 	node["nationality"] = _nationality;
 	node["initialStats"] = _initialStats;
 	node["currentStats"] = _currentStats;
@@ -286,6 +296,60 @@ std::string Soldier::getName(bool statstring, unsigned int maxLength) const
 void Soldier::setName(const std::string &name)
 {
 	_name = name;
+}
+
+/**
+ * Returns the soldier's callsign.
+ * @param maxLength Restrict length to a certain value.
+ * @return Soldier callsign.
+ */
+std::string Soldier::getCallsign(unsigned int maxLength) const
+{
+	std::ostringstream ss;
+	ss << "\"";
+	ss << _callsign;
+	ss << "\"";
+	if (_callsign.length() + 2 > maxLength)
+	{
+		return ss.str().substr(0, maxLength);
+	}
+	else
+	{
+		return ss.str();
+	}
+}
+
+/**
+ * Changes the soldier's callsign.
+ * @param callsign Soldier callsign.
+ */
+void Soldier::setCallsign(const std::string &callsign)
+{
+	_callsign = callsign;
+}
+
+/**
+ * Check whether the soldier has a callsign assigned.
+ * @return true, if the soldier has a callsign, false, if he has not.
+ */
+bool Soldier::hasCallsign() const
+{
+	return !_callsign.empty();
+}
+
+/**
+ * Generate a random callsign from the pool of names. Tries to fallback to the first entry in
+ * in the namepool list if no callsigns for the given nationality are defined.
+ * @return generated callsign.
+ */
+std::string Soldier::generateCallsign(const std::vector<SoldierNamePool*> &names)
+{
+	std::string callsign = names.at(_nationality)->genCallsign(_gender);
+	if (callsign.empty())
+	{
+		callsign = names.at(0)->genCallsign(_gender);
+	}
+	return callsign;
 }
 
 /**
@@ -1529,6 +1593,7 @@ bool Soldier::prepareStatsWithBonuses(const Mod *mod)
 
 	// 1. current stats
 	UnitStats tmp = _currentStats;
+	auto basePsiSkill = _currentStats.psiSkill;
 
 	// 2. refresh soldier bonuses
 	auto bonuses = getBonuses(mod); // this is the only place where bonus cache is rebuilt
@@ -1542,6 +1607,12 @@ bool Soldier::prepareStatsWithBonuses(const Mod *mod)
 
 	// 4. stats with soldier bonuses, but without armor bonuses
 	_tmpStatsWithSoldierBonuses = UnitStats::obeyFixedMinimum(tmp);
+
+	// if the psi skill has not been "unlocked" yet by training, do not allow soldier bonuses to unlock it
+	if (basePsiSkill <= 0 && _tmpStatsWithSoldierBonuses.psiSkill > 0)
+	{
+		_tmpStatsWithSoldierBonuses.psiSkill = basePsiSkill;
+	}
 
 	// 5. apply armor bonus
 	tmp += *_armor->getStats();
