@@ -1124,6 +1124,7 @@ void SavedBattleGame::endTurn()
 	}
 	else if (_side == FACTION_HOSTILE)
 	{
+		_selectedUnit =  0;
 		_side = FACTION_NEUTRAL;
 		// if there is no neutral team, we skip this and instantly prepare the new turn for the player
 //		if (selectNextPlayerUnit() == 0)
@@ -1180,9 +1181,15 @@ void SavedBattleGame::endTurn()
 			}
 		}
 	}
+
 	// hide all aliens (VOF calculations below will turn them visible again)
 	for (std::vector<BattleUnit*>::iterator i = _units.begin(); i != _units.end(); ++i)
 	{
+		if ((*i)->getStatus() == STATUS_IGNORE_ME)
+		{
+			continue;
+		}
+
 		if ((*i)->getFaction() == _side)
 		{
 			(*i)->prepareNewTurn();
@@ -1195,18 +1202,17 @@ void SavedBattleGame::endTurn()
 		{
 			(*i)->setVisible(false);
 		}
+	}
+
+	//scripts update
+	for (std::vector<BattleUnit*>::iterator i = _units.begin(); i != _units.end(); ++i)
+	{
+		if ((*i)->getStatus() == STATUS_IGNORE_ME)
+		{
+			continue;
+		}
 
 		ModScript::scriptCallback<ModScript::NewTurnUnit>((*i)->getArmor(), (*i), this, this->getTurn(), _side);
-
-		if ((*i)->isJustRevivedByNewTurn())
-		{
-			(*i)->setJustRevivedByNewTurn(false);
-			if (getMod()->getTURecoveryWakeUpNewTurn() < 100)
-			{
-				int newTU = (*i)->getBaseStats()->tu * getMod()->getTURecoveryWakeUpNewTurn() / 100;
-				(*i)->setTimeUnits(newTU);
-			}
-		}
 	}
 
 	for (auto& item : _items)
@@ -1214,8 +1220,9 @@ void SavedBattleGame::endTurn()
 		ModScript::scriptCallback<ModScript::NewTurnItem>(item->getRules(), item, this, this->getTurn(), _side);
 	}
 
-	// re-run calculateFOV() *after* all aliens have been set not-visible
-	_tileEngine->recalculateFOV();
+	reviveUnconsciousUnits(false);
+
+	//fov check will be done by `BattlescapeGame::endTurn`
 
 	if (_side != FACTION_PLAYER)
 		selectNextPlayerUnit();
@@ -1356,7 +1363,7 @@ void SavedBattleGame::randomizeItemLocations(Tile *t)
 }
 
 /**
- * Add item to delete list, usually when removing item form game or build in weapons
+ * Add item to delete list, usually when removing item from game or build in weapons
  * @param item Item to delete after game end.
  */
 void SavedBattleGame::deleteList(BattleItem* item)
@@ -1926,11 +1933,7 @@ void SavedBattleGame::prepareNewTurn()
 		(*i)->calculateEnviDamage(mod, this);
 	}
 
-	reviveUnconsciousUnits();
-
-	// fires could have been started, stopped or smoke could reveal/conceal units.
-	getTileEngine()->calculateLighting(LL_FIRE);
-	getTileEngine()->recalculateFOV();
+	//fov and light udadates are done in `BattlescapeGame::endTurn`
 }
 
 /**
@@ -1944,7 +1947,7 @@ void SavedBattleGame::reviveUnconsciousUnits(bool noTU)
 {
 	for (std::vector<BattleUnit*>::iterator i = getUnits()->begin(); i != getUnits()->end(); ++i)
 	{
-		if ((*i)->getArmor()->getSize() == 1)
+		if ((*i)->getArmor()->getSize() == 1 && (*i)->getStatus() != STATUS_IGNORE_ME)
 		{
 			Position originalPosition = (*i)->getPosition();
 			if (originalPosition == Position(-1, -1, -1))
@@ -1973,8 +1976,12 @@ void SavedBattleGame::reviveUnconsciousUnits(bool noTU)
 					}
 					else
 					{
-						// changing TUs here would have no effect as they are modified later during the new turn preparation
-						(*i)->setJustRevivedByNewTurn(true);
+						(*i)->updateUnitStats(true, false);
+						if (getMod()->getTURecoveryWakeUpNewTurn() < 100)
+						{
+							int newTU = (*i)->getTimeUnits() * getMod()->getTURecoveryWakeUpNewTurn() / 100;
+							(*i)->setTimeUnits(newTU);
+						}
 					}
 					removeUnconsciousBodyItem((*i));
 				}
@@ -2703,7 +2710,7 @@ namespace
 template<typename... Args>
 void flashMessageVariadicScriptImpl(SavedBattleGame* sbg, ScriptText message, Args... args)
 {
-	if (!sbg)
+	if (!sbg || !sbg->getBattleState())
 	{
 		return;
 	}
@@ -2712,7 +2719,7 @@ void flashMessageVariadicScriptImpl(SavedBattleGame* sbg, ScriptText message, Ar
 	(translated.arg(args), ...);
 	sbg->getBattleState()->warning(translated);
 }
-	
+
 void randomChanceScript(SavedBattleGame* sbg, int& val)
 {
 	if (sbg)
@@ -2792,7 +2799,7 @@ void tryConcealUnitScript(SavedBattleGame* sbg, BattleUnit* bu, int& val)
 		val = sbg->getTileEngine()->tryConcealUnit(bu);
 	}
 }
-	
+
 std::string debugDisplayScript(const SavedBattleGame* p)
 {
 	if (p)
@@ -2836,14 +2843,14 @@ void SavedBattleGame::ScriptRegister(ScriptParserBase* parser)
 	sbg.add<void(*)(SavedBattleGame*, ScriptText, int, int), &flashMessageVariadicScriptImpl>("flashMessage");
 	sbg.add<void(*)(SavedBattleGame*, ScriptText, int, int, int), &flashMessageVariadicScriptImpl>("flashMessage");
 	sbg.add<void(*)(SavedBattleGame*, ScriptText, int, int, int, int), &flashMessageVariadicScriptImpl>("flashMessage");
-	
+
 	sbg.add<&randomChanceScript>("randomChance");
 	sbg.add<&randomRangeScript>("randomRange");
 	sbg.add<&turnSideScript>("getTurnSide", "Return the faction whose turn it is.");
 	sbg.addCustomConst("FACTION_PLAYER", FACTION_PLAYER);
 	sbg.addCustomConst("FACTION_HOSTILE", FACTION_HOSTILE);
 	sbg.addCustomConst("FACTION_NEUTRAL", FACTION_NEUTRAL);
-	
+
 	sbg.add<&tryConcealUnitScript>("tryConcealUnit");
 
 	sbg.add<&difficultyLevelScript>("difficultyLevel");

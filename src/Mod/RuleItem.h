@@ -58,6 +58,8 @@ class SurfaceSet;
 class Surface;
 class Mod;
 
+enum UnitFaction : int;
+
 struct RuleItemUseCost
 {
 	int Time;
@@ -210,6 +212,7 @@ private:
 	std::map<std::string, std::string> _zombieUnitByArmorMale, _zombieUnitByArmorFemale, _zombieUnitByType;
 	std::string _zombieUnit, _spawnUnit;
 	int _spawnUnitFaction;
+	int _psiTargetMatrix;
 	bool _LOSRequired, _underwaterOnly, _landOnly, _psiReqiured, _manaRequired;
 	int _meleePower, _specialType, _vaporColor, _vaporDensity, _vaporProbability;
 	std::vector<int> _customItemPreviewIndex;
@@ -380,13 +383,13 @@ public:
 	float getPowerRangeThresholdRaw() const { return _powerRangeThreshold; }
 	/// Gets amount of psi accuracy dropped for range in voxels.
 	float getPsiAccuracyRangeReduction(float range) const;
-	/// Get multiplier of accuracy form unit statistics
+	/// Get multiplier of accuracy from unit statistics
 	int getAccuracyMultiplier(const BattleUnit *unit) const;
 	const RuleStatBonus *getAccuracyMultiplierRaw() const { return &_accuracyMulti; }
-	/// Get multiplier of melee hit chance form unit statistics
+	/// Get multiplier of melee hit chance from unit statistics
 	int getMeleeMultiplier(const BattleUnit *unit) const;
 	const RuleStatBonus *getMeleeMultiplierRaw() const { return &_meleeMulti; }
-	/// Get multiplier of throwing form unit statistics
+	/// Get multiplier of throwing from unit statistics
 	int getThrowMultiplier(const BattleUnit *unit) const;
 	const RuleStatBonus *getThrowMultiplierRaw() const { return &_throwMulti; }
 	/// Get multiplier of close quarters combat from unit statistics
@@ -633,6 +636,9 @@ public:
 	const std::string &getSpawnUnit() const;
 	/// Gets which faction the spawned unit should have.
 	int getSpawnUnitFaction() const;
+	/// Checks the psiamp's allowed targets. Not used in AI. Mind control of the same faction is hardcoded disabled.
+	bool isPsiTargetAllowed(UnitFaction targetFaction) const;
+	int getPsiTargetMatrixRaw() const { return _psiTargetMatrix; }
 	/// Check if LOS is required to use this item (only applies to psionic type items)
 	bool isLOSRequired() const;
 	/// Is this item restricted to underwater use?
