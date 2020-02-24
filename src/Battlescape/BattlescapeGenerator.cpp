@@ -192,7 +192,7 @@ void BattlescapeGenerator::setUfoDamagePercentage(int ufoDamagePercentage)
 }
 
 /**
- * Set new weapon deploy for aliens that override weapon deploy data form mission type/ufo.
+ * Set new weapon deploy for aliens that overrides weapon deploy data from mission type/ufo.
  * @param alienCustomDeploy
  */
 void BattlescapeGenerator::setAlienCustomDeploy(const AlienDeployment* alienCustomDeploy, const AlienDeployment* alienCustomMission)
@@ -499,6 +499,7 @@ void BattlescapeGenerator::nextStage()
 			if (!(*j)->isOut())
 			{
 				++soldiersTotal;
+				(*j)->resetTurnsSinceStunned();
 				(*j)->setTurnsSinceSpotted(255);
 				(*j)->setTurnsLeftSpottedForSnipers(0);
 				if (!selectedFirstSoldier && (*j)->getGeoscapeSoldier())
@@ -813,7 +814,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 						_base->getStorageItems()->addItem(ammo->getType(), ammoPerVehicle);
 					}
 				}
-				else if (item->getVehicleUnit()->getArmor()->getSize() > 1)
+				else if (item->getVehicleUnit()->getArmor()->getSize() > 1 || Mod::EXTENDED_HWP_LOAD_ORDER == false)
 				{
 					// 2x2 HWPs first
 					BattleUnit *unit = addXCOMVehicle(*i);
@@ -904,7 +905,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 	}
 
 	// add remaining 1x1 craft vehicles
-	if (!_baseInventory)
+	if (!_baseInventory && Mod::EXTENDED_HWP_LOAD_ORDER)
 	{
 		if (_craft != 0)
 		{

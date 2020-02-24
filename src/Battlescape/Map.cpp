@@ -274,7 +274,7 @@ void Map::draw()
 		}
 	}
 
-	if ((_save->getSelectedUnit() && _save->getSelectedUnit()->getVisible()) || _unitDying || _save->getSelectedUnit() == 0 || _save->getDebugMode() || _projectileInFOV || _explosionInFOV)
+	if ((_save->getSelectedUnit() && _save->getSelectedUnit()->getVisible()) || _unitDying || _save->getSide() == FACTION_PLAYER || _save->getDebugMode() || _projectileInFOV || _explosionInFOV)
 	{
 		drawTerrain(this);
 	}
@@ -614,7 +614,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
 	else
 	{
 		shade = getMixedTileShade(currTile, offsets.TerrainLevelOffset, unitFromBelow);
-		if (!moving && unitTile->getObstacle(4))
+		if (_showObstacles && unitTile->getObstacle(4))
 		{
 			shade = getShadePulseForFrame(shade, _animFrame);
 		}

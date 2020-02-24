@@ -328,6 +328,7 @@ public:
 	static int UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
 	static bool EXTENDED_ITEM_RELOAD_COST;
 	static bool EXTENDED_RUNNING_COST;
+	static bool EXTENDED_HWP_LOAD_ORDER;
 
 	// reset all the statics in all classes to default values
 	static void resetGlobalStatics();
@@ -504,7 +505,7 @@ public:
 	/// Gets first turn when AI can use grenades.
 	int getAIUseDelayGrenade() const  {return _aiUseDelayGrenade;}
 	/// Gets first turn when AI can use martial arts.
-	int getAIUseDelayMelee() const    {return _aiUseDelayMelee;}
+	int getAIUseDelayMelee() const {return _aiUseDelayMelee;}
 	/// Gets first turn when AI can use psionic abilities.
 	int getAIUseDelayPsionic() const  {return _aiUseDelayPsionic;}
 	/// Gets how much AI intelligence should be used to determine firing mode for sniping.

@@ -64,7 +64,7 @@ namespace OpenXcom
 BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 	_faction(FACTION_PLAYER), _originalFaction(FACTION_PLAYER), _killedBy(FACTION_PLAYER), _id(0), _tile(0),
 	_lastPos(Position()), _direction(0), _toDirection(0), _directionTurret(0), _toDirectionTurret(0),
-	_verticalDirection(0), _status(STATUS_STANDING), _justRevivedByNewTurn(false), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0), _fallPhase(0), _kneeled(false), _floating(false),
+	_verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0), _fallPhase(0), _kneeled(false), _floating(false),
 	_dontReselect(false), _fire(0), _currentAIState(0), _visible(false),
 	_exp{ }, _expTmp{ },
 	_motionPoints(0), _scannedTurn(-1), _kills(0), _hitByFire(false), _hitByAnything(false), _alreadyExploded(false), _fireMaxHit(0), _smokeMaxHit(0), _moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
@@ -394,7 +394,7 @@ void BattleUnit::prepareUnitResponseSounds(const Mod *mod)
 BattleUnit::BattleUnit(const Mod *mod, Unit *unit, UnitFaction faction, int id, const RuleEnviroEffects* enviro, Armor *armor, StatAdjustment *adjustment, int depth) :
 	_faction(faction), _originalFaction(faction), _killedBy(faction), _id(id),
 	_tile(0), _lastPos(Position()), _direction(0), _toDirection(0), _directionTurret(0),
-	_toDirectionTurret(0), _verticalDirection(0), _status(STATUS_STANDING), _justRevivedByNewTurn(false), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0),
+	_toDirectionTurret(0), _verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0),
 	_fallPhase(0), _kneeled(false), _floating(false), _dontReselect(false), _fire(0), _currentAIState(0),
 	_visible(false), _exp{ }, _expTmp{ },
 	_motionPoints(0), _scannedTurn(-1), _kills(0), _hitByFire(false), _hitByAnything(false), _alreadyExploded(false), _fireMaxHit(0), _smokeMaxHit(0),
@@ -588,6 +588,7 @@ void BattleUnit::load(const YAML::Node &node, const ScriptGlobal *shared)
 	_visible = node["visible"].as<bool>(_visible);
 	_turnsSinceSpotted = node["turnsSinceSpotted"].as<int>(_turnsSinceSpotted);
 	_turnsLeftSpottedForSnipers = node["turnsLeftSpottedForSnipers"].as<int>(_turnsLeftSpottedForSnipers);
+	_turnsSinceStunned = node["turnsSinceStunned"].as<int>(_turnsSinceStunned);
 	_killedBy = (UnitFaction)node["killedBy"].as<int>(_killedBy);
 	_moraleRestored = node["moraleRestored"].as<int>(_moraleRestored);
 	_rankInt = node["rankInt"].as<int>(_rankInt);
@@ -664,6 +665,7 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	node["visible"] = _visible;
 	node["turnsSinceSpotted"] = _turnsSinceSpotted;
 	node["turnsLeftSpottedForSnipers"] = _turnsLeftSpottedForSnipers;
+	node["turnsSinceStunned"] = _turnsSinceStunned;
 	node["rankInt"] = _rankInt;
 	node["moraleRestored"] = _moraleRestored;
 	if (getAIModule())
@@ -1641,6 +1643,7 @@ void BattleUnit::startFalling()
 {
 	_status = STATUS_COLLAPSING;
 	_fallPhase = 0;
+	_turnsSinceStunned = 0;
 }
 
 /**
@@ -2286,6 +2289,11 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
 	_dontReselect = false;
 	_motionPoints = 0;
 
+	if (!isOut())
+	{
+		incTurnsSinceStunned();
+	}
+
 	// don't give it back its TUs or anything this round
 	// because it's no longer a unit of the team getting TUs back
 	if (_faction != _originalFaction)
@@ -2300,7 +2308,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
 	}
 	else
 	{
-		recoverTimeUnits();
+		updateUnitStats(true, false);
 	}
 
 	// transition between stages, don't do damage or panic
@@ -2324,12 +2332,12 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
  */
 void BattleUnit::updateUnitStats(bool tuAndEnergy, bool rest)
 {
+	// snapshot of current stats
+	int TURecovery = 0;
+	int ENRecovery = 0;
+
 	if (tuAndEnergy)
 	{
-		// snapshot of current stats
-		int TURecovery = 0;
-		int ENRecovery = 0;
-
 		// apply soldier bonuses
 		if (_geoscapeSoldier)
 		{
@@ -2340,9 +2348,7 @@ void BattleUnit::updateUnitStats(bool tuAndEnergy, bool rest)
 			}
 		}
 
-		// update stats
-		prepareTimeUnits(_armor->getTimeRecovery(this, TURecovery));
-		prepareEnergy(_armor->getEnergyRecovery(this, ENRecovery));
+		//unit update will be after other stat calucalted and updated
 	}
 
 	if (rest)
@@ -2370,6 +2376,13 @@ void BattleUnit::updateUnitStats(bool tuAndEnergy, bool rest)
 		prepareMana(_armor->getManaRecovery(this, MNRecovery));
 		prepareMorale(_armor->getMoraleRecovery(this, MRRecovery));
 		prepareStun(_armor->getStunRegeneration(this, STRecovery));
+	}
+
+	if (tuAndEnergy)
+	{
+		// update stats
+		prepareTimeUnits(_armor->getTimeRecovery(this, TURecovery));
+		prepareEnergy(_armor->getEnergyRecovery(this, ENRecovery));
 	}
 }
 
@@ -3105,7 +3118,7 @@ bool BattleUnit::reloadAmmo()
 		// we have a non-melee weapon with no ammo and 15 or more TUs - we might need to look for ammo then
 		BattleItem *ammo = 0;
 		auto ruleWeapon = weapon->getRules();
-		auto tuCost = getTimeUnits();
+		auto tuCost = getTimeUnits() + 1;
 		auto slotAmmo = 0;
 
 		for (BattleItem* bi : *getInventory())
@@ -3115,7 +3128,7 @@ bool BattleUnit::reloadAmmo()
 			{
 				int tuTemp = (Mod::EXTENDED_ITEM_RELOAD_COST && bi->getSlot()->getType() != INV_HAND) ? bi->getSlot()->getCost(weapon->getSlot()) : 0;
 				tuTemp += ruleWeapon->getTULoad(slot);
-				if (tuTemp <= tuCost)
+				if (tuTemp < tuCost)
 				{
 					tuCost = tuTemp;
 					ammo = bi;
@@ -3871,6 +3884,7 @@ void BattleUnit::instaKill()
 {
 	_health = 0;
 	_status = STATUS_DEAD;
+	_turnsSinceStunned = 0;
 }
 
 /**
@@ -4266,7 +4280,7 @@ BattleItem *BattleUnit::getUtilityWeapon(BattleType type)
 }
 
 /**
- * Set fire damage form environment.
+ * Set fire damage from environment.
  * @param damage
  */
 void BattleUnit::setEnviFire(int damage)
@@ -4275,7 +4289,7 @@ void BattleUnit::setEnviFire(int damage)
 }
 
 /**
- * Set smoke damage form environment.
+ * Set smoke damage from environment.
  * @param damage
  */
 void BattleUnit::setEnviSmoke(int damage)
@@ -4284,7 +4298,7 @@ void BattleUnit::setEnviSmoke(int damage)
 }
 
 /**
- * Calculate smoke and fire damage form environment.
+ * Calculate smoke and fire damage from environment.
  */
 void BattleUnit::calculateEnviDamage(Mod *mod, SavedBattleGame *save)
 {
@@ -4979,12 +4993,12 @@ void setBaseStatRangeScript(BattleUnit *bu, int val)
 		(bu->*StatCurr) = Clamp(val, Min, Max);
 	}
 }
-	
+
 void getVisibleUnitsCountScript(BattleUnit *bu, int &ret)
 {
 	if (bu)
 	{
-		
+
 		auto visibleUnits = bu->getVisibleUnits();
 		ret = visibleUnits->size();
 	}
@@ -5149,7 +5163,7 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 
 	bu.add<&getVisibleUnitsCountScript>("getVisibleUnitsCount");
 	bu.add<&getFactionScript>("getFaction");
-	
+
 	bu.add<&BattleUnit::getFatalWounds>("getFatalwoundsTotal");
 	bu.add<&BattleUnit::getFatalWound>("getFatalwounds");
 	bu.add<&BattleUnit::getOverKillDamage>("getOverKillDamage");
@@ -5168,7 +5182,10 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.add<&getPositionYScript>("getPosition.getY");
 	bu.add<&getPositionZScript>("getPosition.getZ");
 	bu.add<&BattleUnit::getTurnsSinceSpotted>("getTurnsSinceSpotted");
-	
+	bu.add<&setBaseStatRangeScript<&BattleUnit::_turnsSinceSpotted, 0, 255>>("setTurnsSinceSpotted");
+	bu.addField<&BattleUnit::_turnsSinceStunned>("getTurnsSinceStunned");
+	bu.add<&setBaseStatRangeScript<&BattleUnit::_turnsSinceStunned, 0, 255>>("setTurnsSinceStunned");
+
 	bu.addScriptValue<&BattleUnit::_scriptValues>();
 	bu.addDebugDisplay<&debugDisplayScript>();
 
@@ -5404,9 +5421,9 @@ ModScript::TryPsiAttackUnitParser::TryPsiAttackUnitParser(ScriptGlobal* shared, 
 	"battle_action" }
 {
 	BindBase b { this };
-	
+
 	b.addCustomPtr<const Mod>("rules", mod);
-	
+
 	battleActionImpl(b);
 }
 

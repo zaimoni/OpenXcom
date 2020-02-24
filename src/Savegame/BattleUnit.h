@@ -50,7 +50,7 @@ struct BattleUnitStatistics;
 struct StatAdjustment;
 
 enum UnitStatus {STATUS_STANDING, STATUS_WALKING, STATUS_FLYING, STATUS_TURNING, STATUS_AIMING, STATUS_COLLAPSING, STATUS_DEAD, STATUS_UNCONSCIOUS, STATUS_PANICKING, STATUS_BERSERK, STATUS_IGNORE_ME};
-enum UnitFaction {FACTION_PLAYER, FACTION_HOSTILE, FACTION_NEUTRAL};
+enum UnitFaction : int {FACTION_PLAYER, FACTION_HOSTILE, FACTION_NEUTRAL};
 enum UnitBodyPart {BODYPART_HEAD, BODYPART_TORSO, BODYPART_RIGHTARM, BODYPART_LEFTARM, BODYPART_RIGHTLEG, BODYPART_LEFTLEG, BODYPART_MAX};
 enum UnitBodyPartEx {BODYPART_LEGS = BODYPART_MAX, BODYPART_COLLAPSING, BODYPART_ITEM_RIGHTHAND, BODYPART_ITEM_LEFTHAND, BODYPART_ITEM_FLOOR, BODYPART_ITEM_INVENTORY, BODYPART_LARGE_TORSO, BODYPART_LARGE_PROPULSION = BODYPART_LARGE_TORSO + 4, BODYPART_LARGE_TURRET = BODYPART_LARGE_PROPULSION + 4};
 
@@ -87,7 +87,6 @@ private:
 	int _verticalDirection;
 	Position _destination;
 	UnitStatus _status;
-	bool _justRevivedByNewTurn;
 	bool _wantsToSurrender, _isSurrendering;
 	int _walkPhase, _fallPhase;
 	std::vector<BattleUnit *> _visibleUnits, _unitsSpottedThisTurn;
@@ -114,7 +113,7 @@ private:
 	int _moraleRestored;
 	int _coverReserve;
 	BattleUnit *_charging;
-	int _turnsSinceSpotted, _turnsLeftSpottedForSnipers;
+	int _turnsSinceSpotted, _turnsLeftSpottedForSnipers, _turnsSinceStunned = 255;
 	std::string _spawnUnit;
 	std::string _activeHand;
 	BattleUnitStatistics* _statistics;
@@ -223,10 +222,6 @@ public:
 	int getVerticalDirection() const;
 	/// Gets the unit's status.
 	UnitStatus getStatus() const;
-	/// Has the unit just been revived by a new turn?
-	bool isJustRevivedByNewTurn() const { return _justRevivedByNewTurn; }
-	/// Sets if the unit has just been revived by a new turn.
-	void setJustRevivedByNewTurn(bool justRevivedByNewTurn) { _justRevivedByNewTurn = justRevivedByNewTurn; }
 	/// Does the unit want to surrender?
 	bool wantsToSurrender() const;
 	/// Is the unit surrendering this turn?
@@ -557,6 +552,7 @@ public:
 	BattleUnit *getCharging();
 	/// Get the carried weight in strength units.
 	int getCarriedWeight(BattleItem *draggingItem = 0) const;
+
 	/// Set how many turns this unit will be exposed for.
 	void setTurnsSinceSpotted (int turns);
 	/// Set how many turns this unit will be exposed for.
@@ -565,6 +561,13 @@ public:
 	void setTurnsLeftSpottedForSnipers (int turns);
 	/// Get how many turns left snipers know about this target.
 	int  getTurnsLeftSpottedForSnipers() const;
+	/// Reset how many turns passed since stunned last time.
+	void resetTurnsSinceStunned() { _turnsSinceStunned = 255; }
+	/// Increse how many turns passed since stunned last time.
+	void incTurnsSinceStunned() { _turnsSinceStunned = std::max(255, _turnsSinceStunned + 1); }
+	/// Return how many truns passed since stunned last time.
+	int getTurnsSinceStunned() const { return _turnsSinceStunned; }
+
 	/// Get this unit's original faction
 	UnitFaction getOriginalFaction() const;
 	/// Get alien/HWP unit.
@@ -602,11 +605,11 @@ public:
 	bool getFloorAbove() const;
 	/// Get any utility weapon we may be carrying, or a built in one.
 	BattleItem *getUtilityWeapon(BattleType type);
-	/// Set fire damage form environment.
+	/// Set fire damage from environment.
 	void setEnviFire(int damage);
-	/// Set smoke damage form environment.
+	/// Set smoke damage from environment.
 	void setEnviSmoke(int damage);
-	/// Calculate smoke and fire damage form environment.
+	/// Calculate smoke and fire damage from environment.
 	void calculateEnviDamage(Mod *mod, SavedBattleGame *save);
 	/// Use this function to check the unit's movement type.
 	MovementType getMovementType() const;
