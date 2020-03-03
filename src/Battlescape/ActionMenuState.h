@@ -31,15 +31,19 @@ class ActionMenuItem;
  */
 class ActionMenuState : public State
 {
-private:
+protected:
 	BattleAction *_action;
 	ActionMenuItem *_actionMenu[6];
 	/// Adds a new menu item for an action.
 	void addItem(BattleActionType ba, const std::string &name, int *id, SDL_Keycode key);
+	/// Acts on the action instance that has been chosen and set.
+	void handleAction();
 #ifdef __MOBILE__
 	InteractiveSurface *_outside;
 #endif
 public:
+	/// Default constructor, used by SkillMenuState.
+	ActionMenuState(BattleAction *action);
 	/// Creates the Action Menu state.
 	ActionMenuState(BattleAction *action, int x, int y);
 	/// Cleans up the Action Menu state.
@@ -49,7 +53,7 @@ public:
 	/// Handler for right-clicking anything.
 	void handle(Action *action) override;
 	/// Handler for clicking a action menu item.
-	void btnActionMenuItemClick(Action *action);
+	virtual void btnActionMenuItemClick(Action *action);
 	/// Update the resolution settings, we just resized the window.
 	void resize(int &dX, int &dY) override;
 #ifdef __MOBILE__
