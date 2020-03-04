@@ -11,6 +11,8 @@
 		5B0DC8AF22F300E70092A513 /* RuleEnviroEffects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */; };
 		5B0DC8B222F300FA0092A513 /* RuleArcScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */; };
 		5B5F680D2391B9A100D2D740 /* OptionsFoldersState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */; };
+		5B76D7A8241000F800F6D311 /* SkillMenuState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B76D7A7241000F800F6D311 /* SkillMenuState.cpp */; };
+		5B76D7AB2410011D00F6D311 /* RuleSkill.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B76D7AA2410011D00F6D311 /* RuleSkill.cpp */; };
 		5B7C32DB23BA240A0070A6D9 /* HitLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B7C32CF23BA240A0070A6D9 /* HitLog.cpp */; };
 		5B7C32DE23BA241C0070A6D9 /* TurnDiaryState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B7C32DC23BA241B0070A6D9 /* TurnDiaryState.cpp */; };
 		5B8049FD226F8E12004E517F /* GlobalManufactureState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B8049F1226F8E12004E517F /* GlobalManufactureState.cpp */; };
@@ -505,6 +507,10 @@
 		5B0DC8B122F300FA0092A513 /* RuleArcScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleArcScript.h; sourceTree = "<group>"; };
 		5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsFoldersState.cpp; sourceTree = "<group>"; };
 		5B5F680C2391B9A000D2D740 /* OptionsFoldersState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OptionsFoldersState.h; sourceTree = "<group>"; };
+		5B76D79C241000F700F6D311 /* SkillMenuState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SkillMenuState.h; sourceTree = "<group>"; };
+		5B76D7A7241000F800F6D311 /* SkillMenuState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SkillMenuState.cpp; sourceTree = "<group>"; };
+		5B76D7A92410011D00F6D311 /* RuleSkill.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleSkill.h; sourceTree = "<group>"; };
+		5B76D7AA2410011D00F6D311 /* RuleSkill.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleSkill.cpp; sourceTree = "<group>"; };
 		5B7C32CF23BA240A0070A6D9 /* HitLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HitLog.cpp; sourceTree = "<group>"; };
 		5B7C32DA23BA240A0070A6D9 /* HitLog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HitLog.h; sourceTree = "<group>"; };
 		5B7C32DC23BA241B0070A6D9 /* TurnDiaryState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TurnDiaryState.cpp; sourceTree = "<group>"; };
@@ -1792,6 +1798,8 @@
 		B283430A201F6D9C00BAEC9D /* Battlescape */ = {
 			isa = PBXGroup;
 			children = (
+				5B76D7A7241000F800F6D311 /* SkillMenuState.cpp */,
+				5B76D79C241000F700F6D311 /* SkillMenuState.h */,
 				5B7C32DC23BA241B0070A6D9 /* TurnDiaryState.cpp */,
 				5B7C32DD23BA241B0070A6D9 /* TurnDiaryState.h */,
 				5BD0BAED2242E02A008E6DFB /* AlienInventory.cpp */,
@@ -2121,6 +2129,8 @@
 		B283440E201F6D9D00BAEC9D /* Mod */ = {
 			isa = PBXGroup;
 			children = (
+				5B76D7AA2410011D00F6D311 /* RuleSkill.cpp */,
+				5B76D7A92410011D00F6D311 /* RuleSkill.h */,
 				5B95F03D233D1B960018C910 /* RuleSoldierBonus.cpp */,
 				5B95F03C233D1B960018C910 /* RuleSoldierBonus.h */,
 				5B95F038233D1B770018C910 /* RuleEvent.cpp */,
@@ -2427,6 +2437,7 @@
 				5B95F035233D1ADB0018C910 /* GeoscapeEventState.cpp in Sources */,
 				B2834531201F6D9E00BAEC9D /* ArticleStateTFTDFacility.cpp in Sources */,
 				B283450C201F6D9E00BAEC9D /* InfoboxOKState.cpp in Sources */,
+				5B76D7AB2410011D00F6D311 /* RuleSkill.cpp in Sources */,
 				B28344B7201F6D9E00BAEC9D /* hq2x.cpp in Sources */,
 				B283453A201F6D9E00BAEC9D /* ArticleStateItem.cpp in Sources */,
 				B2834487201F6D9D00BAEC9D /* DogfightState.cpp in Sources */,
@@ -2512,6 +2523,7 @@
 				B283448F201F6D9D00BAEC9D /* BaseNameState.cpp in Sources */,
 				B2834548201F6D9E00BAEC9D /* TextButton.cpp in Sources */,
 				B2834595201F6D9E00BAEC9D /* MCDPatch.cpp in Sources */,
+				5B76D7A8241000F800F6D311 /* SkillMenuState.cpp in Sources */,
 				B283453E201F6D9E00BAEC9D /* Text.cpp in Sources */,
 				B2834566201F6D9E00BAEC9D /* SelectStartFacilityState.cpp in Sources */,
 				5BD0BADB2242E009008E6DFB /* SoldierSortUtil.cpp in Sources */,
