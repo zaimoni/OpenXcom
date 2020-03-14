@@ -10,6 +10,7 @@
 		5B0DC8AC22F300BD0092A513 /* md5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AB22F300BC0092A513 /* md5.cpp */; };
 		5B0DC8AF22F300E70092A513 /* RuleEnviroEffects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */; };
 		5B0DC8B222F300FA0092A513 /* RuleArcScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */; };
+		5B189CEC241CBF2C00E11BE9 /* RuleManufactureShortcut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B189CEB241CBF2C00E11BE9 /* RuleManufactureShortcut.cpp */; };
 		5B5F680D2391B9A100D2D740 /* OptionsFoldersState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */; };
 		5B76D7A8241000F800F6D311 /* SkillMenuState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B76D7A7241000F800F6D311 /* SkillMenuState.cpp */; };
 		5B76D7AB2410011D00F6D311 /* RuleSkill.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5B76D7AA2410011D00F6D311 /* RuleSkill.cpp */; };
@@ -505,6 +506,8 @@
 		5B0DC8AE22F300E70092A513 /* RuleEnviroEffects.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleEnviroEffects.cpp; sourceTree = "<group>"; };
 		5B0DC8B022F300FA0092A513 /* RuleArcScript.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleArcScript.cpp; sourceTree = "<group>"; };
 		5B0DC8B122F300FA0092A513 /* RuleArcScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleArcScript.h; sourceTree = "<group>"; };
+		5B189CE0241CBF2C00E11BE9 /* RuleManufactureShortcut.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleManufactureShortcut.h; sourceTree = "<group>"; };
+		5B189CEB241CBF2C00E11BE9 /* RuleManufactureShortcut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RuleManufactureShortcut.cpp; sourceTree = "<group>"; };
 		5B5F68012391B9A000D2D740 /* OptionsFoldersState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsFoldersState.cpp; sourceTree = "<group>"; };
 		5B5F680C2391B9A000D2D740 /* OptionsFoldersState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OptionsFoldersState.h; sourceTree = "<group>"; };
 		5B76D79C241000F700F6D311 /* SkillMenuState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SkillMenuState.h; sourceTree = "<group>"; };
@@ -2129,6 +2132,8 @@
 		B283440E201F6D9D00BAEC9D /* Mod */ = {
 			isa = PBXGroup;
 			children = (
+				5B189CEB241CBF2C00E11BE9 /* RuleManufactureShortcut.cpp */,
+				5B189CE0241CBF2C00E11BE9 /* RuleManufactureShortcut.h */,
 				5B76D7AA2410011D00F6D311 /* RuleSkill.cpp */,
 				5B76D7A92410011D00F6D311 /* RuleSkill.h */,
 				5B95F03D233D1B960018C910 /* RuleSoldierBonus.cpp */,
@@ -2633,6 +2638,7 @@
 				B28344FD201F6D9E00BAEC9D /* CommendationState.cpp in Sources */,
 				B283447D201F6D9D00BAEC9D /* OptionsControlsState.cpp in Sources */,
 				5B0DC8AF22F300E70092A513 /* RuleEnviroEffects.cpp in Sources */,
+				5B189CEC241CBF2C00E11BE9 /* RuleManufactureShortcut.cpp in Sources */,
 				B2834529201F6D9E00BAEC9D /* Ufopaedia.cpp in Sources */,
 				B283458F201F6D9E00BAEC9D /* RuleUfo.cpp in Sources */,
 				B283459A201F6D9E00BAEC9D /* RuleSoldier.cpp in Sources */,
