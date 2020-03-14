@@ -309,6 +309,7 @@ set ( mod_src
   Mod/RuleItem.cpp
   Mod/RuleItemCategory.cpp
   Mod/RuleManufacture.cpp
+  Mod/RuleManufactureShortcut.cpp
   Mod/RuleMissionScript.cpp
   Mod/RuleMusic.cpp
   Mod/RuleRegion.cpp
