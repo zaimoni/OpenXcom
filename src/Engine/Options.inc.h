@@ -47,7 +47,7 @@ keyBattleCenterEnemy1, keyBattleCenterEnemy2, keyBattleCenterEnemy3, keyBattleCe
 keyBattleCenterEnemy9, keyBattleCenterEnemy10, keyBattleVoxelView, keyBattleZeroTUs, keyInvCreateTemplate, keyInvApplyTemplate, keyInvClear, keyInvAutoEquip;
 
 // Extra hotkeys (OXCE)
-OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch, keyGeoGlobalProduction,
+OPT SDL_Keycode keyGeoDailyPilotExperience, keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch, keyGeoGlobalProduction,
 	keyGraphsZoomIn, keyGraphsZoomOut,
 	keyToggleQuickSearch,
 	keyCraftLoadoutSave, keyCraftLoadoutLoad,
@@ -58,9 +58,13 @@ OPT SDL_Keycode keyGeoUfoTracker, keyGeoTechTreeViewer, keyGeoGlobalResearch, ke
 	keyRemoveArmorFromCraft, keyRemoveArmorFromAllCrafts,
 	keyRemoveSoldiersFromTraining,
 	keyInventoryArmor, keyInventoryAvatar, keyInventorySave, keyInventoryLoad,
+	keyInvSavePersonalEquipment, keyInvLoadPersonalEquipment, keyInvShowPersonalEquipment,
 	keyBattleUseSpecial,
 	keyBattleActionItem1, keyBattleActionItem2, keyBattleActionItem3, keyBattleActionItem4, keyBattleActionItem5,
 	keyNightVisionToggle, keyNightVisionHold, keySelectMusicTrack;
+OPT SDL_Keycode keyBasescapeBuildNewBase, keyBasescapeBaseInfo, keyBasescapeSoldiers, keyBasescapeCrafts,
+	keyBasescapeFacilities, keyBasescapeResearch, keyBasescapeManufacture, keyBasescapeTransfer,
+	keyBasescapePurchase, keyBasescapeSell;
 
 // Extra options (OXCE)
 OPT int oxceStartUpTextMode;
@@ -73,8 +77,17 @@ OPT int oxceNightVisionColor;
 OPT bool oxceAutoSell;
 OPT int oxceAutoNightVisionThreshold;
 OPT bool oxceRememberDisabledCraftWeapons;
+
+// Extra options (OXCE), accessible only via options.cfg
 OPT bool oxceHighlightNewTopicsHidden;
 OPT bool oxceEnableUnitResponseSounds;
+OPT bool oxceEnableSlackingIndicator;
+
+OPT int oxceManufactureScrollSpeed;
+OPT int oxceManufactureScrollSpeedWithCtrl;
+OPT int oxceResearchScrollSpeed;
+OPT int oxceResearchScrollSpeedWithCtrl;
+
 OPT std::string password;
 
 // System-specific options

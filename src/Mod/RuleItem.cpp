@@ -35,6 +35,90 @@
 namespace OpenXcom
 {
 
+namespace
+{
+
+/**
+ * Update `attacker` from `weapon_item`.
+ */
+void UpdateAttacker(BattleActionAttack& attack)
+{
+	if (attack.weapon_item && !attack.attacker)
+	{
+		const auto battleType = attack.weapon_item->getRules()->getBattleType();
+		if (battleType == BT_PROXIMITYGRENADE || battleType == BT_GRENADE)
+		{
+			auto owner = attack.weapon_item->getPreviousOwner();
+			if (owner)
+			{
+				attack.attacker = owner;
+			}
+		}
+	}
+}
+
+/**
+ * Update `damage_item` from `weapon_item`.
+ */
+void UpdateAmmo(BattleActionAttack& attack)
+{
+	if (attack.weapon_item && !attack.damage_item)
+	{
+		const auto battleType = attack.weapon_item->getRules()->getBattleType();
+		if (battleType == BT_PROXIMITYGRENADE || battleType == BT_GRENADE || battleType == BT_PSIAMP)
+		{
+			attack.damage_item = attack.weapon_item;
+		}
+		else
+		{
+			attack.damage_item = attack.weapon_item->getAmmoForAction(attack.type);
+		}
+	}
+}
+
+}
+
+/**
+ * Generate ActionAttack before shooting, this means we can get the ammo from the weapon.
+ * @param action BattleCost of attack.
+ * @return All attack action data.
+ */
+BattleActionAttack BattleActionAttack::GetBeforeShoot(const BattleActionCost &action)
+{
+	return GetBeforeShoot(action.type, action.actor, action.weapon, action.skillRules);
+}
+
+BattleActionAttack BattleActionAttack::GetBeforeShoot(BattleActionType type, BattleUnit *unit, BattleItem *wepon, const RuleSkill *skill)
+{
+	auto attack = BattleActionAttack{ type, unit, wepon };
+	UpdateAttacker(attack);
+	UpdateAmmo(attack);
+	attack.skill_rules = skill;
+	return attack;
+}
+
+/**
+ * Generate ActionAttack after shooting, the ammo can be already spent and unloaded from the weapon.
+ * @param action BattleCost of attack.
+ * @param ammo Ammo used to shoot/attack.
+ * @return All attack action data.
+ */
+BattleActionAttack BattleActionAttack::GetAferShoot(const BattleActionCost &action, BattleItem *ammo)
+{
+	return GetAferShoot(action.type, action.actor, action.weapon, ammo, action.skillRules);
+}
+
+BattleActionAttack BattleActionAttack::GetAferShoot(BattleActionType type, BattleUnit *unit, BattleItem *wepon, BattleItem *ammo, const RuleSkill *skill)
+{
+	auto attack = BattleActionAttack{ type, unit, wepon };
+	UpdateAttacker(attack);
+	attack.damage_item = ammo;
+	attack.skill_rules = skill;
+	return attack;
+}
+
+
+
 const float VexelsToTiles = 0.0625f;
 const float TilesToVexels = 16.0f;
 
@@ -220,6 +304,7 @@ void RuleItem::loadConfAction(RuleItemAction& a, const YAML::Node& node, const s
 	if (const YAML::Node& conf = node["conf" + name])
 	{
 		a.shots = conf["shots"].as<int>(a.shots);
+		a.followProjectiles = conf["followProjectiles"].as<bool>(a.followProjectiles);
 		a.name = conf["name"].as<std::string>(a.name);
 		loadAmmoSlotChecked(a.ammoSlot, conf["ammoSlot"], _name);
 		a.arcing = conf["arcing"].as<bool>(a.arcing);
@@ -272,9 +357,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	//requires
 	_requiresName = node["requires"].as< std::vector<std::string> >(_requiresName);
 	_requiresBuyName = node["requiresBuy"].as< std::vector<std::string> >(_requiresBuyName);
-	_requiresBuyBaseFunc = node["requiresBuyBaseFunc"].as< std::vector<std::string> >(_requiresBuyBaseFunc);
-
-	std::sort(_requiresBuyBaseFunc.begin(), _requiresBuyBaseFunc.end());
+	mod->loadBaseFunction(_type, _requiresBuyBaseFunc, node["requiresBuyBaseFunc"]);
 
 
 	_recoveryDividers = node["recoveryDividers"].as< std::map<std::string, int> >(_recoveryDividers);
@@ -484,10 +567,10 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_waypoints = node["waypoints"].as<int>(_waypoints);
 	_fixedWeapon = node["fixedWeapon"].as<bool>(_fixedWeapon);
 	_fixedWeaponShow = node["fixedWeaponShow"].as<bool>(_fixedWeaponShow);
-	_defaultInventorySlot = node["defaultInventorySlot"].as<std::string>(_defaultInventorySlot);
+	_defaultInventorySlotName = node["defaultInventorySlot"].as<std::string>(_defaultInventorySlotName);
 	_defaultInvSlotX = node["defaultInvSlotX"].as<int>(_defaultInvSlotX);
 	_defaultInvSlotY = node["defaultInvSlotY"].as<int>(_defaultInvSlotY);
-	_supportedInventorySections = node["supportedInventorySections"].as< std::vector<std::string> >(_supportedInventorySections);
+	_supportedInventorySectionsNames = node["supportedInventorySections"].as< std::vector<std::string> >(_supportedInventorySectionsNames);
 	_isConsumable = node["isConsumable"].as<bool>(_isConsumable);
 	_isFireExtinguisher = node["isFireExtinguisher"].as<bool>(_isFireExtinguisher);
 	_isExplodingInHands = node["isExplodingInHands"].as<bool>(_isExplodingInHands);
@@ -624,10 +707,22 @@ void RuleItem::afterLoad(const Mod* mod)
 		}
 	}
 
+	_defaultInventorySlot = mod->getInventory(_defaultInventorySlotName, true);
+	if (_supportedInventorySectionsNames.size())
+	{
+		_supportedInventorySections.reserve(_supportedInventorySectionsNames.size());
+		for (auto& n : _supportedInventorySectionsNames)
+		{
+			_supportedInventorySections.push_back(mod->getInventory(n, true));
+		}
+		Collections::sortVector(_supportedInventorySections);
+	}
+
 	//remove not needed data
 	Collections::removeAll(_requiresName);
 	Collections::removeAll(_requiresBuyName);
 	Collections::removeAll(_recoveryTransformationsName);
+	Collections::removeAll(_supportedInventorySectionsNames);
 }
 
 /**
@@ -676,15 +771,6 @@ const std::vector<const RuleResearch *> &RuleItem::getRequirements() const
 const std::vector<const RuleResearch *> &RuleItem::getBuyRequirements() const
 {
 	return _requiresBuy;
-}
-
-/**
- * Gets the base functions required to buy item.
- * @return The sorted list of base functions ID
- */
-const std::vector<std::string> &RuleItem::getRequiresBuyBaseFunc() const
-{
-	return _requiresBuyBaseFunc;
 }
 
 /**
@@ -865,40 +951,22 @@ bool RuleItem::getFixedShow() const
 }
 
 /**
- * Gets the name of the default inventory slot.
- * @return String Id.
- */
-const std::string &RuleItem::getDefaultInventorySlot() const
-{
-	return _defaultInventorySlot;
-}
-
-/**
- * Gets the item's supported inventory sections.
- * @return The list of inventory sections.
- */
-const std::vector<std::string> &RuleItem::getSupportedInventorySections() const
-{
-	return _supportedInventorySections;
-}
-
-/**
  * Checks if the item can be placed into a given inventory section.
- * @param inventorySection Name of the inventory section (RuleInventory->id).
+ * @param inventorySection Inventory section rule.
  * @return True if the item can be placed into a given inventory section.
  */
-bool RuleItem::canBePlacedIntoInventorySection(const std::string &inventorySection) const
+bool RuleItem::canBePlacedIntoInventorySection(const RuleInventory* inventorySection) const
 {
 	// backwards-compatibility
 	if (_supportedInventorySections.empty())
 		return true;
 
 	// always possible to put an item on the ground
-	if (inventorySection == "STR_GROUND")
+	if (inventorySection->getType() == INV_GROUND)
 		return true;
 
 	// otherwise check allowed inventory sections
-	return std::find(_supportedInventorySections.begin(), _supportedInventorySections.end(), inventorySection) != _supportedInventorySections.end();
+	return Collections::sortVectorHave(_supportedInventorySections, inventorySection);
 }
 
 /**
@@ -1681,13 +1749,13 @@ const std::string &RuleItem::getMediKitCustomBackground() const
  * @param stats unit stats
  * @return The radius.
  */
-int RuleItem::getExplosionRadius(const BattleUnit *unit) const
+int RuleItem::getExplosionRadius(BattleActionAttack::ReadOnly attack) const
 {
 	int radius = 0;
 
 	if (_damageType.FixRadius == -1)
 	{
-		radius = getPowerBonus(unit) * _damageType.RadiusEffectiveness;
+		radius = getPowerBonus(attack) * _damageType.RadiusEffectiveness;
 		if (_damageType.FireBlastCalc)
 		{
 			radius += 1;
@@ -2237,9 +2305,9 @@ bool RuleItem::isManaRequired() const
  * @param stats unit stats
  * @return bonus power.
  */
-int RuleItem::getPowerBonus(const BattleUnit *unit) const
+int RuleItem::getPowerBonus(BattleActionAttack::ReadOnly attack) const
 {
-	return _damageBonus.getBonus(unit, _power);
+	return _damageBonus.getBonus(attack, _power);
 }
 
 /**
@@ -2247,9 +2315,9 @@ int RuleItem::getPowerBonus(const BattleUnit *unit) const
  * @param stats unit stats
  * @return bonus power.
  */
-int RuleItem::getMeleeBonus(const BattleUnit *unit) const
+int RuleItem::getMeleeBonus(BattleActionAttack::ReadOnly attack) const
 {
-	return _meleeBonus.getBonus(unit, _meleePower);
+	return _meleeBonus.getBonus(attack, _meleePower);
 }
 
 /**
@@ -2257,9 +2325,9 @@ int RuleItem::getMeleeBonus(const BattleUnit *unit) const
  * @param stats unit stats
  * @return multiplier.
  */
-int RuleItem::getMeleeMultiplier(const BattleUnit *unit) const
+int RuleItem::getMeleeMultiplier(BattleActionAttack::ReadOnly attack) const
 {
-	return _meleeMulti.getBonus(unit);
+	return _meleeMulti.getBonus(attack);
 }
 
 /**
@@ -2267,9 +2335,9 @@ int RuleItem::getMeleeMultiplier(const BattleUnit *unit) const
  * @param stats unit stats
  * @return multiplier.
  */
-int RuleItem::getAccuracyMultiplier(const BattleUnit *unit) const
+int RuleItem::getAccuracyMultiplier(BattleActionAttack::ReadOnly attack) const
 {
-	return _accuracyMulti.getBonus(unit);
+	return _accuracyMulti.getBonus(attack);
 }
 
 /**
@@ -2277,9 +2345,9 @@ int RuleItem::getAccuracyMultiplier(const BattleUnit *unit) const
  * @param stats unit stats
  * @return multiplier.
  */
-int RuleItem::getThrowMultiplier(const BattleUnit *unit) const
+int RuleItem::getThrowMultiplier(BattleActionAttack::ReadOnly attack) const
 {
-	return _throwMulti.getBonus(unit);
+	return _throwMulti.getBonus(attack);
 }
 
 /**
@@ -2287,9 +2355,9 @@ int RuleItem::getThrowMultiplier(const BattleUnit *unit) const
  * @param stats unit stats
  * @return multiplier.
  */
-int RuleItem::getCloseQuartersMultiplier(const BattleUnit *unit) const
+int RuleItem::getCloseQuartersMultiplier(BattleActionAttack::ReadOnly attack) const
 {
-	return _closeQuartersMulti.getBonus(unit);
+	return _closeQuartersMulti.getBonus(attack);
 }
 
 /**
@@ -2385,12 +2453,26 @@ int RuleItem::getSprayWaypoints() const
 	return _sprayWaypoints;
 }
 
+
 ////////////////////////////////////////////////////////////
 //					Script binding
 ////////////////////////////////////////////////////////////
 
 namespace
 {
+
+void getTypeScript(const RuleItem* r, ScriptText& txt)
+{
+	if (r)
+	{
+		txt = { r->getType().c_str() };
+		return;
+	}
+	else
+	{
+		txt = ScriptText::empty;
+	}
+}
 
 void getBattleTypeScript(const RuleItem *ri, int &ret)
 {
@@ -2400,6 +2482,19 @@ void getBattleTypeScript(const RuleItem *ri, int &ret)
 		return;
 	}
 	ret = (int)BT_NONE;
+}
+
+void isSingleTargetScript(const RuleItem* r, int &ret)
+{
+	if (r)
+	{
+		ret = (r->getDamageType()->FixRadius == 0);
+		return;
+	}
+	else
+	{
+		ret = 0;
+	}
 }
 
 std::string debugDisplayScript(const RuleItem* ri)
@@ -2445,6 +2540,8 @@ void RuleItem::ScriptRegister(ScriptParserBase* parser)
 	ri.addCustomConst("BT_FLARE", BT_FLARE);
 	ri.addCustomConst("BT_CORPSE", BT_CORPSE);
 
+	ri.add<&getTypeScript>("getType");
+
 	ri.add<&RuleItem::getAccuracyAimed>("getAccuracyAimed");
 	ri.add<&RuleItem::getAccuracyAuto>("getAccuracyAuto");
 	ri.add<&RuleItem::getAccuracyMelee>("getAccuracyMelee");
@@ -2461,8 +2558,9 @@ void RuleItem::ScriptRegister(ScriptParserBase* parser)
 	ri.add<&RuleItem::isWaterOnly>("isWaterOnly");
 	ri.add<&RuleItem::isTwoHanded>("isTwoHanded");
 	ri.add<&RuleItem::isBlockingBothHands>("isBlockingBothHands");
+	ri.add<&isSingleTargetScript>("isSingleTarget");
 
-	ri.addScriptValue<&RuleItem::_scriptValues>(false);
+	ri.addScriptValue<BindBase::OnlyGet, &RuleItem::_scriptValues>();
 	ri.addDebugDisplay<&debugDisplayScript>();
 }
 

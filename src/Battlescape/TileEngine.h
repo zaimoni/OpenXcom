@@ -33,8 +33,12 @@ class BattleItem;
 class Tile;
 class RuleSkill;
 struct BattleAction;
-struct GraphSubset;
+template<typename Tag, typename DataType> struct AreaSubset;
 
+/**
+ * Define some part of map
+ */
+using MapSubset = AreaSubset<Position, Sint16>;
 enum BattleActionType : Uint8;
 enum LightLayers : Uint8;
 
@@ -106,7 +110,7 @@ private:
 	BattleUnit* _movingUnit = nullptr;
 
 	/// Add light source.
-	void addLight(GraphSubset gs, Position center, int power, LightLayers layer);
+	void addLight(MapSubset gs, Position center, int power, LightLayers layer);
 	/// Calculate blockage amount.
 	int blockage(Tile *tile, const TilePart part, ItemDamageType type, int direction = -1, bool checkingFromOrigin = false);
 	/// Get max distance that fire light can reach.
@@ -128,13 +132,13 @@ private:
 	inline bool inEventVisibilitySector(const Position &toCheck) const;
 
 	/// Calculates sun shading of the whole map.
-	void calculateSunShading(GraphSubset gs);
+	void calculateSunShading(MapSubset gs);
 	/// Recalculates lighting of the battlescape for terrain.
-	void calculateTerrainBackground(GraphSubset gs);
+	void calculateTerrainBackground(MapSubset gs);
 	/// Recalculates lighting of the battlescape for terrain.
-	void calculateTerrainItems(GraphSubset gs);
+	void calculateTerrainItems(MapSubset gs);
 	/// Recalculates lighting of the battlescape for units.
-	void calculateUnitLighting(GraphSubset gs);
+	void calculateUnitLighting(MapSubset gs);
 
 	/// Checks validity of a snap shot to this position.
 	ReactionScore determineReactionType(BattleUnit *unit, BattleUnit *target);
@@ -196,7 +200,7 @@ public:
 	/// Checks the vertical blockage of a tile.
 	int verticalBlockage(Tile *startTile, Tile *endTile, ItemDamageType type, bool skipObject = false);
 	/// Calculate success rate of psi attack.
-	int psiAttackCalculate(BattleActionType type, const BattleUnit *attacker, const BattleUnit *victim, const BattleItem *weapon);
+	int psiAttackCalculate(BattleActionAttack::ReadOnly attack, const BattleUnit *victim);
 	/// Attempts a panic or mind control action.
 	bool psiAttack(BattleActionAttack attack, BattleUnit *victim);
 	/// Attempts a melee attack action.

@@ -71,6 +71,9 @@ private:
 	int _power, _range, _score, _reload, _breakOffTime, _missionScore;
 	int _hunterKillerPercentage, _huntMode, _huntSpeed, _huntBehavior;
 	int _missilePower;
+	bool _unmanned;
+	int _splashdownSurvivalChance;
+	int _fakeWaterLandingChance;
 	int _fireSound;
 	int _alertSound;
 	int _huntAlertSound;
@@ -145,9 +148,16 @@ public:
 	int getHuntBehavior() const;
 	/// Gets the missile power (of a UFO that represents one or more missiles).
 	int getMissilePower() const { return _missilePower; }
+	/// Is this an unmanned UFO (drone, missile, etc.)?
+	bool isUnmanned() const { return _unmanned; }
+	/// Gets the chance of surviving a splashdown on fake water.
+	int getSplashdownSurvivalChance() const { return _splashdownSurvivalChance; }
+	/// Gets the chance for deciding to land on fake water texture.
+	int getFakeWaterLandingChance() const { return _fakeWaterLandingChance; }
 	/// Gets script.
 	template<typename Script>
 	const typename Script::Container &getScript() const { return _ufoScripts.get<Script>(); }
+	/// Get all script values.
 	const ScriptValues<RuleUfo> &getScriptValuesRaw() const { return _scriptValues; }
 };
 

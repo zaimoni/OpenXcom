@@ -64,7 +64,7 @@ PrimeGrenadeState::PrimeGrenadeState(BattleAction *action, bool inInventoryView,
 	// Set palette
 	if (inInventoryView)
 	{
-		setPalette("PAL_BATTLESCAPE");
+		setStandardPalette("PAL_BATTLESCAPE");
 	}
 	else
 	{

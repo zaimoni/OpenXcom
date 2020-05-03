@@ -164,19 +164,14 @@ void ResearchState::onOpenTechTreeViewer(Action *)
 void ResearchState::lstResearchMousePress(Action *action)
 {
 	/*
-	if (_lstResearch->isScrollbarVisible())
-		return;
-
-	// 175 +/- 20
-	if (action->getAbsoluteXMouse() < (_txtAllocated->getX() - 5) ||
-		action->getAbsoluteXMouse() > (_txtAllocated->getX() + 35))
+	if (!_lstResearch->isInsideNoScrollArea(action->getAbsoluteXMouse()))
 	{
 		return;
 	}
 
-	int change = 1;
+	int change = Options::oxceResearchScrollSpeed;
 	if (SDL_GetModState() & KMOD_CTRL)
-		change = 10;
+		change = Options::oxceResearchScrollSpeedWithCtrl;
 
 	if (action->getDetails()->button.button == SDL_BUTTON_WHEELUP)
 	{
@@ -187,7 +182,7 @@ void ResearchState::lstResearchMousePress(Action *action)
 			ResearchProject *selectedProject = _base->getResearch()[_lstResearch->getSelectedRow()];
 			selectedProject->setAssigned(selectedProject->getAssigned() + change);
 			_base->setScientists(_base->getScientists() - change);
-			fillProjectList();
+			fillProjectList(_lstResearch->getScroll());
 		}
 	}
 	else if (action->getDetails()->button.button == SDL_BUTTON_WHEELDOWN)
@@ -198,7 +193,7 @@ void ResearchState::lstResearchMousePress(Action *action)
 		{
 			selectedProject->setAssigned(selectedProject->getAssigned() - change);
 			_base->setScientists(_base->getScientists() + change);
-			fillProjectList();
+			fillProjectList(_lstResearch->getScroll());
 		}
 	}
 	*/
@@ -219,13 +214,23 @@ void ResearchState::onCurrentGlobalResearchClick(Action *)
 void ResearchState::init()
 {
 	State::init();
-	fillProjectList();
+	fillProjectList(0);
+
+	if (Options::oxceResearchScrollSpeed > 0 || Options::oxceResearchScrollSpeedWithCtrl > 0)
+	{
+		// 175 +/- 20
+		_lstResearch->setNoScrollArea(_txtAllocated->getX() - 5, _txtAllocated->getX() + 35);
+	}
+	else
+	{
+		_lstResearch->setNoScrollArea(0, 0);
+	}
 }
 
 /**
  * Fills the list with Base ResearchProjects. Also updates count of available lab space and available/allocated scientists.
  */
-void ResearchState::fillProjectList()
+void ResearchState::fillProjectList(size_t scrl)
 {
 	const std::vector<ResearchProject *> & baseProjects(_base->getResearch());
 	_lstResearch->clearList();
@@ -241,6 +246,9 @@ void ResearchState::fillProjectList()
 	_txtAvailable->setText(tr("STR_SCIENTISTS_AVAILABLE").arg(_base->getAvailableScientists()));
 	_txtAllocated->setText(tr("STR_SCIENTISTS_ALLOCATED").arg(_base->getAllocatedScientists()));
 	_txtSpace->setText(tr("STR_LABORATORY_SPACE_AVAILABLE").arg(_base->getFreeLaboratories()));
+
+	if (scrl)
+		_lstResearch->scrollTo(scrl);
 }
 
 }

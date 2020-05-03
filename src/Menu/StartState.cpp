@@ -94,7 +94,7 @@ StartState::StartState() : _anim(0)
 	bnw[2].g = 185;
 	bnw[2].b = 185;
 
-	setPalette(bnw, 0, 3);
+	setStatePalette(bnw, 0, 3);
 
 	add(_text);
 	add(_cursor);

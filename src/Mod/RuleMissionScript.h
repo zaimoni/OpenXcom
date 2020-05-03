@@ -38,6 +38,7 @@ private:
 	std::vector<std::pair<size_t, WeightedOptions*> > _regionWeights, _missionWeights, _raceWeights;
 	std::map<std::string, bool> _researchTriggers;
 	std::map<std::string, bool> _itemTriggers;
+	std::map<std::string, bool> _facilityTriggers;
 	bool _useTable, _siteType;
 public:
 	/// Creates a new mission script.
@@ -47,7 +48,7 @@ public:
 	/// Loads a mission script from yaml.
 	void load(const YAML::Node& node);
 	/// Gets the name of the script command.
-	std::string getType() const;
+	const std::string& getType() const;
 	/// Gets the name of the variable to use for keeping track of... things.
 	std::string getVarName() const;
 	/// Gets a complete and unique list of all the mission types contained within this command.
@@ -94,6 +95,8 @@ public:
 	const std::map<std::string, bool> &getResearchTriggers() const;
 	/// Gets the item triggers that may apply to this command.
 	const std::map<std::string, bool> &getItemTriggers() const;
+	/// Gets the facility triggers that may apply to this command.
+	const std::map<std::string, bool> &getFacilityTriggers() const;
 	/// Delete this mission from the table? stops it coming up again in random selection, but NOT if a missionScript calls it by name.
 	bool getUseTable() const;
 	/// Sets this script to a terror mission type command or not.

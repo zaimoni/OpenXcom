@@ -171,14 +171,14 @@ bool calculateLineHitHelper(const Position& origin, const Position& target, Func
  * @param func Call back.
  */
 template<typename TileFunc>
-void iterateTiles(SavedBattleGame* save, GraphSubset gs, TileFunc func)
+void iterateTiles(SavedBattleGame* save, MapSubset gs, TileFunc func)
 {
 	const auto totalSizeX = save->getMapSizeX();
 	const auto totalSizeY = save->getMapSizeY();
 	const auto totalSizeZ = save->getMapSizeZ();
 
-	gs = GraphSubset::intersection(gs, GraphSubset{ totalSizeX, totalSizeY });
-	if (gs.size_x() && gs.size_y())
+	gs = MapSubset::intersection(gs, MapSubset{ totalSizeX, totalSizeY });
+	if (gs)
 	{
 		for (int z = 0; z < totalSizeZ; ++z)
 		{
@@ -201,12 +201,12 @@ void iterateTiles(SavedBattleGame* save, GraphSubset gs, TileFunc func)
  * @param radius Radius of area.
  * @return Subset of map.
  */
-GraphSubset mapArea(Position position, int radius)
+MapSubset mapArea(Position position, int radius)
 {
 	return { std::make_pair(position.x - radius, position.x + radius + 1), std::make_pair(position.y - radius, position.y + radius + 1) };
 }
 
-GraphSubset mapAreaExpand(GraphSubset gs, int radius)
+MapSubset mapAreaExpand(MapSubset gs, int radius)
 {
 	return { std::make_pair(gs.beg_x - radius, gs.end_x + radius), std::make_pair(gs.beg_y - radius, gs.end_y + radius) };
 }
@@ -228,7 +228,7 @@ constexpr Position TileEngine::voxelTileCenter;
  * @param maxDarknessToSeeUnits Threshold of darkness for LoS calculation.
  */
 TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
-	_save(save), _voxelData(mod->getVoxelData()), _inventorySlotGround(mod->getInventory("STR_GROUND", true)), _personalLighting(true), _cacheTile(0), _cacheTileBelow(0),
+	_save(save), _voxelData(mod->getVoxelData()), _inventorySlotGround(mod->getInventoryGround()), _personalLighting(true), _cacheTile(0), _cacheTileBelow(0),
 	_maxViewDistance(mod->getMaxViewDistance()), _maxViewDistanceSq(_maxViewDistance * _maxViewDistance),
 	_maxVoxelViewDistance(_maxViewDistance * 16), _maxDarknessToSeeUnits(mod->getMaxDarknessToSeeUnits()),
 	_maxStaticLightDistance(mod->getMaxStaticLightDistance()), _maxDynamicLightDistance(mod->getMaxDynamicLightDistance()),
@@ -249,7 +249,7 @@ TileEngine::~TileEngine()
 /**
   * Calculates sun shading for the whole terrain.
   */
-void TileEngine::calculateSunShading(GraphSubset gs)
+void TileEngine::calculateSunShading(MapSubset gs)
 {
 	int power = 15 - _save->getGlobalShade();
 
@@ -284,7 +284,7 @@ void TileEngine::calculateSunShading(GraphSubset gs)
 /**
   * Recalculates lighting for the terrain: fire.
   */
-void TileEngine::calculateTerrainBackground(GraphSubset gs)
+void TileEngine::calculateTerrainBackground(MapSubset gs)
 {
 	const int fireLightPower = 15; // amount of light a fire generates
 
@@ -331,7 +331,7 @@ void TileEngine::calculateTerrainBackground(GraphSubset gs)
 /**
   * Recalculates lighting for the terrain: objects,items.
   */
-void TileEngine::calculateTerrainItems(GraphSubset gs)
+void TileEngine::calculateTerrainItems(MapSubset gs)
 {
 	// add lighting of terrain
 	iterateTiles(
@@ -361,7 +361,7 @@ void TileEngine::calculateTerrainItems(GraphSubset gs)
 /**
   * Recalculates lighting for the units.
   */
-void TileEngine::calculateUnitLighting(GraphSubset gs)
+void TileEngine::calculateUnitLighting(MapSubset gs)
 {
 	const int fireLightPower = 15; // amount of light a fire generates
 
@@ -410,7 +410,7 @@ void TileEngine::calculateUnitLighting(GraphSubset gs)
 
 void TileEngine::calculateLighting(LightLayers layer, Position position, int eventRadius, bool terrianChanged)
 {
-	auto gsDynamic = GraphSubset{ _save->getMapSizeX(), _save->getMapSizeY() };
+	auto gsDynamic = MapSubset{ _save->getMapSizeX(), _save->getMapSizeY() };
 	auto gsStatic = gsDynamic;
 
 	if (position != invalid)
@@ -512,8 +512,8 @@ void TileEngine::calculateLighting(LightLayers layer, Position position, int eve
  * @param power Power.
  * @param layer Light is separated in 4 layers: Ambient, Tiles, Items, Units.
  */
-void TileEngine::addLight(GraphSubset gs, Position center, int power, LightLayers layer)
-{
+void TileEngine::addLight(MapSubset gs, Position center, int power, LightLayers layer)
+	{
 	if (power <= 0)
 	{
 		return;
@@ -535,7 +535,7 @@ void TileEngine::addLight(GraphSubset gs, Position center, int power, LightLayer
 
 	iterateTiles(
 		_save,
-		GraphSubset::intersection(gs, mapArea(center, power - 1)),
+		MapSubset::intersection(gs, mapArea(center, power - 1)),
 		[&](Tile* tile)
 		{
 			const auto target = tile->getPosition();
@@ -1834,7 +1834,7 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit* 
 						if (rs.attackType == BA_SNAPSHOT && Options::battleUFOExtenderAccuracy)
 						{
 							BattleItem *weapon = rs.weapon;
-							int accuracy = (*i)->getFiringAccuracy(rs.attackType, weapon, _save->getBattleGame()->getMod());
+							int accuracy = BattleUnit::getFiringAccuracy(BattleActionAttack::GetBeforeShoot(rs.attackType, rs.unit, weapon), _save->getBattleGame()->getMod());
 							int distance = Position::distance2d((*i)->getPosition(), unit->getPosition());
 							int upperLimit = weapon->getRules()->getSnapRange();
 							int lowerLimit = weapon->getRules()->getMinRange();
@@ -2000,7 +2000,7 @@ bool TileEngine::tryReaction(ReactionScore *reaction, BattleUnit *target, const 
 				unit->setAIModule(ai);
 			}
 
-			int radius = ammo->getRules()->getExplosionRadius(unit);
+			int radius = ammo->getRules()->getExplosionRadius({ action.type, action.actor, action.weapon, ammo });
 			if (action.type != BA_HIT && radius > 0 &&
 				ai->explosiveEfficacy(action.target, unit, radius, -1) == 0)
 			{
@@ -3852,27 +3852,35 @@ void TileEngine::togglePersonalLighting()
  * @param weapon Attack item.
  * @return Value greater than zero mean successful attack.
  */
-int TileEngine::psiAttackCalculate(BattleActionType type, const BattleUnit *attacker, const BattleUnit *victim, const BattleItem *weapon)
+int TileEngine::psiAttackCalculate(BattleActionAttack::ReadOnly attack, const BattleUnit *victim)
 {
 	if (!victim)
 		return 0;
 
-	float attackStrength = attacker->getPsiAccuracy(type, weapon);
-	float defenseStrength = 30.0f + victim->getArmor()->getPsiDefence(victim);
+	auto type = attack.type;
+	auto attacker = attack.attacker;
+	auto weapon = attack.weapon_item;
+
+	int attackStrength = BattleUnit::getPsiAccuracy(attack);
+	int defenseStrength = 30 + victim->getArmor()->getPsiDefence(victim);
 
 	auto dis = Position::distance(attacker->getPosition().toVoxel(), victim->getPosition().toVoxel());
-	attackStrength -= weapon->getRules()->getPsiAccuracyRangeReduction(dis);
-	attackStrength += RNG::generate(0,55);
 
-	int psiAttackResult = attackStrength - defenseStrength;
-	
-	ModScript::TryPsiAttackUnit::Output args { psiAttackResult };
-	ModScript::TryPsiAttackUnit::Worker work { weapon, attacker, victim, (int)attackStrength, (int)defenseStrength, type, };
-	
-	work.execute(victim->getArmor()->getScript<ModScript::TryPsiAttackUnit>(), args);
-	
-	psiAttackResult = args.getFirst();
-	
+	auto rng = RNG::globalRandomState().subSequence();
+	int psiAttackResult = 0;
+
+	psiAttackResult = ModScript::scriptFunc1<ModScript::TryPsiAttackItem>(
+		weapon->getRules(),
+		psiAttackResult,
+		weapon, attacker, victim, attackStrength, defenseStrength, type, &rng, (int)dis, (int)weapon->getRules()->getPsiAccuracyRangeReduction(dis)
+	);
+
+	psiAttackResult =  ModScript::scriptFunc1<ModScript::TryPsiAttackUnit>(
+		victim->getArmor(),
+		psiAttackResult,
+		weapon, attacker, victim, attackStrength, defenseStrength, type
+	);
+
 	return psiAttackResult;
 }
 
@@ -3888,7 +3896,7 @@ bool TileEngine::psiAttack(BattleActionAttack attack, BattleUnit *victim)
 
 	attack.attacker->addPsiSkillExp();
 	if (Options::allowPsiStrengthImprovement) victim->addPsiStrengthExp();
-	if (psiAttackCalculate(attack.type, attack.attacker, victim, attack.weapon_item) > 0)
+	if (psiAttackCalculate(attack, victim) > 0)
 	{
 		attack.attacker->addPsiSkillExp();
 		attack.attacker->addPsiSkillExp();
@@ -3956,14 +3964,9 @@ bool TileEngine::psiAttack(BattleActionAttack attack, BattleUnit *victim)
  */
 bool TileEngine::meleeAttack(BattleActionAttack attack, BattleUnit *victim)
 {
-	int hitChance;
-	if (attack.type == BA_CQB)
+	int hitChance = BattleUnit::getFiringAccuracy(attack, _save->getBattleGame()->getMod());
+	if (attack.type != BA_CQB)
 	{
-		hitChance = attack.attacker->getFiringAccuracy(BA_CQB, attack.weapon_item, _save->getBattleGame()->getMod());
-	}
-	else
-	{
-		hitChance = attack.attacker->getFiringAccuracy(BA_HIT, attack.weapon_item, _save->getBattleGame()->getMod());
 		// hit log - new melee attack
 		_save->appendToHitLog(HITLOG_NEW_SHOT, attack.attacker->getFaction());
 	}
@@ -4288,40 +4291,40 @@ void TileEngine::itemDrop(Tile *t, BattleItem *item, bool updateLight)
  */
 void TileEngine::itemDropInventory(Tile *t, BattleUnit *unit, bool unprimeItems, bool deleteFixedItems)
 {
-	auto &inv = *unit->getInventory();
-	for (std::vector<BattleItem*>::iterator j = inv.begin(); j != inv.end();)
-	{
-		if (!(*j)->getRules()->isFixed())
+	Collections::removeIf(*unit->getInventory(),
+		[&](BattleItem* i)
 		{
-			(*j)->setOwner(nullptr);
-			if (unprimeItems)
+			if (!i->getRules()->isFixed())
 			{
-				(*j)->setFuseTimer(-1); // unprime explosives before dropping them
-			}
-			t->addItem(*j, _inventorySlotGround);
-			if ((*j)->getUnit() && (*j)->getUnit()->getStatus() == STATUS_UNCONSCIOUS)
-			{
-				(*j)->getUnit()->setPosition(t->getPosition());
-			}
-			j = inv.erase(j);
-		}
-		else
-		{
-			if (deleteFixedItems)
-			{
-				// delete fixed items completely (e.g. when changing armor)
-				(*j)->setOwner(nullptr);
-				BattleItem *item = *j;
-				j = inv.erase(j);
-				_save->removeItem(item);
+				i->setOwner(nullptr);
+				if (unprimeItems)
+				{
+					i->setFuseTimer(-1); // unprime explosives before dropping them
+				}
+				t->addItem(i, _inventorySlotGround);
+				if (i->getUnit() && i->getUnit()->getStatus() == STATUS_UNCONSCIOUS)
+				{
+					i->getUnit()->setPosition(t->getPosition());
+				}
+				return true;
 			}
 			else
 			{
-				// do nothing, fixed items cannot be moved (individually by the player)!
-				++j;
+				if (deleteFixedItems)
+				{
+					// delete fixed items completely (e.g. when changing armor)
+					i->setOwner(nullptr);
+					_save->removeItem(i);
+					return true;
+				}
+				else
+				{
+					// do nothing, fixed items cannot be moved (individually by the player)!
+					return false;
+				}
 			}
 		}
-	}
+	);
 }
 
 /**

@@ -106,7 +106,11 @@ struct ScriptText
 	{
 		return ptr ? ptr : "";
 	}
+
+	const static ScriptText empty;
 };
+
+const inline ScriptText ScriptText::empty = { "" };
 
 
 using ScriptFunc = RetEnum (*)(ScriptWorkerBase&, const Uint8*, ProgPos&);
@@ -153,9 +157,9 @@ enum ArgSpecEnum : ArgEnumBase
 {
 	ArgSpecNone = 0x0,
 	ArgSpecReg = 0x1,
-	ArgSpecVar = 0x3,
+	ArgSpecVar = 0x2 + ArgSpecReg,
 	ArgSpecPtr = 0x4,
-	ArgSpecPtrE = 0xC,
+	ArgSpecPtrE = 0x8 + ArgSpecPtr,
 	ArgSpecSize = 0x10,
 };
 constexpr ArgSpecEnum operator|(ArgSpecEnum a, ArgSpecEnum b)
@@ -1257,7 +1261,7 @@ public:
 		addTypeBase(s, ArgRegisteType<t3>(), info::metaDest);
 	}
 
-	/// Register type in parser.
+	/// Register pointer type in parser.
 	template<typename P>
 	void registerPointerType()
 	{
@@ -1267,7 +1271,7 @@ public:
 			P::ScriptRegister(this);
 		}
 	}
-	/// Register type with name in parser but without any automatic registrations.
+	/// Register pointer type with name in parser but without any automatic registrations.
 	template<typename P>
 	void registerRawPointerType(const std::string& s)
 	{
@@ -1276,12 +1280,21 @@ public:
 			addType<P*>(s);
 		}
 	}
+	/// Register value type with name in parser but without any automatic registrations.
+	template<typename P>
+	void registerRawValueType(const std::string& s)
+	{
+		if (!haveType<P>())
+		{
+			addType<P>(s);
+		}
+	}
 
 	/// Load global data from YAML.
 	virtual void load(const YAML::Node& node);
 
 	/// Show all script informations.
-	void logScriptMetadata(bool haveEvents) const;
+	void logScriptMetadata(bool haveEvents, const std::string& groupName) const;
 
 	/// Get name of script.
 	const std::string& getName() const { return _name; }
@@ -1608,9 +1621,9 @@ public:
 	virtual ~ScriptGlobal();
 
 	/// Store parser.
-	void pushParser(ScriptParserBase* parser);
+	void pushParser(const std::string& groupName, ScriptParserBase* parser);
 	/// Store parser.
-	void pushParser(ScriptParserEventsBase* parser);
+	void pushParser(const std::string& groupName, ScriptParserEventsBase* parser);
 
 	/// Add new const value.
 	void addConst(const std::string& name, ScriptValueData i);
@@ -1662,6 +1675,8 @@ public:
 		}
 	}
 
+	/// Initialize shared globals like types.
+	virtual void initParserGlobals(ScriptParserBase* parser) { }
 	/// Prepare for loading data.
 	virtual void beginLoad();
 	/// Finishing loading data.
@@ -1687,9 +1702,9 @@ protected:
 	/// Get value.
 	int getBase(size_t t) const;
 	/// Load values from yaml file.
-	void loadBase(const YAML::Node &node, const ScriptGlobal* shared, ArgEnum type);
+	void loadBase(const YAML::Node &node, const ScriptGlobal* shared, ArgEnum type, const std::string& nodeName);
 	/// Save values to yaml file.
-	void saveBase(YAML::Node &node, const ScriptGlobal* shared, ArgEnum type) const;
+	void saveBase(YAML::Node &node, const ScriptGlobal* shared, ArgEnum type, const std::string& nodeName) const;
 };
 
 /**
@@ -1700,16 +1715,17 @@ class ScriptValues : ScriptValuesBase
 {
 public:
 	using Tag = ScriptTag<T, I>;
+	using Parent = T;
 
 	/// Load values from yaml file.
-	void load(const YAML::Node &node, const ScriptGlobal* shared)
+	void load(const YAML::Node &node, const ScriptGlobal* shared, const std::string& nodeName = "tags")
 	{
-		loadBase(node, shared, Tag::type());
+		loadBase(node, shared, Tag::type(), nodeName);
 	}
 	/// Save values to yaml file.
-	void save(YAML::Node &node, const ScriptGlobal* shared) const
+	void save(YAML::Node &node, const ScriptGlobal* shared, const std::string& nodeName = "tags") const
 	{
-		saveBase(node, shared, Tag::type());
+		saveBase(node, shared, Tag::type(), nodeName);
 	}
 
 	/// Get value.
@@ -1793,10 +1809,11 @@ public:
 	using Container = ScriptGroupContainer<ScriptGroup, Parsers...>;
 
 	/// Constructor.
-	ScriptGroup(ScriptGlobal* shared, Master* master) : Parsers{ shared, master, }...
+	ScriptGroup(ScriptGlobal* shared, Master* master, const std::string& groupName) : Parsers{ shared, master, }...
 	{
 		(void)master;
-		(shared->pushParser(&get<Parsers>()), ...);
+		(void)groupName;
+		(shared->pushParser(groupName, &get<Parsers>()), ...);
 	}
 
 	/// Get parser by type.

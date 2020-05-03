@@ -1146,7 +1146,7 @@ void BattlescapeState::mapClick(Action *action)
 
 	if (_save->getTile(pos) != 0) // don't allow to click into void
 	{
-		if ((action->getDetails()->button.button == SDL_BUTTON_RIGHT || (action->getDetails()->button.button == SDL_BUTTON_LEFT && (SDL_GetModState() & KMOD_ALT) != 0)) && playableUnitSelected())
+		if ((action->getDetails()->button.button == SDL_BUTTON_RIGHT) && playableUnitSelected())
 		{
 			_battleGame->secondaryAction(pos);
 		}
@@ -1565,7 +1565,7 @@ void BattlescapeState::btnLeftHandItemClick(Action *action)
 
 		_battleGame->cancelCurrentAction();
 
-		_save->getSelectedUnit()->setActiveHand("STR_LEFT_HAND");
+		_save->getSelectedUnit()->setActiveLeftHand();
 		_map->draw();
 		BattleItem *leftHandItem = _save->getSelectedUnit()->getLeftHandWeapon();
 		if (!leftHandItem)
@@ -1612,7 +1612,7 @@ void BattlescapeState::btnRightHandItemClick(Action *action)
 
 		_battleGame->cancelCurrentAction();
 
-		_save->getSelectedUnit()->setActiveHand("STR_RIGHT_HAND");
+		_save->getSelectedUnit()->setActiveRightHand();
 		_map->draw();
 		BattleItem *rightHandItem = _save->getSelectedUnit()->getRightHandWeapon();
 		if (!rightHandItem)
@@ -2419,7 +2419,11 @@ void BattlescapeState::animate()
 
 	blinkVisibleUnitButtons();
 	blinkHealthBar();
-	drawHandsItems();
+
+	if (!_map->getProjectile())
+	{
+		drawHandsItems();
+	}
 }
 
 /**
@@ -2527,14 +2531,15 @@ std::string BattlescapeState::getMeleeDamagePreview(BattleUnit *actor, BattleIte
 	{
 		int totalDamage = 0;
 		const RuleDamageType *dmgType;
+		auto attack = BattleActionAttack::GetBeforeShoot(BA_HIT, actor, weapon);
 		if (weapon->getRules()->getBattleType() == BT_MELEE)
 		{
-			totalDamage += weapon->getRules()->getPowerBonus(actor);
+			totalDamage += weapon->getRules()->getPowerBonus(attack);
 			dmgType = weapon->getRules()->getDamageType();
 		}
 		else
 		{
-			totalDamage += weapon->getRules()->getMeleeBonus(actor);
+			totalDamage += weapon->getRules()->getMeleeBonus(attack);
 			dmgType = weapon->getRules()->getMeleeType();
 		}
 
@@ -3465,7 +3470,7 @@ void BattlescapeState::txtTooltipInExtra(Action *action, bool leftHand, bool spe
 		BattleItem *weapon;
 		if (leftHand)
 		{
-			weapon = selectedUnit->getItem("STR_LEFT_HAND");
+			weapon = selectedUnit->getLeftHandWeapon();
 		}
 		else if (special)
 		{
@@ -3474,7 +3479,7 @@ void BattlescapeState::txtTooltipInExtra(Action *action, bool leftHand, bool spe
 		}
 		else
 		{
-			weapon = selectedUnit->getItem("STR_RIGHT_HAND");
+			weapon = selectedUnit->getRightHandWeapon();
 		}
 
 		// no weapon selected... do normal tooltip

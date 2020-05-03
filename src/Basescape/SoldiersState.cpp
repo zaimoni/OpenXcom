@@ -146,9 +146,21 @@ SoldiersState::SoldiersState(Base *base) : _base(base), _origSoldierOrder(*_base
 		if (isTrnBtnVisible)
 			_availableOptions.push_back("STR_TRAINING");
 
+		bool refreshDeadSoldierStats = false;
 		for (auto transformationRule : availableTransformations)
 		{
 			_availableOptions.push_back(transformationRule->getName());
+			if (transformationRule->isAllowingDeadSoldiers())
+			{
+				refreshDeadSoldierStats = true;
+			}
+		}
+		if (refreshDeadSoldierStats)
+		{
+			for (auto& deadMan : *_game->getSavedGame()->getDeadSoldiers())
+			{
+				deadMan->prepareStatsWithBonuses(_game->getMod()); // refresh stats for sorting
+			}
 		}
 
 		_cbxScreenActions->setOptions(_availableOptions, true);
@@ -179,6 +191,7 @@ SoldiersState::SoldiersState(Base *base) : _base(base), _origSoldierOrder(*_base
 	PUSH_IN("STR_NAME_UC", nameStat);
 	PUSH_IN("STR_SOLDIER_TYPE", typeStat);
 	PUSH_IN("STR_RANK", rankStat);
+	PUSH_IN("STR_IDLE_DAYS", idleDaysStat);
 	PUSH_IN("STR_MISSIONS2", missionsStat);
 	PUSH_IN("STR_KILLS2", killsStat);
 	PUSH_IN("STR_WOUND_RECOVERY2", woundRecoveryStat);
@@ -380,12 +393,11 @@ void SoldiersState::initList(size_t scrl)
 	}
 	_txtCraft->setX(_txtRank->getX() + 98 - offset);
 
-	float absBonus = _base->getSickBayAbsoluteBonus();
-	float relBonus = _base->getSickBayRelativeBonus();
+	auto recovery = _base->getSumRecoveryPerDay();
 	unsigned int row = 0;
 	for (std::vector<Soldier*>::iterator i = _filteredListOfSoldiers.begin(); i != _filteredListOfSoldiers.end(); ++i)
 	{
-		std::string craftString = (*i)->getCraftString(_game->getLanguage(), absBonus, relBonus);
+		std::string craftString = (*i)->getCraftString(_game->getLanguage(), recovery);
 
 		if (_dynGetter != NULL)
 		{

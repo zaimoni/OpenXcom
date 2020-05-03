@@ -90,14 +90,14 @@ BriefingState::BriefingState(Craft *craft, Base *base, bool infoOnly) : _infoOnl
 	std::string desc = title + "_BRIEFING";
 	if (!deployment) // none defined - should never happen, but better safe than sorry i guess.
 	{
-		setPalette("PAL_GEOSCAPE", 0);
+		setStandardPalette("PAL_GEOSCAPE", 0);
 		_musicId = "GMDEFEND";
 		_window->setBackground(_game->getMod()->getSurface("BACK16.SCR"));
 	}
 	else
 	{
 		BriefingData data = deployment->getBriefingData();
-		setPalette("PAL_GEOSCAPE", data.palette);
+		setStandardPalette("PAL_GEOSCAPE", data.palette);
 		_window->setBackground(_game->getMod()->getSurface(data.background));
 		_txtCraft->setY(56 + data.textOffset);
 		_txtBriefing->setY(72 + data.textOffset);
@@ -230,9 +230,8 @@ void BriefingState::btnOkClick(Action *)
 	if (_infoOnly) return;
 
 	BattlescapeState *bs = new BattlescapeState;
-	int liveAliens = 0, liveSoldiers = 0;
-	bs->getBattleGame()->tallyUnits(liveAliens, liveSoldiers);
-	if (liveAliens > 0)
+	auto tally = bs->getBattleGame()->tallyUnits();
+	if (tally.liveAliens > 0)
 	{
 		_game->pushState(bs);
 		_game->getSavedGame()->getSavedBattle()->setBattleState(bs);

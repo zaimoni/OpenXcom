@@ -86,7 +86,11 @@ namespace OpenXcom
  * @param y Y position in pixels.
  * @param visibleMapHeight Current visible map height.
  */
-Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) : InteractiveSurface(width, height, x, y), _game(game), _arrow(0), _anyIndicator(false), _isAltPressed(false), _selectorX(0), _selectorY(0), _mouseX(0), _mouseY(0), _cursorType(CT_NORMAL), _cursorSize(1), _animFrame(0), _projectile(0), _projectileInFOV(false), _explosionInFOV(false), _launch(false), _visibleMapHeight(visibleMapHeight), _unitDying(false), _smoothingEngaged(false), _flashScreen(false), _bgColor(15), _projectileSet(0), _showObstacles(false)
+Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) : InteractiveSurface(width, height, x, y),
+	_game(game), _arrow(0), _anyIndicator(false), _isAltPressed(false),
+	_selectorX(0), _selectorY(0), _mouseX(0), _mouseY(0), _cursorType(CT_NORMAL), _cursorSize(1), _animFrame(0),
+	_projectile(0), _followProjectile(true), _projectileInFOV(false), _explosionInFOV(false), _launch(false), _visibleMapHeight(visibleMapHeight),
+	_unitDying(false), _smoothingEngaged(false), _flashScreen(false), _bgColor(15), _projectileSet(0), _showObstacles(false)
 {
 	_iconHeight = _game->getMod()->getInterface("battlescape")->getElement("icons")->h;
 	_iconWidth = _game->getMod()->getInterface("battlescape")->getElement("icons")->w;
@@ -683,7 +687,7 @@ void Map::drawTerrain(Surface *surface)
 		// if the projectile is outside the viewport - center it back on it
 		_camera->convertVoxelToScreen(_projectile->getPosition(), &bulletPositionScreen);
 
-		if (_projectileInFOV)
+		if (_projectileInFOV && _followProjectile)
 		{
 			Position newCam = _camera->getMapOffset();
 			if (newCam.z != bulletHighZ) //switch level
@@ -1196,11 +1200,12 @@ void Map::drawTerrain(Surface *surface)
 								BattleAction *action = _save->getBattleGame()->getCurrentAction();
 								const RuleItem *weapon = action->weapon->getRules();
 								std::ostringstream ss;
+								auto attack = BattleActionAttack::GetBeforeShoot(*action);
 								int distance = Position::distance2d(Position(itX, itY, itZ), action->actor->getPosition());
 
 								if (_cursorType == CT_AIM)
 								{
-									int accuracy = action->actor->getFiringAccuracy(action->type, action->weapon, _game->getMod());
+									int accuracy = BattleUnit::getFiringAccuracy(attack, _game->getMod());
 									int upperLimit = 200;
 									int lowerLimit = weapon->getMinRange();
 									switch (action->type)
@@ -1298,6 +1303,7 @@ void Map::drawTerrain(Surface *surface)
 									ss << "%";
 								}
 
+								//TODO: merge this code with `InventoryState::calculateCurrentDamageTooltip` as 90% is same or should be same
 								// display additional damage and psi-effectiveness info
 								if (_isAltPressed)
 								{
@@ -1309,9 +1315,10 @@ void Map::drawTerrain(Surface *surface)
 									}
 									else if (action->weapon->needsAmmoForAction(action->type))
 									{
-										if (action->weapon->getAmmoForAction(action->type) != 0)
+										auto ammo = attack.damage_item;
+										if (ammo != nullptr)
 										{
-											rule = action->weapon->getAmmoForAction(action->type)->getRules();
+											rule = ammo->getRules();
 										}
 										else
 										{
@@ -1355,7 +1362,7 @@ void Map::drawTerrain(Surface *surface)
 									{
 										if (rule->getBattleType() == BT_PSIAMP)
 										{
-											float attackStrength = action->actor->getPsiAccuracy(action->type, action->weapon);
+											float attackStrength = BattleUnit::getPsiAccuracy(attack);
 											float defenseStrength = 30.0f; // indicator ignores: +victim->getArmor()->getPsiDefence(victim);
 
 											float dis = Position::distance(action->actor->getPosition().toVoxel(), Position(itX, itY, itZ).toVoxel());
@@ -1373,7 +1380,7 @@ void Map::drawTerrain(Surface *surface)
 										if (rule->getBattleType() != BT_PSIAMP || action->type == BA_USE)
 										{
 											int totalDamage = 0;
-											totalDamage += rule->getPowerBonus(action->actor);
+											totalDamage += rule->getPowerBonus(attack);
 											totalDamage -= rule->getPowerRangeReduction(distance * 16);
 											if (totalDamage < 0) totalDamage = 0;
 											if (_cursorType != CT_WAYPOINT)

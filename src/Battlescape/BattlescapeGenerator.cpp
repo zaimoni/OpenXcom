@@ -82,7 +82,7 @@ BattlescapeGenerator::BattlescapeGenerator(Game *game) :
 	{
 		_allowAutoLoadout = false;
 	}
-	_inventorySlotGround = _game->getMod()->getInventory("STR_GROUND", true);
+	_inventorySlotGround = _game->getMod()->getInventoryGround();
 }
 
 /**
@@ -245,12 +245,17 @@ void BattlescapeGenerator::nextStage()
 			}
 			for (std::vector<BattleItem*>::iterator corpseItem = unitsToDrop.begin(); corpseItem != unitsToDrop.end(); ++corpseItem)
 			{
-				(*corpseItem)->moveToOwner(0);
-				(*unit)->getTile()->addItem(*corpseItem, _inventorySlotGround);
-				if ((*corpseItem)->getUnit() && (*corpseItem)->getUnit()->getStatus() == STATUS_UNCONSCIOUS)
-				{
-					(*corpseItem)->getUnit()->setPosition((*unit)->getTile()->getPosition());
-				}
+				_save->getTileEngine()->itemDrop((*unit)->getTile(), (*corpseItem), false);
+			}
+		}
+
+		// scripts (or some bugs in the game) could make aliens or soldiers that have "unresolved" stun or death state.
+		if (!(*unit)->isOut() && (*unit)->isOutThresholdExceed())
+		{
+			(*unit)->instaFalling();
+			if ((*unit)->getTile())
+			{
+				_save->getTileEngine()->itemDropInventory((*unit)->getTile(), (*unit));
 			}
 		}
 	}
@@ -548,7 +553,7 @@ void BattlescapeGenerator::nextStage()
 	{
 		_save->selectNextPlayerUnit();
 	}
-	RuleInventory *ground = _game->getMod()->getInventory("STR_GROUND", true);
+	RuleInventory *ground = _inventorySlotGround;
 
 	for (std::vector<BattleItem*>::iterator i = takeToNextStage.begin(); i != takeToNextStage.end(); ++i)
 	{
@@ -767,7 +772,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 {
 	_save->applyEnviroEffects(enviro);
 
-	RuleInventory *ground = _game->getMod()->getInventory("STR_GROUND", true);
+	RuleInventory *ground = _inventorySlotGround;
 
 	if (_craft != 0)
 		_base = _craft->getBase();
@@ -1535,7 +1540,19 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
 
 				auto inventorySlot = _game->getMod()->getInventory(layoutItem->getSlot(), true);
 
-				if (unit->getItem(inventorySlot, layoutItem->getSlotX(), layoutItem->getSlotY())) continue;
+				// we need to check all "slot boxes" for overlap (not just top left)
+				bool overlaps = false;
+				for (int x = 0; x < item->getRules()->getInventoryWidth(); ++x)
+				{
+					for (int y = 0; y < item->getRules()->getInventoryHeight(); ++y)
+					{
+						if (!overlaps && unit->getItem(inventorySlot, x + layoutItem->getSlotX(), y + layoutItem->getSlotY()))
+						{
+							overlaps = true;
+						}
+					}
+				}
+				if (overlaps) continue;
 
 				auto toLoad = 0;
 				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
@@ -3663,7 +3680,8 @@ bool BattlescapeGenerator::addLine(MapDirection direction, const std::vector<SDL
 		{
 			_blocks[roadX][roadY] = terrain->getRandomMapBlock(10, 10, crossingGroup);
 			clearModule(roadX * 10, roadY * 10, 10, 10);
-			loadMAP(_blocks[roadX][roadY], roadX * 10, roadY * 10, 0, terrain, 0);
+			int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
+			loadMAP(_blocks[roadX][roadY], roadX * 10, roadY * 10, 0, terrain, terrainMapDataSetIDOffset);
 
 			SDL_Rect blockRect;
 			blockRect.x = roadX;

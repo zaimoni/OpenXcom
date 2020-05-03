@@ -540,10 +540,15 @@ void InteractiveSurface::onMouseOut(ActionHandler handler)
 /**
  * Sets a function to be called every time a key is pressed when the surface is focused.
  * @param handler Action handler.
- * @param key Keyboard button to check for (note: ignores key modifiers). Set to 0 for any key.
+ * @param key Keyboard button to check for (note: ignores key modifiers). Set to SDLK_ANY for any key.
  */
 void InteractiveSurface::onKeyboardPress(ActionHandler handler, SDL_Keycode key)
 {
+	if (key == SDLK_UNKNOWN)
+	{
+		// Ignore unknown keys
+		return;
+	}
 	if (handler != 0)
 	{
 		_keyPress[key] = handler;
@@ -557,10 +562,15 @@ void InteractiveSurface::onKeyboardPress(ActionHandler handler, SDL_Keycode key)
 /**
  * Sets a function to be called every time a key is released when the surface is focused.
  * @param handler Action handler.
- * @param key Keyboard button to check for (note: ignores key modifiers). Set to 0 for any key.
+ * @param key Keyboard button to check for (note: ignores key modifiers). Set to SDLK_ANY for any key.
  */
 void InteractiveSurface::onKeyboardRelease(ActionHandler handler, SDL_Keycode key)
 {
+	if (key == SDLK_UNKNOWN)
+	{
+		// Ignore unknown keys
+		return;
+	}
 	if (handler != 0)
 	{
 		_keyRelease[key] = handler;

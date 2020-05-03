@@ -25,6 +25,7 @@
 #include "Unit.h"
 #include "ModScript.h"
 #include "RuleResearch.h"
+#include "RuleBaseFacilityFunctions.h"
 
 namespace OpenXcom
 {
@@ -52,11 +53,16 @@ enum ExperienceTrainingMode {
 	ETM_PSI_STRENGTH_OR_SKILL, ETM_PSI_STRENGTH_OR_SKILL_2X,
 	ETM_NOTHING
 };
+enum BattleActionType : Uint8 { BA_NONE, BA_TURN, BA_WALK, BA_KNEEL, BA_PRIME, BA_UNPRIME, BA_THROW, BA_AUTOSHOT, BA_SNAPSHOT, BA_AIMEDSHOT, BA_HIT, BA_USE, BA_LAUNCH, BA_MINDCONTROL, BA_PANIC, BA_RETHINK, BA_CQB };
 
+
+struct BattleActionCost;
 class BattleItem;
+class RuleSkill;
 class SurfaceSet;
 class Surface;
 class Mod;
+class RuleInventory;
 
 enum UnitFaction : int;
 
@@ -187,6 +193,7 @@ struct RuleItemAction
 	int accuracy = 0;
 	int range = 0;
 	int shots = 1;
+	bool followProjectiles = true;
 	int ammoSlot = 0;
 	RuleItemUseCost cost;
 	RuleItemUseCost flat;
@@ -204,6 +211,58 @@ struct RuleItemFuseTrigger
 	bool throwExplode = false;
 	bool proximityTrigger = false;
 	bool proximityExplode = false;
+};
+
+namespace helper
+{
+
+/**
+ * Defined outside struct BattleActionAttack to allow forward declaration of it for RuleStatBonus
+ */
+struct BattleActionAttackReadOnlyImpl
+{
+	BattleActionType type;
+	const BattleUnit *attacker = nullptr;
+	const BattleItem *weapon_item = nullptr;
+	const BattleItem *damage_item = nullptr;
+	const RuleSkill *skill_rules = nullptr;
+};
+
+}
+
+
+/**
+ * Helper struct that has all the data needed for weapon attack.
+ */
+struct BattleActionAttack
+{
+	BattleActionType type;
+	BattleUnit *attacker = nullptr;
+	BattleItem *weapon_item = nullptr;
+	BattleItem *damage_item = nullptr;
+	const RuleSkill *skill_rules = nullptr;
+
+	/**
+	 * Helper class that have only readonly access to data.
+	 */
+	using ReadOnly = helper::BattleActionAttackReadOnlyImpl;
+
+	/**
+	 * Cast operator to readonly version.
+	 */
+	operator ReadOnly() const
+	{
+		return { type, attacker, weapon_item, damage_item, skill_rules, };
+	}
+
+	/// Get Action Attack from Action cost.
+	static BattleActionAttack GetBeforeShoot(const BattleActionCost &action);
+	/// Get Action Attack with updated unit and ammo.
+	static BattleActionAttack GetBeforeShoot(BattleActionType type, BattleUnit *unit, BattleItem *wepon, const RuleSkill *skill = nullptr);
+	/// Get Action Attack from Action cost with defined ammo.
+	static BattleActionAttack GetAferShoot(const BattleActionCost &action, BattleItem *ammo);
+	/// Get Action Attack with updated unit with defined ammo.
+	static BattleActionAttack GetAferShoot(BattleActionType type, BattleUnit *unit, BattleItem *wepon, BattleItem *ammo, const RuleSkill *skill = nullptr);
 };
 
 /**
@@ -229,7 +288,7 @@ private:
 	std::vector<std::string> _requiresName;
 	std::vector<std::string> _requiresBuyName;
 	std::vector<const RuleResearch *> _requires, _requiresBuy;
-	std::vector<std::string> _requiresBuyBaseFunc;
+	RuleBaseFacilityFunctions _requiresBuyBaseFunc;
 	std::map<std::string, int> _recoveryDividers;
 	std::map<std::string, std::vector<int> > _recoveryTransformationsName;
 	std::map<const RuleItem*, std::vector<int> > _recoveryTransformations;
@@ -272,9 +331,11 @@ private:
 	bool _hiddenOnMinimap;
 	std::string _medikitActionName, _psiAttackName, _primeActionName, _unprimeActionName, _primeActionMessage, _unprimeActionMessage;
 	bool _twoHanded, _blockBothHands, _fixedWeapon, _fixedWeaponShow, _isConsumable, _isFireExtinguisher, _isExplodingInHands, _specialUseEmptyHand;
-	std::string _defaultInventorySlot;
+	std::string _defaultInventorySlotName;
+	RuleInventory* _defaultInventorySlot; //TODO: fix constness
 	int _defaultInvSlotX, _defaultInvSlotY;
-	std::vector<std::string> _supportedInventorySections;
+	std::vector<std::string> _supportedInventorySectionsNames;
+	std::vector<const RuleInventory*> _supportedInventorySections;
 	int _waypoints, _invWidth, _invHeight;
 	int _painKiller, _heal, _stimulant;
 	BattleMediKitType _medikitType;
@@ -356,7 +417,7 @@ public:
 	/// Gets the item's buy requirements.
 	const std::vector<const RuleResearch*> &getBuyRequirements() const;
 	/// Gets the base functions required to buy craft.
-	const std::vector<std::string> &getRequiresBuyBaseFunc() const;
+	RuleBaseFacilityFunctions getRequiresBuyBaseFunc() const { return _requiresBuyBaseFunc; }
 	/// Gets the dividers used for recovery of special items.
 	const std::map<std::string, int> &getRecoveryDividers() const;
 	/// Gets the item(s) to be recovered instead of this item.
@@ -393,14 +454,18 @@ public:
 	bool isFixed() const;
 	/// Do show fixed weapon on unit.
 	bool getFixedShow() const;
+
 	/// Get name of the default inventory slot.
-	const std::string &getDefaultInventorySlot() const;
+	RuleInventory* getDefaultInventorySlot() const { return _defaultInventorySlot; }
+	/// Get inventory slot default X position.
 	int getDefaultInventorySlotX() const { return _defaultInvSlotX; }
+	/// Get inventory slot default Y position.
 	int getDefaultInventorySlotY() const { return _defaultInvSlotY; }
 	/// Gets the item's supported inventory sections.
-	const std::vector<std::string> &getSupportedInventorySections() const;
+	const std::vector<const RuleInventory*> &getSupportedInventorySections() const { return _supportedInventorySections; }
 	/// Checks if the item can be placed into a given inventory section.
-	bool canBePlacedIntoInventorySection(const std::string &inventorySection) const;
+	bool canBePlacedIntoInventorySection(const RuleInventory* inventorySection) const;
+
 	/// Gets if the item is a launcher.
 	int getWaypoints() const;
 	/// Gets the item's bullet sprite reference.
@@ -451,36 +516,45 @@ public:
 	/// Get the psi miss animation starting frame (comes from hit.pck).
 	int getPsiMissAnimation() const;
 
+
 	/// Gets the item's power.
 	int getPower() const;
 	/// Should the item's power be displayed in Ufopedia or not?
 	bool getHidePower() const { return _hidePower; }
-	/// Get additional power from unit statistics
-	int getPowerBonus(const BattleUnit *unit) const;
-	const RuleStatBonus *getDamageBonusRaw() const { return &_damageBonus; }
 	/// Ok, so this isn't a melee type weapon but we're using it for melee... how much damage should it do?
 	int getMeleePower() const;
-	/// Get additional power for melee attack in range weapon from unit statistics.
-	int getMeleeBonus(const BattleUnit *unit) const;
-	const RuleStatBonus *getMeleeBonusRaw() const { return &_meleeBonus; }
+
 	/// Gets amount of power dropped for range in voxels.
 	float getPowerRangeReduction(float range) const;
 	float getPowerRangeReductionRaw() const { return _powerRangeReduction; }
 	float getPowerRangeThresholdRaw() const { return _powerRangeThreshold; }
 	/// Gets amount of psi accuracy dropped for range in voxels.
 	float getPsiAccuracyRangeReduction(float range) const;
+
+	/// Get additional power from unit statistics
+	int getPowerBonus(BattleActionAttack::ReadOnly attack) const;
+	const RuleStatBonus *getDamageBonusRaw() const { return &_damageBonus; }
+
+	/// Get additional power for melee attack in range weapon from unit statistics.
+	int getMeleeBonus(BattleActionAttack::ReadOnly attack) const;
+	const RuleStatBonus *getMeleeBonusRaw() const { return &_meleeBonus; }
+
 	/// Get multiplier of accuracy from unit statistics
-	int getAccuracyMultiplier(const BattleUnit *unit) const;
+	int getAccuracyMultiplier(BattleActionAttack::ReadOnly attack) const;
 	const RuleStatBonus *getAccuracyMultiplierRaw() const { return &_accuracyMulti; }
+
 	/// Get multiplier of melee hit chance from unit statistics
-	int getMeleeMultiplier(const BattleUnit *unit) const;
+	int getMeleeMultiplier(BattleActionAttack::ReadOnly  attack) const;
 	const RuleStatBonus *getMeleeMultiplierRaw() const { return &_meleeMulti; }
+
 	/// Get multiplier of throwing from unit statistics
-	int getThrowMultiplier(const BattleUnit *unit) const;
+	int getThrowMultiplier(BattleActionAttack::ReadOnly attack) const;
 	const RuleStatBonus *getThrowMultiplierRaw() const { return &_throwMulti; }
+
 	/// Get multiplier of close quarters combat from unit statistics
-	int getCloseQuartersMultiplier(const BattleUnit *unit) const;
+	int getCloseQuartersMultiplier(BattleActionAttack::ReadOnly attack) const;
 	const RuleStatBonus *getCloseQuartersMultiplierRaw() const { return &_closeQuartersMulti; }
+
 
 	/// Get configuration of aimed shot action.
 	const RuleItemAction *getConfigAimed() const;
@@ -490,6 +564,7 @@ public:
 	const RuleItemAction *getConfigSnap() const;
 	/// Get configuration of melee action.
 	const RuleItemAction *getConfigMelee() const;
+
 
 	/// Gets the item's aimed shot accuracy.
 	int getAccuracyAimed() const;
@@ -635,7 +710,7 @@ public:
 	/// Gets the medikit custom background.
 	const std::string &getMediKitCustomBackground() const;
 	/// Gets the max explosion radius.
-	int getExplosionRadius(const BattleUnit *unit) const;
+	int getExplosionRadius(BattleActionAttack::ReadOnly attack) const;
 	/// Gets the recovery points score
 	int getRecoveryPoints() const;
 	/// Gets the item's armor.
@@ -758,6 +833,7 @@ public:
 	/// Gets script.
 	template<typename Script>
 	const typename Script::Container &getScript() const { return _battleItemScripts.get<Script>(); }
+	/// Get all script values.
 	const ScriptValues<RuleItem> &getScriptValuesRaw() const { return _scriptValues; }
 };
 

@@ -42,6 +42,7 @@ class SoldierDiary;
 class SavedGame;
 class RuleSoldierTransformation;
 class RuleSoldierBonus;
+struct BaseSumDailyRecovery;
 
 /**
  * Represents a soldier hired by the player.
@@ -63,19 +64,22 @@ private:
 	int _id, _nationality, _improvement, _psiStrImprovement;
 	RuleSoldier *_rules;
 	UnitStats _initialStats, _currentStats, _tmpStatsWithSoldierBonuses, _tmpStatsWithAllBonuses;
+	UnitStats _dailyDogfightExperienceCache;
 	SoldierRank _rank;
 	Craft *_craft;
 	SoldierGender _gender;
 	SoldierLook _look;
 	int _lookVariant;
 	int _missions, _kills;
-	int _manaMissing; // amount of mana missing until full mana recovery
-	float _recovery; // amount of HP missing until full recovery... used to calculate recovery time
+	int _healthMissing = 0; // amount of health missing until full health recovery, this is less serious than wound recovery.
+	int _manaMissing = 0;   // amount of mana missing until full mana recovery
+	float _recovery = 0.0;  // amount of hospital attention soldier needs... used to calculate recovery time
 	bool _recentlyPromoted, _psiTraining, _training, _returnToTrainingWhenHealed;
 	Armor *_armor;
 	Armor *_replacedArmor;
 	Armor *_transformedArmor;
-	std::vector<EquipmentLayoutItem*> _equipmentLayout;
+	std::vector<EquipmentLayoutItem*> _equipmentLayout;           // last used equipment layout, managed by the game
+	std::vector<EquipmentLayoutItem*> _personalEquipmentLayout;   // personal  equipment layout, managed by the player
 	SoldierDeath *_death;
 	SoldierDiary *_diary;
 	std::string _statString;
@@ -111,7 +115,7 @@ public:
 	/// Sets the soldier's craft.
 	void setCraft(Craft *craft);
 	/// Gets the soldier's craft string.
-	std::string getCraftString(Language *lang, float absBonus, float relBonus) const;
+	std::string getCraftString(Language *lang, const BaseSumDailyRecovery& recovery) const;
 	/// Gets a string version of the soldier's rank.
 	std::string getRankString() const;
 	/// Gets a sprite version of the soldier's rank. Used for BASEBITS.PCK.
@@ -170,29 +174,52 @@ public:
 	Armor *getTransformedArmor() const;
 	/// Backs up the soldier's original armor (before transformation).
 	void setTransformedArmor(Armor *armor);
+
+
 	/// Is the soldier wounded or not?.
 	bool isWounded() const;
 	/// Is the soldier wounded or not?.
 	bool hasFullHealth() const;
 	/// Is the soldier capable of defending a base?.
 	bool canDefendBase() const;
+
 	/// Gets the amount of missing mana.
 	int getManaMissing() const;
 	/// Sets the amount of missing mana.
 	void setManaMissing(int manaMissing);
 	/// Gets the soldier's mana recovery time.
 	int getManaRecovery(int manaRecoveryPerDay) const;
+
+	/// Gets the amount of missing health.
+	int getHealthMissing() const;
+	/// Sets the amount of missing health.
+	void setHealthMissing(int healthMissing);
+	/// Gets the soldier's health recovery time.
+	int getHealthRecovery(int healthRecoveryPerDay) const;
+
 	/// Gets the soldier's wound recovery time.
 	int getWoundRecoveryInt() const;
-	int getWoundRecovery(float absBonus, float relBonus) const;
 	/// Sets the soldier's wound recovery time.
 	void setWoundRecovery(int recovery);
+	/// Gets ther soldier's wound recovery.
+	int getWoundRecovery(float absBonus, float relBonus) const;
+
 	/// Heals wound recoveries.
-	void heal(float absBonus, float relBonus);
+	void healWound(float absBonus, float relBonus);
 	/// Replenishes mana.
 	void replenishMana(int manaRecoveryPerDay);
+	/// Replenishes health.
+	void replenishHealth(int healthRecoveryPerDay);
+
+	/// Daily stat replenish and healing of the soldier based on the facilities available in the base.
+	void replenishStats(const BaseSumDailyRecovery& recovery);
+	/// Gets number of days until the soldier is ready for action again.
+	int getNeededRecoveryTime(const BaseSumDailyRecovery& recovery) const;
+
+
 	/// Gets the soldier's equipment-layout.
 	std::vector<EquipmentLayoutItem*> *getEquipmentLayout();
+	std::vector<EquipmentLayoutItem*> *getPersonalEquipmentLayout() { return &_personalEquipmentLayout; }
 	/// Trains a soldier's psychic stats
 	void trainPsi();
 	/// Trains a soldier's psionic abilities (anytimePsiTraining option).
@@ -247,7 +274,11 @@ public:
 	UnitStats *getStatsWithAllBonuses();
 	/// Pre-calculates soldier stats with various bonuses.
 	bool prepareStatsWithBonuses(const Mod *mod);
-	
+	/// Gets a pointer to the daily dogfight experience cache.
+	UnitStats* getDailyDogfightExperienceCache();
+	/// Resets the daily dogfight experience cache.
+	void resetDailyDogfightExperienceCache();
+
 private:
 	std::string generateCallsign(const std::vector<SoldierNamePool*> &names);
 

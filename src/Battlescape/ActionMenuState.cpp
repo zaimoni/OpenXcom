@@ -227,7 +227,7 @@ void ActionMenuState::init()
 void ActionMenuState::addItem(BattleActionType ba, const std::string &name, int *id, SDL_Keycode key)
 {
 	std::string s1, s2;
-	int acc = _action->actor->getFiringAccuracy(ba, _action->weapon, _game->getMod());
+	int acc = BattleUnit::getFiringAccuracy(BattleActionAttack::GetBeforeShoot(ba, _action->actor, _action->weapon), _game->getMod());
 	int tu = _action->actor->getActionTUs(ba, _action->weapon).Time;
 
 	if (ba == BA_THROW || ba == BA_AIMEDSHOT || ba == BA_SNAPSHOT || ba == BA_AUTOSHOT || ba == BA_LAUNCH || ba == BA_HIT)
@@ -495,6 +495,12 @@ void ActionMenuState::handleAction()
 			_action->targeting = true;
 			newHitLog = true;
 			_game->popState();
+		}
+
+		// meleeAttackBState won't be available to clear the action type, do it here instead.
+		if (_action->type == BA_HIT && !_action->result.empty())
+		{
+			_action->type = BA_NONE;
 		}
 
 		if (newHitLog)

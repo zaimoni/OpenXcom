@@ -34,6 +34,7 @@
 #include "../Engine/Collections.h"
 #include "../Engine/Unicode.h"
 #include "Globe.h"
+#include "../Interface/ComboBox.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
 #include "../Engine/Timer.h"
@@ -81,6 +82,7 @@
 #include "ItemsArrivingState.h"
 #include "CraftErrorState.h"
 #include "DogfightErrorState.h"
+#include "DogfightExperienceState.h"
 #include "../Ufopaedia/Ufopaedia.h"
 #include "../Savegame/ResearchProject.h"
 #include "ResearchCompleteState.h"
@@ -183,6 +185,9 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 	_txtYear = new Text(59, 8, screenWidth-61, screenHeight/2+1);
 	_txtFunds = new Text(59, 8, screenWidth-61, screenHeight/2-27);
 
+	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
+	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
+
 	_timeSpeed = _btn5Secs;
 	_gameTimer = new Timer(Options::geoClockSpeed);
 
@@ -192,6 +197,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 	_dogfightTimer = new Timer(Options::dogfightSpeed);
 
 	_txtDebug = new Text(200, 32, 0, 0);
+	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
+	_cbxZone = new ComboBox(this, 100, 16, 154, 36);
 
 	// Set palette
 	setInterface("geoscape");
@@ -235,8 +242,11 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 	add(_txtDay, "text", "geoscape");
 	add(_txtMonth, "text", "geoscape");
 	add(_txtYear, "text", "geoscape");
+	add(_txtSlacking, "slackingIndicator", "geoscape");
 
 	add(_txtDebug, "text", "geoscape");
+	add(_cbxRegion, "button", "geoscape");
+	add(_cbxZone, "button", "geoscape");
 
 	// Set up objects
 	Surface *geobord = _game->getMod()->getSurface("GEOBORD.SCR");
@@ -256,6 +266,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnSelectMusicTrackClick, Options::keySelectMusicTrack);
 	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnGlobalProductionClick, Options::keyGeoGlobalProduction);
 	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnGlobalResearchClick, Options::keyGeoGlobalResearch);
+	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnDogfightExperienceClick, Options::keyGeoDailyPilotExperience);
 	_btnIntercept->setGeoscapeButton(true);
 
 	_btnBases->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -383,6 +394,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 
 	_txtYear->setAlign(ALIGN_CENTER);
 
+	_txtSlacking->setAlign(ALIGN_RIGHT);
+
 	if (Options::showFundsOnGeoscape)
 	{
 		_txtHour->setY(_txtHour->getY()+6);
@@ -404,6 +417,29 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 	_zoomOutEffectTimer->onTimer((StateHandler)&GeoscapeState::zoomOutEffect);
 	_dogfightStartTimer->onTimer((StateHandler)&GeoscapeState::startDogfight);
 	_dogfightTimer->onTimer((StateHandler)&GeoscapeState::handleDogfights);
+
+	// debug helpers
+	{
+		std::vector<std::string> regionList;
+		regionList.push_back("All regions");
+		for (auto r : *_game->getSavedGame()->getRegions())
+		{
+			regionList.push_back(r->getRules()->getType());
+		}
+		_cbxRegion->setOptions(regionList, false);
+		_cbxRegion->setVisible(false);
+		_cbxRegion->onChange((ActionHandler)&GeoscapeState::cbxRegionChange);
+
+		std::vector<std::string> zoneList;
+		zoneList.push_back("All zones");
+		for (int z = 0; z < 20; ++z)
+		{
+			zoneList.push_back(std::to_string(z));
+		}
+		_cbxZone->setOptions(zoneList, false);
+		_cbxZone->setVisible(false);
+		_cbxZone->onChange((ActionHandler)&GeoscapeState::cbxZoneChange);
+	}
 
 	timeDisplay();
 }
@@ -469,6 +505,8 @@ void GeoscapeState::handle(Action *action)
 			{
 				_txtDebug->setText("");
 			}
+			_cbxRegion->setVisible(_game->getSavedGame()->getDebugMode());
+			_cbxZone->setVisible(_game->getSavedGame()->getDebugMode());
 		}
 		if (Options::debug && _game->getSavedGame()->getDebugMode() && (SDL_GetModState() & KMOD_CTRL) != 0)
 		{
@@ -623,6 +661,7 @@ void GeoscapeState::init()
 {
 	State::init();
 	timeDisplay();
+	updateSlackingIndicator();
 
 	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick);
 	_globe->onMouseOver(0);
@@ -2090,6 +2129,8 @@ void GeoscapeState::time1Hour()
 			break;
 		}
 	}
+
+	updateSlackingIndicator();
 }
 
 /**
@@ -2426,27 +2467,11 @@ void GeoscapeState::time1Day()
 		}
 
 		// Handle soldier wounds and martial training
-		float absBonus = base->getSickBayAbsoluteBonus();
-		float relBonus = base->getSickBayRelativeBonus();
-		int manaRecoveryPerDay = base->getManaRecoveryPerDay();
+		auto recovery = base->getSumRecoveryPerDay();
 		std::vector<Soldier *> trainingFinishedList;
 		for (std::vector<Soldier*>::iterator j = base->getSoldiers()->begin(); j != base->getSoldiers()->end(); ++j)
 		{
-			if ((*j)->isWounded())
-			{
-				(*j)->heal(absBonus, relBonus);
-			}
-			else if ((*j)->getManaMissing() > 0 && manaRecoveryPerDay > 0)
-			{
-				// positive mana recovery only when NOT wounded
-				(*j)->replenishMana(manaRecoveryPerDay);
-			}
-
-			if (manaRecoveryPerDay < 0)
-			{
-				// negative mana recovery always
-				(*j)->replenishMana(manaRecoveryPerDay);
-			}
+			(*j)->replenishStats(recovery);
 
 			if ((*j)->isInTraining())
 			{
@@ -2565,6 +2590,40 @@ void GeoscapeState::time1Day()
 	// Handle resupply of alien bases.
 	std::for_each(saveGame->getAlienBases()->begin(), saveGame->getAlienBases()->end(),
 			  GenerateSupplyMission(*_game, *_globe));
+
+	// Handle alien base detection (by xcom base facilities).
+	for (auto alienBase : *_game->getSavedGame()->getAlienBases())
+	{
+		if (alienBase->isDiscovered()) continue;
+		for (auto xcomBase : *_game->getSavedGame()->getBases())
+		{
+			int distance = XcomDistance(xcomBase->getDistance(alienBase));
+			for (auto facility : *xcomBase->getFacilities())
+			{
+				if (facility->getBuildTime() == 0 && facility->getRules()->getSightRange() > distance)
+				{
+					int chanceToDetect = facility->getRules()->getSightChance(); // static % defined by the modder
+					if (chanceToDetect == 0)
+					{
+						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
+					}
+					if (RNG::percent(chanceToDetect))
+					{
+						alienBase->setDiscovered(true);
+					}
+				}
+			}
+		}
+	}
+
+	// clear the daily dogfight experience cache
+	for (auto* base : *saveGame->getBases())
+	{
+		for (auto* soldier : *base->getSoldiers())
+		{
+			soldier->resetDailyDogfightExperienceCache();
+		}
+	}
 
 	// Autosave 3 times a month
 	int day = saveGame->getTime()->getDay();
@@ -2785,6 +2844,15 @@ void GeoscapeState::btnGlobalProductionClick(Action *)
 void GeoscapeState::btnGlobalResearchClick(Action *)
 {
 	_game->pushState(new GlobalResearchState(false));
+}
+
+/**
+ * Opens the Dogfight Experience screen.
+ * @param action Pointer to an action.
+ */
+void GeoscapeState::btnDogfightExperienceClick(Action *)
+{
+	_game->pushState(new DogfightExperienceState());
 }
 
 /**
@@ -3267,6 +3335,16 @@ void GeoscapeState::determineAlienMissions()
 							break;
 					}
 				}
+				if (triggerHappy)
+				{
+					// facility requirements
+					for (auto &triggerFacility : arcScript->getFacilityTriggers())
+					{
+						triggerHappy = (save->isFacilityBuilt(triggerFacility.first) == triggerFacility.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
 				// level three condition check: does random chance favour this command's execution?
 				if (triggerHappy && RNG::percent(arcScript->getExecutionOdds()))
 				{
@@ -3380,6 +3458,16 @@ void GeoscapeState::determineAlienMissions()
 						break;
 				}
 			}
+			if (triggerHappy)
+			{
+				// facility requirements
+				for (auto &triggerFacility : command->getFacilityTriggers())
+				{
+					triggerHappy = (save->isFacilityBuilt(triggerFacility.first) == triggerFacility.second);
+					if (!triggerHappy)
+						break;
+				}
+			}
 			// levels one and two passed: insert this command into the array.
 			if (triggerHappy)
 			{
@@ -3467,6 +3555,16 @@ void GeoscapeState::determineAlienMissions()
 					for (auto &triggerItem : eventScript->getItemTriggers())
 					{
 						triggerHappy = (save->isItemObtained(triggerItem.first) == triggerItem.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				if (triggerHappy)
+				{
+					// facility requirements
+					for (auto &triggerFacility : eventScript->getFacilityTriggers())
+					{
+						triggerHappy = (save->isFacilityBuilt(triggerFacility.first) == triggerFacility.second);
 						if (!triggerHappy)
 							break;
 					}
@@ -3990,6 +4088,46 @@ void GeoscapeState::resize(int &dX, int &dY)
 bool GeoscapeState::buttonsDisabled()
 {
 	return _zoomInEffectTimer->isRunning() || _zoomOutEffectTimer->isRunning();
+}
+
+void GeoscapeState::updateSlackingIndicator()
+{
+	if (!Options::oxceEnableSlackingIndicator)
+		return;
+
+	int scientistsSlacking = 0;
+	int engineersSlacking = 0;
+	for (auto xcomBase : *_game->getSavedGame()->getBases())
+	{
+		scientistsSlacking += xcomBase->getAvailableScientists();
+		engineersSlacking += xcomBase->getAvailableEngineers();
+	}
+	if (scientistsSlacking > 0 || engineersSlacking > 0)
+	{
+		_txtSlacking->setText(tr("STR_SLACKING_INDICATOR").arg(scientistsSlacking).arg(engineersSlacking));
+	}
+	else
+	{
+		_txtSlacking->setText("");
+	}
+}
+
+void GeoscapeState::cbxRegionChange(Action *)
+{
+	int index = _cbxRegion->getSelected();
+	if (index < 1)
+	{
+		_game->getSavedGame()->debugRegion = nullptr;
+	}
+	else
+	{
+		_game->getSavedGame()->debugRegion = (*_game->getSavedGame()->getRegions())[index-1];
+	}
+}
+
+void GeoscapeState::cbxZoneChange(Action *)
+{
+	_game->getSavedGame()->debugZone = _cbxZone->getSelected();
 }
 
 }

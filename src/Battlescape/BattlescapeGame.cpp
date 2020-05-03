@@ -171,43 +171,6 @@ bool BattleActionCost::spendTU(std::string *message)
 }
 
 /**
- * Constructor for Battle Action attack.
- * @param action type of action.
- * @param unit unit performing attack.
- * @param item weapon of choice.
- */
-BattleActionAttack::BattleActionAttack(BattleActionType action, BattleUnit *unit, BattleItem *item, BattleItem *ammo) : type{ action }, attacker{ unit }
-{
-	if (item)
-	{
-		weapon_item = item;
-		damage_item = ammo;
-		const auto battleType = item->getRules()->getBattleType();
-		if (battleType == BT_PROXIMITYGRENADE || battleType == BT_GRENADE)
-		{
-			if (!attacker && weapon_item->getPreviousOwner())
-			{
-				attacker = weapon_item->getPreviousOwner();
-			}
-		}
-	}
-}
-
-/**
- * Constructor from BattleActionCost.
- * @param action Action.
- */
-BattleActionAttack::BattleActionAttack(const BattleActionCost& action, BattleItem *ammo) : BattleActionAttack{ action.type, action.actor, action.weapon, ammo }
-{
-
-}
-
-BattleActionAttack::BattleActionAttack(const BattleAction &action, BattleItem *ammo) : BattleActionAttack{ action.type, action.actor, action.weapon, ammo }
-{
-	skill_rules = action.skillRules;
-}
-
-/**
  * Initializes all the elements in the Battlescape screen.
  * @param save Pointer to the save game.
  * @param parentState Pointer to the parent battlescape state.
@@ -322,7 +285,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
 	{
 		unit->dontReselect();
 	}
-	if (_AIActionCounter >= 2 || !unit->reselectAllowed() || unit->getTurnsSinceStunned() == 0) //stun check for restoring OXC behavior that AI do not attack after getup even having full TU
+	if (_AIActionCounter >= 2 || !unit->reselectAllowed() || unit->getTurnsSinceStunned() == 0) //stun check for restoring OXC behavior that AI does not attack after waking up even having full TU
 	{
 		if (_save->selectNextPlayerUnit(true, _AISecondMove) == 0)
 		{
@@ -389,13 +352,13 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
 	bool weaponPickedUp = false;
 	if (!weapon || !weapon->haveAnyAmmo())
 	{
-		if (unit->getOriginalFaction() == FACTION_HOSTILE)
+		if (unit->getOriginalFaction() != FACTION_PLAYER)
 		{
 			if (unit->getUnitRules())
 			{
 				pickUpWeaponsMoreActively = unit->getUnitRules()->pickUpWeaponsMoreActively(getMod());
 			}
-			if (unit->getVisibleUnits()->empty() || pickUpWeaponsMoreActively)
+			if ((unit->getOriginalFaction() == FACTION_HOSTILE && unit->getVisibleUnits()->empty()) || pickUpWeaponsMoreActively)
 			{
 				weaponPickedUp = findItem(&action, pickUpWeaponsMoreActively);
 			}
@@ -641,47 +604,13 @@ void BattlescapeGame::endTurn()
 	_save->getTileEngine()->calculateLighting(LL_FIRE, TileEngine::invalid, 0, true);
 	_save->getTileEngine()->recalculateFOV();
 
-	// if all units from either faction are killed - the mission is over.
-	int liveAliens = 0;
-	int liveSoldiers = 0;
-	int inExit = 0;
-
 	// Calculate values
-	for (std::vector<BattleUnit*>::iterator j = _save->getUnits()->begin(); j != _save->getUnits()->end(); ++j)
-	{
-		if (!(*j)->isOut())
-		{
-			if ((*j)->getOriginalFaction() == FACTION_HOSTILE)
-			{
-				if (!Options::allowPsionicCapture || (*j)->getFaction() != FACTION_PLAYER)
-				{
-					liveAliens++;
-				}
-			}
-			else if ((*j)->getOriginalFaction() == FACTION_PLAYER)
-			{
-				if ((*j)->isSummonedPlayerUnit())
-					continue;
+	auto tally = _save->getBattleGame()->tallyUnits();
 
-				if ((*j)->isInExitArea(END_POINT))
-				{
-					inExit++;
-				}
-				if ((*j)->getFaction() == FACTION_PLAYER)
-				{
-					liveSoldiers++;
-				}
-				else
-				{
-					liveAliens++;
-				}
-			}
-		}
-	}
-
+	// if all units from either faction are killed - the mission is over.
 	if (_save->allObjectivesDestroyed() && _save->getObjectiveType() == MUST_DESTROY)
 	{
-		_parentState->finishBattle(false, liveSoldiers);
+		_parentState->finishBattle(false, tally.liveSoldiers);
 		return;
 	}
 	if (_save->getTurnLimit() > 0 && _save->getTurn() > _save->getTurnLimit())
@@ -690,11 +619,11 @@ void BattlescapeGame::endTurn()
 		{
 		case FORCE_ABORT:
 			_save->setAborted(true);
-			_parentState->finishBattle(true, inExit);
+			_parentState->finishBattle(true, tally.inExit);
 			return;
 		case FORCE_WIN:
 		case FORCE_WIN_SURRENDER:
-			_parentState->finishBattle(false, liveSoldiers);
+			_parentState->finishBattle(false, tally.liveSoldiers);
 			return;
 		case FORCE_LOSE:
 		default:
@@ -704,7 +633,7 @@ void BattlescapeGame::endTurn()
 		}
 	}
 
-	if (liveAliens > 0 && liveSoldiers > 0)
+	if (tally.liveAliens > 0 && tally.liveSoldiers > 0)
 	{
 		showInfoBoxQueue();
 
@@ -717,7 +646,7 @@ void BattlescapeGame::endTurn()
 		}
 	}
 
-	bool battleComplete = liveAliens == 0 || liveSoldiers == 0;
+	bool battleComplete = tally.liveAliens == 0 || tally.liveSoldiers == 0;
 
 	if ((_save->getSide() != FACTION_NEUTRAL || battleComplete)
 		&& _endTurnRequested)
@@ -1058,7 +987,7 @@ void BattlescapeGame::handleNonTargetAction()
 				_parentState->warning(error);
 			}
 		}
-		else if (_currentAction.type == BA_USE || _currentAction.type == BA_LAUNCH)
+		else if (_currentAction.type == BA_USE)
 		{
 			_save->reviveUnconsciousUnits(true);
 		}
@@ -1073,7 +1002,10 @@ void BattlescapeGame::handleNonTargetAction()
 				_parentState->warning(error);
 			}
 		}
-		_currentAction.type = BA_NONE;
+		if (_currentAction.type != BA_HIT) // don't clear the action type if we're meleeing, let the melee action state take care of that
+		{
+			_currentAction.type = BA_NONE;
+		}
 		_parentState->updateSoldierInfo();
 	}
 
@@ -1104,7 +1036,7 @@ void BattlescapeGame::setupCursor()
 			getMap()->setCursorType(CT_AIM);
 		}
 	}
-	else
+	else if (_currentAction.type != BA_HIT)
 	{
 		_currentAction.actor = _save->getSelectedUnit();
 		if (_currentAction.actor)
@@ -2136,10 +2068,10 @@ BattleUnit *BattlescapeGame::convertUnit(BattleUnit *unit)
 	// remove unit-tile link
 	unit->setTile(nullptr, _save);
 
-	Unit* type = getMod()->getUnit(unit->getSpawnUnit(), true);
+	const Unit* type = unit->getSpawnUnit();
 
 	BattleUnit *newUnit = new BattleUnit(getMod(),
-		type,
+		const_cast<Unit*>(type),
 		FACTION_HOSTILE,
 		_save->getUnits()->back()->getId() + 1,
 		_save->getEnviroEffects(),
@@ -2490,7 +2422,7 @@ BattleItem *BattlescapeGame::surveyItems(BattleAction *action, bool pickUpWeapon
 		{
 			if ((*i)->getTurnFlag() || pickUpWeaponsMoreActively)
 			{
-				if ((*i)->getSlot() && (*i)->getSlot()->getId() == "STR_GROUND" && (*i)->getTile())
+				if ((*i)->getSlot() && (*i)->getSlot()->getType() == INV_GROUND && (*i)->getTile())
 				{
 					droppedItems.push_back(*i);
 				}
@@ -2723,28 +2655,28 @@ bool BattlescapeGame::takeItem(BattleItem* item, BattleAction *action)
 		}
 		else
 		{
-			placed = equipItem(mod->getInventory("STR_BELT", true), item);
+			placed = equipItem(mod->getInventoryBelt(), item);
 		}
 		break;
 	case BT_GRENADE:
 	case BT_PROXIMITYGRENADE:
-		placed = equipItem(mod->getInventory("STR_BELT", true), item);
+		placed = equipItem(mod->getInventoryBelt(), item);
 		break;
 	case BT_FIREARM:
 	case BT_MELEE:
 		if (!rightWeapon)
 		{
-			placed = equipItem(mod->getInventory("STR_RIGHT_HAND", true), item);
+			placed = equipItem(mod->getInventoryRightHand(), item);
 		}
 		break;
 	case BT_MEDIKIT:
 	case BT_SCANNER:
-		placed = equipItem(mod->getInventory("STR_BACK_PACK", true), item);
+		placed = equipItem(mod->getInventoryBackpack(), item);
 		break;
 	case BT_MINDPROBE:
 		if (!leftWeapon)
 		{
-			placed = equipItem(mod->getInventory("STR_LEFT_HAND", true), item);
+			placed = equipItem(mod->getInventoryLeftHand(), item);
 		}
 		break;
 	default: break;
@@ -2813,18 +2745,15 @@ bool BattlescapeGame::isSurrendering(BattleUnit* bu)
 
 /**
  * Tallies the living units in the game and, if required, converts units into their spawn unit.
- * @param &liveAliens The integer in which to store the live alien tally.
- * @param &liveSoldiers The integer in which to store the live XCom tally.
- * @param convert Should we convert infected units?
  */
-void BattlescapeGame::tallyUnits(int &liveAliens, int &liveSoldiers)
+BattlescapeTally BattlescapeGame::tallyUnits()
 {
-	liveSoldiers = 0;
-	liveAliens = 0;
+	BattlescapeTally tally = { };
 
 	for (std::vector<BattleUnit*>::iterator j = _save->getUnits()->begin(); j != _save->getUnits()->end(); ++j)
 	{
-		if (!(*j)->isOut())
+		//TODO: add handling of stunned units for display purposes in AbortMissionState
+		if (!(*j)->isOut() && !(*j)->isOutThresholdExceed())
 		{
 			if ((*j)->getOriginalFaction() == FACTION_HOSTILE)
 			{
@@ -2838,7 +2767,7 @@ void BattlescapeGame::tallyUnits(int &liveAliens, int &liveSoldiers)
 				}
 				else
 				{
-					liveAliens++;
+					tally.liveAliens++;
 				}
 			}
 			else if ((*j)->getOriginalFaction() == FACTION_PLAYER)
@@ -2846,17 +2775,32 @@ void BattlescapeGame::tallyUnits(int &liveAliens, int &liveSoldiers)
 				if ((*j)->isSummonedPlayerUnit())
 					continue;
 
-				if ((*j)->getFaction() == FACTION_PLAYER)
+				if ((*j)->isInExitArea(START_POINT))
 				{
-					liveSoldiers++;
+					tally.inEntrance++;
+				}
+				else if ((*j)->isInExitArea(END_POINT))
+				{
+					tally.inExit++;
 				}
 				else
 				{
-					liveAliens++;
+					tally.inField++;
+				}
+
+				if ((*j)->getFaction() == FACTION_PLAYER)
+				{
+					tally.liveSoldiers++;
+				}
+				else
+				{
+					tally.liveAliens++;
 				}
 			}
 		}
 	}
+
+	return tally;
 }
 
 bool BattlescapeGame::convertInfected()
@@ -3072,11 +3016,9 @@ void BattlescapeGame::autoEndBattle()
 		}
 		else
 		{
-			int liveAliens = 0;
-			int liveSoldiers = 0;
-			tallyUnits(liveAliens, liveSoldiers);
-			end = (liveAliens == 0 || liveSoldiers == 0);
-			if (liveAliens == 0)
+			auto tally = tallyUnits();
+			end = (tally.liveAliens == 0 || tally.liveSoldiers == 0);
+			if (tally.liveAliens == 0)
 			{
 				_allEnemiesNeutralized = true; // remember that all aliens were neutralized (and the battle should end no matter what)
 				askForConfirmation = true;

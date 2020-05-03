@@ -20,6 +20,7 @@
 #include <string>
 #include <yaml-cpp/yaml.h>
 #include "Unit.h"
+#include "RuleBaseFacilityFunctions.h"
 #include "../Engine/Script.h"
 
 namespace OpenXcom
@@ -63,7 +64,7 @@ private:
 	std::string _type;
 	int _listOrder;
 	std::vector<std::string> _requires;
-	std::vector<std::string> _requiresBuyBaseFunc;
+	RuleBaseFacilityFunctions _requiresBuyBaseFunc;
 	UnitStats _minStats, _maxStats, _statCaps, _trainingStatCaps, _dogfightExperience;
 	std::string _armor;
 	std::string _specWeaponName;
@@ -71,6 +72,8 @@ private:
 	int _costBuy, _costSalary, _costSalarySquaddie, _costSalarySergeant, _costSalaryCaptain, _costSalaryColonel, _costSalaryCommander;
 	int _standHeight, _kneelHeight, _floatHeight;
 	int _femaleFrequency, _value, _transferTime, _moraleLossWhenKilled;
+	int _manaMissingWoundThreshold = -1;
+	int _healthMissingWoundThreshold = -1;
 	std::vector<int> _deathSoundMale, _deathSoundFemale;
 	std::vector<int> _panicSoundMale, _panicSoundFemale, _berserkSoundMale, _berserkSoundFemale;
 	std::vector<int> _selectUnitSoundMale, _selectUnitSoundFemale;
@@ -100,7 +103,7 @@ public:
 	/// Cross link with other rules.
 	void afterLoad(const Mod* mod);
 	/// Gets the soldier's type.
-	std::string getType() const;
+	const std::string& getType() const;
 	/// Gets whether or not the soldier type should be displayed in the inventory.
 	bool getShowTypeInInventory() const { return _showTypeInInventory; }
 	/// Gets the list/sort order of the soldier's type.
@@ -108,7 +111,7 @@ public:
 	/// Gets the soldier's requirements.
 	const std::vector<std::string> &getRequirements() const;
 	/// Gets the base functions required to buy solder.
-	const std::vector<std::string> &getRequiresBuyBaseFunc() const;
+	RuleBaseFacilityFunctions getRequiresBuyBaseFunc() const { return _requiresBuyBaseFunc; }
 	/// Gets the minimum stats for the random stats generator.
 	UnitStats getMinStats() const;
 	/// Gets the maximum stats for the random stats generator.
@@ -201,6 +204,14 @@ public:
 	int getRankSpriteBattlescape() const;
 	/// Gets the offset of the rank sprite in TinyRanks.
 	int getRankSpriteTiny() const;
+
+	/// Get all script values.
+	const ScriptValues<RuleSoldier> &getScriptValuesRaw() const { return _scriptValues; }
+
+	/// How much missing mana will act as "fatal wounds" and prevent the soldier from going into battle.
+	int getManaWoundThreshold() const { return _manaMissingWoundThreshold; }
+	/// How much missing health will act as "fatal wounds" and prevent the soldier from going into battle.
+	int getHealthWoundThreshold() const { return _healthMissingWoundThreshold; }
 };
 
 }

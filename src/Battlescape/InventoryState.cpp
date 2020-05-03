@@ -19,6 +19,7 @@
 #include "InventoryState.h"
 #include "InventoryLoadState.h"
 #include "InventorySaveState.h"
+#include "InventoryPersonalState.h"
 #include <algorithm>
 #include "Inventory.h"
 #include "../Basescape/SoldierArmorState.h"
@@ -114,7 +115,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	_btnQuickSearch = new TextEdit(this, 40, 9, 244, 140);
 
 	// Set palette
-	setPalette("PAL_BATTLESCAPE");
+	setStandardPalette("PAL_BATTLESCAPE");
 
 	add(_bg);
 
@@ -184,6 +185,9 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::btnArmorClickRight, Options::keyInventoryAvatar);
 	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::btnInventoryLoadClick, Options::keyInventoryLoad);
 	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::btnInventorySaveClick, Options::keyInventorySave);
+	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::btnCreatePersonalTemplateClick, Options::keyInvSavePersonalEquipment);
+	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::btnApplyPersonalTemplateClick, Options::keyInvLoadPersonalEquipment);
+	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::btnShowPersonalTemplateClick, Options::keyInvShowPersonalEquipment);
 	_btnOk->setTooltip("STR_OK");
 	_btnOk->onMouseIn((ActionHandler)&InventoryState::txtTooltipIn);
 	_btnOk->onMouseOut((ActionHandler)&InventoryState::txtTooltipOut);
@@ -658,9 +662,15 @@ void InventoryState::saveEquipmentLayout()
  */
 void InventoryState::btnArmorClick(Action *action)
 {
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
+	// only allowed during base equipment
 	if (_base == 0)
 	{
-		// equipment just before mission or during the mission
 		return;
 	}
 
@@ -690,9 +700,15 @@ void InventoryState::btnArmorClick(Action *action)
  */
 void InventoryState::btnArmorClickRight(Action *action)
 {
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
+	// only allowed during base equipment
 	if (_base == 0)
 	{
-		// equipment just before mission or during the mission
 		return;
 	}
 
@@ -721,6 +737,12 @@ void InventoryState::btnArmorClickRight(Action *action)
 */
 void InventoryState::btnArmorClickMiddle(Action *action)
 {
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
 	BattleUnit *unit = _inv->getSelectedUnit();
 	if (unit != 0)
 	{
@@ -743,6 +765,10 @@ void InventoryState::saveGlobalLayout(int index, bool includingArmor)
 	if (includingArmor)
 	{
 		_game->getSavedGame()->setGlobalEquipmentLayoutArmor(index, _battleGame->getSelectedUnit()->getArmor()->getType());
+	}
+	else
+	{
+		_game->getSavedGame()->setGlobalEquipmentLayoutArmor(index, std::string());
 	}
 }
 
@@ -839,9 +865,9 @@ bool InventoryState::loadGlobalLayoutArmor(int index)
 */
 void InventoryState::btnGlobalEquipmentLayoutClick(Action *action)
 {
+	// cannot use this feature during the mission!
 	if (_tu)
 	{
-		// cannot use this feature during the mission!
 		return;
 	}
 
@@ -884,9 +910,15 @@ void InventoryState::btnGlobalEquipmentLayoutClick(Action *action)
 */
 void InventoryState::btnInventoryLoadClick(Action *)
 {
+	// cannot use this feature during the mission!
 	if (_tu)
 	{
-		// cannot use this feature during the mission!
+		return;
+	}
+
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
 		return;
 	}
 
@@ -899,6 +931,12 @@ void InventoryState::btnInventoryLoadClick(Action *)
 */
 void InventoryState::btnInventorySaveClick(Action *)
 {
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
 	_game->pushState(new InventorySaveState(this));
 }
 
@@ -908,6 +946,12 @@ void InventoryState::btnInventorySaveClick(Action *)
  */
 void InventoryState::btnUfopaediaClick(Action *)
 {
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
 	Ufopaedia::open(_game);
 }
 
@@ -1046,6 +1090,12 @@ void InventoryState::btnGroundClick(Action *action)
  */
 void InventoryState::btnRankClick(Action *)
 {
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
 	_game->pushState(new UnitInfoState(_battleGame->getSelectedUnit(), _parent, true, false));
 }
 
@@ -1084,6 +1134,40 @@ void InventoryState::btnCreateTemplateClick(Action *)
 	// give audio feedback
 	_game->getMod()->getSoundByDepth(_battleGame->getDepth(), Mod::ITEM_DROP)->play();
 	refreshMouse();
+}
+
+void InventoryState::btnCreatePersonalTemplateClick(Action *)
+{
+	// cannot use this feature during the mission!
+	if (_tu)
+	{
+		return;
+	}
+
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
+	auto unit = _battleGame->getSelectedUnit();
+	if (unit && unit->getGeoscapeSoldier())
+	{
+		auto& personalTemplate = *unit->getGeoscapeSoldier()->getPersonalEquipmentLayout();
+
+		// clear current personal template
+		_clearInventoryTemplate(personalTemplate);
+
+		// create new personal template
+		_createInventoryTemplate(personalTemplate);
+
+		// give visual feedback
+		_inv->showWarning(tr("STR_PERSONAL_EQUIPMENT_SAVED"));
+
+		// give audio feedback
+		_game->getMod()->getSoundByDepth(_battleGame->getDepth(), Mod::ITEM_DROP)->play();
+		refreshMouse();
+	}
 }
 
 void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &inventoryTemplate)
@@ -1254,6 +1338,52 @@ void InventoryState::btnApplyTemplateClick(Action *)
 	_game->getMod()->getSoundByDepth(_battleGame->getDepth(), Mod::ITEM_DROP)->play();
 }
 
+void InventoryState::btnApplyPersonalTemplateClick(Action *)
+{
+	// cannot use this feature during the mission!
+	if (_tu)
+	{
+		return;
+	}
+
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
+	auto unit = _battleGame->getSelectedUnit();
+	if (unit && unit->getGeoscapeSoldier())
+	{
+		auto& personalTemplate = *unit->getGeoscapeSoldier()->getPersonalEquipmentLayout();
+
+		_applyInventoryTemplate(personalTemplate);
+
+		// refresh ui
+		_inv->arrangeGround();
+		updateStats();
+		refreshMouse();
+
+		// give audio feedback
+		_game->getMod()->getSoundByDepth(_battleGame->getDepth(), Mod::ITEM_DROP)->play();
+	}
+}
+
+void InventoryState::btnShowPersonalTemplateClick(Action *)
+{
+	// don't accept clicks when moving items
+	if (_inv->getSelectedItem() != 0)
+	{
+		return;
+	}
+
+	auto unit = _battleGame->getSelectedUnit();
+	if (unit && unit->getGeoscapeSoldier())
+	{
+		_game->pushState(new InventoryPersonalState(unit->getGeoscapeSoldier()));
+	}
+}
+
 void InventoryState::refreshMouse()
 {
 	// send a mouse motion event to refresh any hover actions
@@ -1299,7 +1429,7 @@ void InventoryState::onAutoequip(Action *)
 	Tile                     *groundTile    = unit->getTile();
 	std::vector<BattleItem*>  groundInv     = *groundTile->getInventory();
 	Mod                      *mod           = _game->getMod();
-	RuleInventory            *groundRuleInv = mod->getInventory("STR_GROUND", true);
+	RuleInventory            *groundRuleInv = mod->getInventoryGround();
 	int                       worldShade    = _battleGame->getGlobalShade();
 
 	std::vector<BattleUnit*> units;
@@ -1342,6 +1472,7 @@ void InventoryState::calculateCurrentDamageTooltip()
 	if (!_currentDamageTooltipItem)
 		return;
 
+	const BattleItem *damageItem = _currentDamageTooltipItem;
 	const RuleItem *weaponRule = _currentDamageTooltipItem->getRules();
 	const int PRIMARY_SLOT = 0;
 
@@ -1353,9 +1484,11 @@ void InventoryState::calculateCurrentDamageTooltip()
 	}
 	else if (_currentDamageTooltipItem->needsAmmoForSlot(PRIMARY_SLOT))
 	{
-		if (_currentDamageTooltipItem->getAmmoForSlot(PRIMARY_SLOT) != 0)
+		auto ammo = _currentDamageTooltipItem->getAmmoForSlot(PRIMARY_SLOT);
+		if (ammo != nullptr)
 		{
-			rule = _currentDamageTooltipItem->getAmmoForSlot(PRIMARY_SLOT)->getRules();
+			damageItem = ammo;
+			rule = ammo->getRules();
 		}
 		else
 		{
@@ -1400,7 +1533,7 @@ void InventoryState::calculateCurrentDamageTooltip()
 		if (rule->getBattleType() != BT_CORPSE)
 		{
 			int totalDamage = 0;
-			totalDamage += rule->getPowerBonus(currentUnit);
+			totalDamage += rule->getPowerBonus({ BA_NONE, currentUnit, _currentDamageTooltipItem, damageItem }); //TODO: find what exactly attack we can do
 			//totalDamage -= rule->getPowerRangeReduction(distance * 16);
 			if (totalDamage < 0) totalDamage = 0;
 			std::ostringstream ss;
@@ -1795,7 +1928,7 @@ void InventoryState::txtArmorTooltipIn(Action *action)
 			_currentTooltip = action->getSender()->getTooltip();
 			{
 				std::ostringstream ss;
-				
+
 				if (unit->getGeoscapeSoldier())
 				{
 					auto soldierRules = unit->getGeoscapeSoldier()->getRules();
@@ -1805,7 +1938,7 @@ void InventoryState::txtArmorTooltipIn(Action *action)
 						ss << ": ";
 					}
 				}
-				
+
 				ss << tr(_currentTooltip);
 				if (unit->getArmor()->getWeight() != 0)
 				{

@@ -85,6 +85,7 @@
 #include "RuleMissionScript.h"
 #include "../Geoscape/Globe.h"
 #include "../Savegame/SavedGame.h"
+#include "../Savegame/SavedBattleGame.h"
 #include "../Savegame/Region.h"
 #include "../Savegame/Base.h"
 #include "../Savegame/Country.h"
@@ -237,6 +238,7 @@ class ModScriptGlobal : public ScriptGlobal
 {
 	size_t _modCurr = 0;
 	std::vector<std::pair<std::string, int>> _modNames;
+	ScriptValues<Mod> _scriptValues;
 
 	void loadRuleList(int &value, const YAML::Node &node) const
 	{
@@ -278,6 +280,14 @@ class ModScriptGlobal : public ScriptGlobal
 	}
 
 public:
+	/// Initialize shared globals like types.
+	void initParserGlobals(ScriptParserBase* parser) override
+	{
+		parser->registerPointerType<Mod>();
+		parser->registerPointerType<SavedGame>();
+		parser->registerPointerType<SavedBattleGame>();
+	}
+
 	/// Prepare for loading data.
 	void beginLoad() override
 	{
@@ -306,6 +316,9 @@ public:
 		updateConst("RuleList." + ModNameCurrent, (int)i);
 		_modCurr = i;
 	}
+
+	/// Get script values
+	ScriptValues<Mod>& getScriptValues() { return _scriptValues; }
 };
 
 /**
@@ -320,7 +333,8 @@ Mod::Mod() :
 	_aiFireChoiceIntelCoeff(5), _aiFireChoiceAggroCoeff(5), _aiExtendedFireModeChoice(false), _aiRespectMaxRange(false), _aiDestroyBaseFacilities(false),
 	_aiPickUpWeaponsMoreActively(false),
 	_maxLookVariant(0), _tooMuchSmokeThreshold(10), _customTrainingFactor(100), _minReactionAccuracy(0), _chanceToStopRetaliation(0), _lessAliensDuringBaseDefense(false),
-	_allowCountriesToCancelAlienPact(false), _buildInfiltrationBaseCloseToTheCountry(false), _kneelBonusGlobal(115), _oneHandedPenaltyGlobal(80),
+	_allowCountriesToCancelAlienPact(false), _buildInfiltrationBaseCloseToTheCountry(false), _allowAlienBasesOnWrongTextures(true),
+	_kneelBonusGlobal(115), _oneHandedPenaltyGlobal(80),
 	_enableCloseQuartersCombat(0), _closeQuartersAccuracyGlobal(100), _closeQuartersTuCostGlobal(12), _closeQuartersEnergyCostGlobal(8),
 	_noLOSAccuracyPenaltyGlobal(-1),
 	_surrenderMode(0),
@@ -340,7 +354,8 @@ Mod::Mod() :
 	_defeatScore(0), _defeatFunds(0), _startingTime(6, 1, 1, 1999, 12, 0, 0), _startingDifficulty(0),
 	_baseDefenseMapFromLocation(0), _disableUnderwaterSounds(false), _enableUnitResponseSounds(false), _pediaReplaceCraftFuelWithRangeType(-1),
 	_facilityListOrder(0), _craftListOrder(0), _itemCategoryListOrder(0), _itemListOrder(0),
-	_researchListOrder(0),  _manufactureListOrder(0), _transformationListOrder(0), _ufopaediaListOrder(0), _invListOrder(0), _soldierListOrder(0), _modCurrent(0), _statePalette(0)
+	_researchListOrder(0),  _manufactureListOrder(0), _soldierBonusListOrder(0), _transformationListOrder(0), _ufopaediaListOrder(0), _invListOrder(0), _soldierListOrder(0),
+	_modCurrent(0), _statePalette(0)
 {
 	_muteMusic = new Music();
 	_muteSound = new Sound();
@@ -931,7 +946,7 @@ Palette *Mod::getPalette(const std::string &name, bool error) const
  * @param firstcolor Offset of the first color to replace.
  * @param ncolors Amount of colors to replace.
  */
-void Mod::setPalette(const SDL_Color *colors, int firstcolor, int ncolors)
+void Mod::setPaletteForAllResources(const SDL_Color *colors, int firstcolor, int ncolors)
 {
 	_statePalette = colors;
 	for (std::map<std::string, Font*>::iterator i = _fonts.begin(); i != _fonts.end(); ++i)
@@ -1179,6 +1194,45 @@ int Mod::getOffset(int id, int max) const
 		return id;
 }
 
+/**
+ * Load base functions to bit set.
+ */
+void Mod::loadBaseFunction(const std::string& parent, std::bitset<128>& f, const YAML::Node& node)
+{
+	if (node)
+	{
+		try
+		{
+			f.reset();
+			for (YAML::const_iterator i = node.begin(); i != node.end(); ++i)
+			{
+				f.set(_baseFunctionNames.addName(i->as<std::string>(), f.size()));
+			}
+		}
+		catch(Exception& ex)
+		{
+			throw Exception("Error for '" + parent + "': " + ex.what());
+		}
+	}
+}
+
+/**
+ * Get names of function names in given bitset.
+ */
+std::vector<std::string> Mod::getBaseFunctionNames(RuleBaseFacilityFunctions f) const
+{
+	std::vector<std::string> vec;
+	vec.reserve(f.count());
+	for (size_t i = 0; i < f.size(); ++i)
+	{
+		if (f.test(i))
+		{
+			vec.push_back(_baseFunctionNames.getName(i));
+		}
+	}
+	return vec;
+}
+
 
 template<typename T>
 static void afterLoadHelper(const char* name, Mod* mod, std::map<std::string, T*>& list, void (T::* func)(const Mod*))
@@ -1367,6 +1421,23 @@ void Mod::loadAll()
 	afterLoadHelper("enviroEffects", this, _enviroEffects, &RuleEnviroEffects::afterLoad);
 	afterLoadHelper("commendations", this, _commendations, &RuleCommendations::afterLoad);
 	afterLoadHelper("skills", this, _skills, &RuleSkill::afterLoad);
+
+	// check unique listOrder
+	{
+		std::vector<int> tmp;
+		tmp.reserve(_soldierBonus.size());
+		for (auto i : _soldierBonus)
+		{
+			tmp.push_back(i.second->getListOrder());
+		}
+		std::sort(tmp.begin(), tmp.end());
+		auto it = std::unique(tmp.begin(), tmp.end());
+		bool wasUnique = (it == tmp.end());
+		if (!wasUnique)
+		{
+			throw Exception("List order for soldier bonus types must be unique!");
+		}
+	}
 
 	// auto-create alternative manufacture rules
 	for (auto shortcutPair : _manufactureShortcut)
@@ -1592,6 +1663,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	if (const YAML::Node &extended = doc["extended"])
 	{
 		_scriptGlobal->load(extended);
+		_scriptGlobal->getScriptValues().load(extended, parsers.getShared(), "globals");
 	}
 	for (YAML::const_iterator i = doc["countries"].begin(); i != doc["countries"].end(); ++i)
 	{
@@ -1758,7 +1830,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		if (rule != 0)
 		{
 			_researchListOrder += 100;
-			rule->load(*i, _researchListOrder);
+			rule->load(*i, this, _researchListOrder);
 			if ((*i)["unlockFinalMission"].as<bool>(false))
 			{
 				_finalResearch = (*i)["name"].as<std::string>(_finalResearch);
@@ -1771,7 +1843,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		if (rule != 0)
 		{
 			_manufactureListOrder += 100;
-			rule->load(*i, _manufactureListOrder);
+			rule->load(*i, this, _manufactureListOrder);
 		}
 	}
 	for (YAML::const_iterator i = doc["manufactureShortcut"].begin(); i != doc["manufactureShortcut"].end(); ++i)
@@ -1787,7 +1859,8 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		RuleSoldierBonus *rule = loadRule(*i, &_soldierBonus, &_soldierBonusIndex, "name");
 		if (rule != 0)
 		{
-			rule->load(*i, parsers);
+			_soldierBonusListOrder += 100;
+			rule->load(*i, parsers, _soldierBonusListOrder);
 		}
 	}
 	for (YAML::const_iterator i = doc["soldierTransformation"].begin(); i != doc["soldierTransformation"].end(); ++i)
@@ -1796,7 +1869,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		if (rule != 0)
 		{
 			_transformationListOrder += 100;
-			rule->load(*i, _transformationListOrder);
+			rule->load(*i, this, _transformationListOrder);
 		}
 	}
 	for (YAML::const_iterator i = doc["ufopaedia"].begin(); i != doc["ufopaedia"].end(); ++i)
@@ -1895,6 +1968,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_alienFuel = doc["alienFuel"].as<std::pair<std::string, int> >(_alienFuel);
 	_fontName = doc["fontName"].as<std::string>(_fontName);
 	_psiUnlockResearch = doc["psiUnlockResearch"].as<std::string>(_psiUnlockResearch);
+	_fakeUnderwaterBaseUnlockResearch = doc["fakeUnderwaterBaseUnlockResearch"].as<std::string>(_fakeUnderwaterBaseUnlockResearch);
 	_destroyedFacility = doc["destroyedFacility"].as<std::string>(_destroyedFacility);
 
 	_aiUseDelayGrenade = doc["turnAIUseGrenade"].as<int>(_aiUseDelayGrenade);
@@ -1922,6 +1996,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_lessAliensDuringBaseDefense = doc["lessAliensDuringBaseDefense"].as<bool>(_lessAliensDuringBaseDefense);
 	_allowCountriesToCancelAlienPact = doc["allowCountriesToCancelAlienPact"].as<bool>(_allowCountriesToCancelAlienPact);
 	_buildInfiltrationBaseCloseToTheCountry = doc["buildInfiltrationBaseCloseToTheCountry"].as<bool>(_buildInfiltrationBaseCloseToTheCountry);
+	_allowAlienBasesOnWrongTextures = doc["allowAlienBasesOnWrongTextures"].as<bool>(_allowAlienBasesOnWrongTextures);
 	_kneelBonusGlobal = doc["kneelBonusGlobal"].as<int>(_kneelBonusGlobal);
 	_oneHandedPenaltyGlobal = doc["oneHandedPenaltyGlobal"].as<int>(_oneHandedPenaltyGlobal);
 	_enableCloseQuartersCombat = doc["enableCloseQuartersCombat"].as<int>(_enableCloseQuartersCombat);
@@ -1935,6 +2010,8 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_bughuntRank = doc["bughuntRank"].as<int>(_bughuntRank);
 	_bughuntLowMorale = doc["bughuntLowMorale"].as<int>(_bughuntLowMorale);
 	_bughuntTimeUnitsLeft = doc["bughuntTimeUnitsLeft"].as<int>(_bughuntTimeUnitsLeft);
+
+
 	if (const YAML::Node &nodeMana = doc["mana"])
 	{
 		_manaEnabled = nodeMana["enabled"].as<bool>(_manaEnabled);
@@ -1942,8 +2019,17 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		_manaUnlockResearch = nodeMana["unlockResearch"].as<std::string>(_manaUnlockResearch);
 		_manaTrainingPrimary = nodeMana["trainingPrimary"].as<bool>(_manaTrainingPrimary);
 		_manaTrainingSecondary = nodeMana["trainingSecondary"].as<bool>(_manaTrainingSecondary);
+
+		_manaMissingWoundThreshold = nodeMana["woundThreshold"].as<int>(_manaMissingWoundThreshold);
 		_manaReplenishAfterMission = nodeMana["replenishAfterMission"].as<bool>(_manaReplenishAfterMission);
 	}
+	if (const YAML::Node &nodeHealth = doc["health"])
+	{
+		_healthMissingWoundThreshold = nodeHealth["woundThreshold"].as<int>(_healthMissingWoundThreshold);
+		_healthReplenishAfterMission = nodeHealth["replenishAfterMission"].as<bool>(_healthReplenishAfterMission);
+	}
+
+
 	if (const YAML::Node &nodeGameOver = doc["gameOver"])
 	{
 		_loseMoney = nodeGameOver["loseMoney"].as<std::string>(_loseMoney);
@@ -3739,7 +3825,6 @@ RuleMissionScript *Mod::getMissionScript(const std::string &name, bool error) co
 {
 	return getRule(name, "Mission Script", _missionScripts, error);
 }
-
 /// Get global script data.
 ScriptGlobal *Mod::getScriptGlobal() const
 {
@@ -4955,6 +5040,11 @@ int Mod::getDefeatFunds() const
 	return _defeatFunds;
 }
 
+
+////////////////////////////////////////////////////////////
+//					Script binding
+////////////////////////////////////////////////////////////
+
 namespace
 {
 
@@ -4981,7 +5071,74 @@ void getSmokeReduction(const Mod *m, int &smoke)
 	smoke = smoke * m->getMaxViewDistance() / (3 * 20);
 }
 
+void getUnitScript(const Mod* mod, const Unit* &unit, const std::string &name)
+{
+	if (mod)
+	{
+		unit = mod->getUnit(name);
+	}
+	else
+	{
+		unit = nullptr;
+	}
 }
+void getArmorScript(const Mod* mod, const Armor* &armor, const std::string &name)
+{
+	if (mod)
+	{
+		armor = mod->getArmor(name);
+	}
+	else
+	{
+		armor = nullptr;
+	}
+}
+void getItemScript(const Mod* mod, const RuleItem* &item, const std::string &name)
+{
+	if (mod)
+	{
+		item = mod->getItem(name);
+	}
+	else
+	{
+		item = nullptr;
+	}
+}
+void getSkillScript(const Mod* mod, const RuleSkill* &skill, const std::string &name)
+{
+	if (mod)
+	{
+		skill = mod->getSkill(name);
+	}
+	else
+	{
+		skill = nullptr;
+	}
+}
+void getSoldierScript(const Mod* mod, const RuleSoldier* &soldier, const std::string &name)
+{
+	if (mod)
+	{
+		soldier = mod->getSoldier(name);
+	}
+	else
+	{
+		soldier = nullptr;
+	}
+}
+void getInvenotryScript(const Mod* mod, const RuleInventory* &inv, const std::string &name)
+{
+	if (mod)
+	{
+		inv = mod->getInventory(name);
+	}
+	else
+	{
+		inv = nullptr;
+	}
+}
+
+} // namespace
 
 /**
  * Register all useful function used by script.
@@ -5001,6 +5158,20 @@ void Mod::ScriptRegister(ScriptParserBase *parser)
 	mod.add<&Mod::getMaxDarknessToSeeUnits>("getMaxDarknessToSeeUnits");
 	mod.add<&Mod::getMaxViewDistance>("getMaxViewDistance");
 	mod.add<&getSmokeReduction>("getSmokeReduction");
+
+	mod.add<&getUnitScript>("getRuleUnit");
+	mod.add<&getItemScript>("getRuleItem");
+	mod.add<&getArmorScript>("getRuleArmor");
+	mod.add<&getSkillScript>("getRuleSkill");
+	mod.add<&getSoldierScript>("getRuleSoldier");
+	mod.add<&getInvenotryScript>("getRuleInventory");
+	mod.add<&Mod::getInventoryRightHand>("getRuleInventoryRightHand");
+	mod.add<&Mod::getInventoryLeftHand>("getRuleInventoryLeftHand");
+	mod.add<&Mod::getInventoryBackpack>("getRuleInventoryBackpack");
+	mod.add<&Mod::getInventoryBelt>("getRuleInventoryBelt");
+	mod.add<&Mod::getInventoryGround>("getRuleInventoryGround");
+
+	mod.addScriptValue<&Mod::_scriptGlobal, &ModScriptGlobal::getScriptValues>();
 }
 
 }
