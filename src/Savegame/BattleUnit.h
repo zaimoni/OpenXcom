@@ -114,7 +114,7 @@ private:
 	int _coverReserve;
 	BattleUnit *_charging;
 	int _turnsSinceSpotted, _turnsLeftSpottedForSnipers, _turnsSinceStunned = 255;
-	std::string _spawnUnit;
+	const Unit *_spawnUnit = nullptr;
 	std::string _activeHand;
 	BattleUnitStatistics* _statistics;
 	int _murdererId;	// used to credit the murderer with the kills that this unit got by blowing up on death
@@ -195,7 +195,7 @@ public:
 	/// Cleans up the BattleUnit.
 	~BattleUnit();
 	/// Loads the unit from YAML.
-	void load(const YAML::Node &node, const ScriptGlobal *shared);
+	void load(const YAML::Node &node, const Mod *mod, const ScriptGlobal *shared);
 	/// Saves the unit to YAML.
 	YAML::Node save(const ScriptGlobal *shared) const;
 	/// Gets the BattleUnit's ID.
@@ -289,12 +289,16 @@ public:
 	bool hasNegativeHealthRegen() const;
 	/// Knocks the unit out instantly.
 	void knockOut(BattlescapeGame *battle);
+
 	/// Start falling sequence.
 	void startFalling();
 	/// Increment the falling sequence.
 	void keepFalling();
+	/// Set final falling state.
+	void instaFalling();
 	/// Get falling sequence.
 	int getFallingPhase() const;
+
 	/// The unit is out - either dead or unconscious.
 	bool isOut() const;
 	/// Check if unit stats will cause knock out.
@@ -335,11 +339,11 @@ public:
 	/// Clear visible tiles.
 	void clearVisibleTiles();
 	/// Calculate psi attack accuracy.
-	int getPsiAccuracy(BattleActionType actionType, const BattleItem *item) const;
+	static int getPsiAccuracy(BattleActionAttack::ReadOnly attack);
 	/// Calculate firing accuracy.
-	int getFiringAccuracy(BattleActionType actionType, BattleItem *item, Mod *mod);
+	static int getFiringAccuracy(BattleActionAttack::ReadOnly attack, Mod *mod);
 	/// Calculate accuracy modifier.
-	int getAccuracyModifier(BattleItem *item = 0);
+	int getAccuracyModifier(const BattleItem *item = 0) const;
 	/// Set armor value.
 	void setArmor(int armor, UnitSide side);
 	/// Get armor value.
@@ -400,8 +404,6 @@ public:
 
 	/// Gets the item in the specified slot.
 	BattleItem *getItem(RuleInventory *slot, int x = 0, int y = 0) const;
-	/// Gets the item in the specified slot.
-	BattleItem *getItem(const std::string &slot, int x = 0, int y = 0) const;
 	/// Gets the item in the main hand.
 	BattleItem *getMainHandWeapon(bool quickest = true) const;
 	/// Gets a grenade from the belt, if any.
@@ -410,8 +412,15 @@ public:
 	BattleItem *getRightHandWeapon() const;
 	/// Gets the item from left hand.
 	BattleItem *getLeftHandWeapon() const;
+	/// Set the right hand as main active hand.
+	void setActiveRightHand();
+	/// Set the left hand as main active hand.
+	void setActiveLeftHand();
+	/// Choose what weapon was last use by unit.
+	BattleItem *getActiveHand(BattleItem *left, BattleItem *right) const;
 	/// Reloads a weapon if needed.
 	bool reloadAmmo();
+
 	/// Check if this unit is in the exit area
 	bool isInExitArea(SpecialTileType stt = START_POINT) const;
 	bool liesInExitArea(Tile *tile, SpecialTileType stt = START_POINT) const;
@@ -519,17 +528,13 @@ public:
 	/// Get the units's alreadyRespawned flag.
 	bool getAlreadyRespawned() const;
 	/// Get the units's rank string.
-	std::string getRankString() const;
+	const std::string& getRankString() const;
 	/// Get the geoscape-soldier object.
 	Soldier *getGeoscapeSoldier() const;
 	/// Add a kill to the counter.
 	void addKillCount();
 	/// Get unit type.
-	std::string getType() const;
-	/// Set the hand this unit is using;
-	void setActiveHand(const std::string &slot);
-	/// Get unit's active hand.
-	std::string getActiveHand() const;
+	const std::string& getType() const;
 	/// Convert's unit to a faction
 	void convertToFaction(UnitFaction f);
 	/// Set health to 0
@@ -537,9 +542,9 @@ public:
 	/// Set health to 0 and set status dead
 	void instaKill();
 	/// Gets the unit's spawn unit.
-	std::string getSpawnUnit() const;
+	const Unit *getSpawnUnit() const;
 	/// Sets the unit's spawn unit.
-	void setSpawnUnit(const std::string &spawnUnit);
+	void setSpawnUnit(const Unit *spawnUnit);
 	/// Gets the unit's aggro sound.
 	int getAggroSound() const;
 	/// Sets the unit's time units.
@@ -567,9 +572,9 @@ public:
 	int  getTurnsLeftSpottedForSnipers() const;
 	/// Reset how many turns passed since stunned last time.
 	void resetTurnsSinceStunned() { _turnsSinceStunned = 255; }
-	/// Increse how many turns passed since stunned last time.
+	/// Increase how many turns passed since stunned last time.
 	void incTurnsSinceStunned() { _turnsSinceStunned = std::max(255, _turnsSinceStunned + 1); }
-	/// Return how many truns passed since stunned last time.
+	/// Return how many turns passed since stunned last time.
 	int getTurnsSinceStunned() const { return _turnsSinceStunned; }
 
 	/// Get this unit's original faction

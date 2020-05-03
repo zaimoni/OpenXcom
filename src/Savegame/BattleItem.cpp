@@ -111,7 +111,7 @@ void BattleItem::load(const YAML::Node &node, Mod *mod, const ScriptGlobal *shar
 		}
 		else
 		{
-			_inventorySlot = mod->getInventory("STR_GROUND");
+			_inventorySlot = mod->getInventoryGround();
 		}
 	}
 	_inventoryX = node["inventoryX"].as<int>(_inventoryX);
@@ -1191,7 +1191,7 @@ bool BattleItem::getGlow() const
 int BattleItem::getGlowRange() const
 {
 	auto owner = _unit ? _unit : _previousOwner;
-	return owner ? _rules->getPowerBonus(owner) : _rules->getPower();
+	return _rules->getPowerBonus({ BA_NONE, owner, this, this });
 }
 
 /**
@@ -1221,6 +1221,10 @@ bool BattleItem::isAmmo() const
 	return _isAmmo;
 }
 
+
+////////////////////////////////////////////////////////////
+//					Script binding
+////////////////////////////////////////////////////////////
 
 namespace
 {
@@ -1302,6 +1306,22 @@ struct getAmmoForActionConstScript
 		else
 		{
 			ammo = nullptr;
+		}
+		return RetContinue;
+	}
+};
+
+struct getRuleInvenotrySlotScript
+{
+	static RetEnum func(const BattleItem *weapon, const RuleInventory *&inv)
+	{
+		if (weapon)
+		{
+			inv = weapon->getSlot();
+		}
+		else
+		{
+			inv = nullptr;
 		}
 		return RetContinue;
 	}
@@ -1401,7 +1421,7 @@ void setStimulantQuantityScript(BattleItem* bt, int i)
 	}
 }
 
-}
+} // namespace
 
 /**
  * Register BattleItem in script parser.
@@ -1423,6 +1443,7 @@ void BattleItem::ScriptRegister(ScriptParserBase* parser)
 	bi.addFunc<getAmmoForSlotConstScript>("getAmmoForSlot");
 	bi.addFunc<getAmmoForActionScript>("getAmmoForAction");
 	bi.addFunc<getAmmoForActionConstScript>("getAmmoForAction");
+	bi.addFunc<getRuleInvenotrySlotScript>("getSlot");
 	bi.addPair<BattleUnit, &BattleItem::getPreviousOwner, &BattleItem::getPreviousOwner>("getPreviousOwner");
 	bi.addPair<BattleUnit, &BattleItem::getOwner, &BattleItem::getOwner>("getOwner");
 	bi.add<&BattleItem::getId>("getId");
@@ -1451,6 +1472,7 @@ void BattleItem::ScriptRegister(ScriptParserBase* parser)
 
 	bi.add<&getActionTUsScript>("getActionCost.getTimeUnits");
 
+	bi.addScriptValue<BindBase::OnlyGet, &BattleItem::_rules, &RuleItem::getScriptValuesRaw>();
 	bi.addScriptValue<&BattleItem::_scriptValues>();
 	bi.addDebugDisplay<&debugDisplayScript>();
 
@@ -1507,7 +1529,7 @@ ModScript::SelectItemParser::SelectItemParser(ScriptGlobal* shared, const std::s
 	setDefault("add sprite_index sprite_offset; return sprite_index;");
 }
 
-ModScript::CreateItemParser::CreateItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name, "item", "battle_game", "turn", }
+ModScript::CreateItemParser::CreateItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name, "item", "unit", "battle_game", "turn", }
 {
 	BindBase b { this };
 
@@ -1519,6 +1541,26 @@ ModScript::NewTurnItemParser::NewTurnItemParser(ScriptGlobal* shared, const std:
 	BindBase b { this };
 
 	b.addCustomPtr<const Mod>("rules", mod);
+}
+
+ModScript::TryPsiAttackItemParser::TryPsiAttackItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"psi_attack_success",
+
+	"item",
+	"attacker",
+	"victim",
+	"attack_strength",
+	"defense_strength",
+	"battle_action",
+	"random",
+	"distance",
+	"distance_strength_reduction" }
+{
+	BindBase b { this };
+
+	b.addCustomPtr<const Mod>("rules", mod);
+
+	setDefault("var int r; random.randomRange r 0 55; add psi_attack_success attack_strength; add psi_attack_success r; sub psi_attack_success defense_strength; sub psi_attack_success distance_strength_reduction; return psi_attack_success;");
 }
 
 /**

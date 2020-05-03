@@ -192,6 +192,8 @@ void MeleeAttackBState::think()
 			_parent->getMap()->invalidate();
 		}
 
+		_parent->getCurrentAction()->type = BA_NONE; // do this to restore cursor
+
 		if (_parent->getSave()->getSide() == FACTION_PLAYER || _parent->getSave()->getDebugMode())
 		{
 			_parent->setupCursor();
@@ -223,7 +225,7 @@ void MeleeAttackBState::performMeleeAttack()
 
 
 	// make an explosion action
-	_parent->statePushFront(new ExplosionBState(_parent, damagePosition, BattleActionAttack{ _action, _ammo, }, 0, true));
+	_parent->statePushFront(new ExplosionBState(_parent, damagePosition, BattleActionAttack::GetAferShoot(_action, _ammo), 0, true));
 
 
 	_reaction = true;

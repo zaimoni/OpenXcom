@@ -54,6 +54,7 @@
 #include "../Mod/RuleBaseFacility.h"
 #include "../Mod/RuleCraft.h"
 #include "../Mod/RuleGlobe.h"
+#include "../Mod/Texture.h"
 #include "../Interface/Cursor.h"
 #include "../Engine/Screen.h"
 #include "../Engine/CrossPlatform.h"
@@ -726,6 +727,27 @@ void Globe::center(double lon, double lat)
 bool Globe::insideLand(double lon, double lat) const
 {
 	return (getPolygonFromLonLat(lon,lat))!=NULL;
+}
+
+/**
+ * Checks if a polar point is inside the fakeUnderwater texture.
+ * @param lon Longitude of the point.
+ * @param lat Latitude of the point.
+ * @return True if it's inside, False if it's outside.
+ */
+bool Globe::insideFakeUnderwaterTexture(double lon, double lat) const
+{
+	auto polygon = getPolygonFromLonLat(lon, lat);
+	if (!polygon)
+	{
+		return false;
+	}
+	auto textureRule = _game->getMod()->getGlobe()->getTexture(polygon->getTexture());
+	if (textureRule && textureRule->isFakeUnderwater())
+	{
+		return true;
+	}
+	return false;
 }
 
 /**
@@ -1508,6 +1530,9 @@ void Globe::drawDetail()
 			color = 0;
 			for (std::vector<Region*>::iterator i = _game->getSavedGame()->getRegions()->begin(); i != _game->getSavedGame()->getRegions()->end(); ++i)
 			{
+				if (_game->getSavedGame()->debugRegion && _game->getSavedGame()->debugRegion != (*i))
+					continue;
+
 				color += 10;
 				for (size_t k = 0; k != (*i)->getRules()->getLatMax().size(); ++k)
 				{
@@ -1527,9 +1552,17 @@ void Globe::drawDetail()
 		{
 			for (std::vector<Region*>::iterator i = _game->getSavedGame()->getRegions()->begin(); i != _game->getSavedGame()->getRegions()->end(); ++i)
 			{
+				if (_game->getSavedGame()->debugRegion && _game->getSavedGame()->debugRegion != (*i))
+					continue;
+
 				color = -1;
+				int zoneNumber = 0;
 				for (std::vector<MissionZone>::const_iterator j = (*i)->getRules()->getMissionZones().begin(); j != (*i)->getRules()->getMissionZones().end(); ++j)
 				{
+					++zoneNumber;
+					if (_game->getSavedGame()->debugZone > 0 && _game->getSavedGame()->debugZone != zoneNumber)
+						continue;
+
 					color += 2;
 					for (std::vector<MissionArea>::const_iterator k = (*j).areas.begin(); k != (*j).areas.end(); ++k)
 					{

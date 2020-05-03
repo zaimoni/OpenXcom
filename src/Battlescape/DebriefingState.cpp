@@ -1519,13 +1519,7 @@ void DebriefingState::prepareDebriefing()
 			{
 				if ((*j)->getTile())
 				{
-					for (std::vector<BattleItem*>::iterator k = (*j)->getInventory()->begin(); k != (*j)->getInventory()->end(); ++k)
-					{
-						if (!(*k)->getRules()->isFixed())
-						{
-							(*j)->getTile()->addItem(*k, _game->getMod()->getInventory("STR_GROUND"));
-						}
-					}
+					battle->getTileEngine()->itemDropInventory((*j)->getTile(), (*j));
 				}
 				if (!(*j)->getArmor()->getCorpseBattlescape().empty())
 				{
@@ -2372,8 +2366,19 @@ void DebriefingState::recoverCivilian(BattleUnit *from, Base *base)
  */
 void DebriefingState::recoverAlien(BattleUnit *from, Base *base)
 {
+	// Transform a live alien into one or more recovered items?
+	RuleItem* liveAlienItemRule = _game->getMod()->getItem(from->getType());
+	if (!liveAlienItemRule->getRecoveryTransformations().empty())
+	{
+		addItemsToBaseStores(liveAlienItemRule, base, 1, true);
+
+		// Ignore everything else, e.g. no points for live/dead aliens (since you did NOT recover them)
+		// Also no points or anything else for the recovered items
+		return;
+	}
+
 	// Zombie handling: don't recover a zombie.
-	if (!from->getSpawnUnit().empty())
+	if (from->getSpawnUnit())
 	{
 		// convert it, and mind control the resulting unit.
 		// reason: zombies don't create unconscious bodies... ever.

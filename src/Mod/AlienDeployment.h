@@ -79,6 +79,7 @@ private:
 	std::string _nextStage, _race, _script;
 	std::vector<std::string> _randomRaces;
 	bool _finalDestination, _isAlienBase, _isHidden;
+	int _fakeUnderwaterSpawnChance;
 	std::string _winCutscene, _loseCutscene, _abortCutscene;
 	std::string _alert, _alertBackground, _alertDescription;
 	int _alertSound;
@@ -102,7 +103,7 @@ public:
 	/// Loads Alien Deployment data from YAML.
 	void load(const YAML::Node& node, Mod *mod);
 	/// Gets the Alien Deployment's type.
-	std::string getType() const;
+	const std::string& getType() const;
 	/// Gets the custom UFO name to use for the dummy/blank 'addUFO' mapscript command.
 	const std::string& getCustomUfoName() const { return _customUfo; }
 	/// Gets the Alien Deployment's enviro effects.
@@ -197,6 +198,8 @@ public:
 	bool isAlienBase() const;
 	/// Gets whether or not this mission should be hidden (purely for new battle mode)
 	bool isHidden() const { return _isHidden; }
+	/// Gets the chance for deciding to spawn an alien base on fakeUnderwater globe texture.
+	int getFakeUnderwaterSpawnChance() const { return _fakeUnderwaterSpawnChance; }
 
 	std::string chooseGenMissionType() const;
 

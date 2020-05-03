@@ -21,9 +21,12 @@
 #include <map>
 #include <yaml-cpp/yaml.h>
 #include "Unit.h"
+#include "RuleBaseFacilityFunctions.h"
 
 namespace OpenXcom
 {
+
+class Mod;
 
 /**
  * Ruleset data structure for the information to transform a soldier.
@@ -32,7 +35,8 @@ class RuleSoldierTransformation
 {
 private:
 	std::string _name;
-	std::vector<std::string > _requires, _requiredPreviousTransformations, _forbiddenPreviousTransformations, _requiresBaseFunc;
+	std::vector<std::string > _requires, _requiredPreviousTransformations, _forbiddenPreviousTransformations;
+	RuleBaseFacilityFunctions _requiresBaseFunc;
 	std::string _producedItem;
 	std::string _producedSoldierType, _producedSoldierArmor;
 	bool _keepSoldierArmor, _createsClone, _needsCorpseRecovered, _allowsDeadSoldiers, _allowsLiveSoldiers, _allowsWoundedSoldiers;
@@ -46,6 +50,7 @@ private:
 	bool _showMinMax;
 	UnitStats _rerollStats;
 	bool _lowerBoundAtMinStats, _upperBoundAtMaxStats, _upperBoundAtStatCaps;
+	int _upperBoundType;
 	bool _reset;
 	std::string _soldierBonusType;
 
@@ -53,7 +58,7 @@ public:
 	/// Default constructor
 	RuleSoldierTransformation(const std::string &name);
 	/// Loads the project data from YAML
-	void load(const YAML::Node& node, int listOrder);
+	void load(const YAML::Node& node, Mod* mod, int listOrder);
 	/// Gets the unique name id of the project
 	const std::string &getName() const;
 	/// Gets the list weight of the project
@@ -61,7 +66,7 @@ public:
 	/// Gets the list of research this project requires
 	const std::vector<std::string > &getRequiredResearch() const;
 	/// Gets the list of required base functions for this project
-	const std::vector<std::string > &getRequiredBaseFuncs() const;
+	RuleBaseFacilityFunctions getRequiredBaseFuncs() const { return _requiresBaseFunc; }
 	/// Gets the type of item produced by this project (the soldier stops existing completely and is fully replaced by the item)
 	const std::string &getProducedItem() const { return _producedItem; }
 	/// Gets the type of soldier produced by this project
@@ -131,6 +136,9 @@ public:
 	bool hasUpperBoundAtMaxStats() const;
 	/// Gets whether or not this project should cap stats at the produced RuleSoldier's statCaps
 	bool hasUpperBoundAtStatCaps() const;
+	/// Gets whether to use soft upper bound limit or not.
+	bool isSoftLimit(bool isSameSoldierType) const;
+
 	/// Gets whether or not this project should reset info about all previous transformations and all previously assigned soldier bonuses
 	bool getReset() const;
 	/// Gets the type of soldier bonus assigned by this project

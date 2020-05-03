@@ -80,9 +80,7 @@ void RuleSoldier::load(const YAML::Node &node, Mod *mod, int listOrder, const Mo
 
 	//requires
 	_requires = node["requires"].as< std::vector<std::string> >(_requires);
-	_requiresBuyBaseFunc = node["requiresBuyBaseFunc"].as< std::vector<std::string> >(_requiresBuyBaseFunc);
-
-	std::sort(_requiresBuyBaseFunc.begin(), _requiresBuyBaseFunc.end());
+	mod->loadBaseFunction(_type, _requiresBuyBaseFunc, node["requiresBuyBaseFunc"]);
 
 
 	_minStats.merge(node["minStats"].as<UnitStats>(_minStats));
@@ -215,6 +213,9 @@ void RuleSoldier::afterLoad(const Mod* mod)
 		_skills.push_back(mod->getSkill(skillName, true));
 	}
 
+	_manaMissingWoundThreshold = mod->getManaWoundThreshold();
+	_healthMissingWoundThreshold = mod->getHealthWoundThreshold();
+
 	//remove not needed data
 	Collections::removeAll(_skillNames);
 }
@@ -231,7 +232,7 @@ void RuleSoldier::addSoldierNamePool(const std::string &namFile)
  * this soldier. Each soldier type has a unique name.
  * @return Soldier name.
  */
-std::string RuleSoldier::getType() const
+const std::string& RuleSoldier::getType() const
 {
 	return _type;
 }
@@ -253,15 +254,6 @@ int RuleSoldier::getListOrder() const
 const std::vector<std::string> &RuleSoldier::getRequirements() const
 {
 	return _requires;
-}
-
-/**
- * Gets the base functions required to buy solder.
- * @retreturn The sorted list of base functions ID
- */
-const std::vector<std::string> &RuleSoldier::getRequiresBuyBaseFunc() const
-{
-	return _requiresBuyBaseFunc;
 }
 
 /**
@@ -600,8 +592,27 @@ int RuleSoldier::getRankSpriteTiny() const
 	return _rankSpriteTiny;
 }
 
+
+////////////////////////////////////////////////////////////
+//					Script binding
+////////////////////////////////////////////////////////////
+
+
 namespace
 {
+
+void getTypeScript(const RuleSkill* r, ScriptText& txt)
+{
+	if (r)
+	{
+		txt = { r->getType().c_str() };
+		return;
+	}
+	else
+	{
+		txt = ScriptText::empty;
+	}
+}
 
 std::string debugDisplayScript(const RuleSoldier* rs)
 {
@@ -634,7 +645,9 @@ void RuleSoldier::ScriptRegister(ScriptParserBase* parser)
 	UnitStats::addGetStatsScript<&RuleSoldier::_minStats>(ra, "StatsMin.");
 	UnitStats::addGetStatsScript<&RuleSoldier::_maxStats>(ra, "StatsMax.");
 
-	ra.addScriptValue<&RuleSoldier::_scriptValues>(false);
+	ra.add<&getTypeScript>("getType");
+
+	ra.addScriptValue<BindBase::OnlyGet, &RuleSoldier::_scriptValues>();
 	ra.addDebugDisplay<&debugDisplayScript>();
 }
 

@@ -113,6 +113,9 @@ struct PromotionInfo
 class SavedGame
 {
 public:
+	Region *debugRegion = nullptr;
+	int debugZone = 0;
+
 	/// Name of class used in script.
 	static constexpr const char *ScriptName = "GeoscapeGame";
 	/// Register all useful function used by script.
@@ -296,6 +299,8 @@ public:
 	const std::map<std::string, bool> &getHiddenPurchaseItems();
 	/// Gets the status of a manufacture rule.
 	int getManufactureRuleStatus(const std::string &manufactureRule);
+	/// Gets all the research rule status info.
+	const std::map<std::string, int> &getResearchRuleStatusRaw() const { return _researchRuleStatus; }
 	/// Is the research new?
 	bool isResearchRuleStatusNew(const std::string &researchRule) const;
 	/// Is the research permanently disabled?
@@ -314,6 +319,8 @@ public:
 	bool isResearched(const std::vector<const RuleResearch *> &research, bool considerDebugMode = true, bool skipDisabled = false) const;
 	/// Gets if a certain item has been obtained.
 	bool isItemObtained(const std::string &itemType) const;
+	/// Gets if a certain facility has been built.
+	bool isFacilityBuilt(const std::string &facilityType) const;
 	/// Gets the soldier matching this ID.
 	Soldier *getSoldier(int id) const;
 	/// Handles the higher promotions.
@@ -322,6 +329,8 @@ public:
 	void processSoldier(Soldier *soldier, PromotionInfo &soldierData);
 	/// Checks how many soldiers of a rank exist and which one has the highest score.
 	Soldier *inspectSoldiers(std::vector<Soldier*> &soldiers, std::vector<Soldier*> &participants, int rank);
+	/// Gets the (approximate) number of idle days since the soldier's last mission.
+	int getSoldierIdleDays(Soldier *soldier);
 	///  Returns the list of alien bases.
 	std::vector<AlienBase*> *getAlienBases();
 	/// Sets debug mode.

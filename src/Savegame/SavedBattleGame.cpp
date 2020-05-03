@@ -240,7 +240,7 @@ void SavedBattleGame::load(const YAML::Node &node, Mod *mod, SavedGame* savedGam
 			if(!mod->getUnit(type) || !mod->getArmor(armor)) continue;
 			unit = new BattleUnit(mod, mod->getUnit(type), originalFaction, id, nullptr, mod->getArmor(armor), mod->getStatAdjustment(savedGame->getDifficulty()), _depth);
 		}
-		unit->load(*i, this->getMod()->getScriptGlobal());
+		unit->load(*i, this->getMod(), this->getMod()->getScriptGlobal());
 		unit->setSpecialWeapon(this);
 		_units.push_back(unit);
 		if (faction == FACTION_PLAYER)
@@ -1099,6 +1099,31 @@ void SavedBattleGame::startFirstTurn()
 	}
 
 	_turn = 1;
+
+	newTurnUpdateScripts();
+}
+
+/**
+ * Scripts that are run at begining of new turn.
+ */
+void SavedBattleGame::newTurnUpdateScripts()
+{
+	for (std::vector<BattleUnit*>::iterator i = _units.begin(); i != _units.end(); ++i)
+	{
+		if ((*i)->getStatus() == STATUS_IGNORE_ME)
+		{
+			continue;
+		}
+
+		ModScript::scriptCallback<ModScript::NewTurnUnit>((*i)->getArmor(), (*i), this, this->getTurn(), _side);
+	}
+
+	for (auto& item : _items)
+	{
+		ModScript::scriptCallback<ModScript::NewTurnItem>(item->getRules(), item, this, this->getTurn(), _side);
+	}
+
+	reviveUnconsciousUnits(false);
 }
 
 /**
@@ -1152,11 +1177,10 @@ void SavedBattleGame::endTurn()
 		while (_selectedUnit && _selectedUnit->getFaction() != FACTION_PLAYER)
 			selectNextPlayerUnit();
 	}
-	int liveSoldiers, liveAliens;
 
-	_battleState->getBattleGame()->tallyUnits(liveAliens, liveSoldiers);
+	auto tally = _battleState->getBattleGame()->tallyUnits();
 
-	if ((_turn > _cheatTurn / 2 && liveAliens <= 2) || _turn > _cheatTurn)
+	if ((_turn > _cheatTurn / 2 && tally.liveAliens <= 2) || _turn > _cheatTurn)
 	{
 		_cheating = true;
 	}
@@ -1205,22 +1229,7 @@ void SavedBattleGame::endTurn()
 	}
 
 	//scripts update
-	for (std::vector<BattleUnit*>::iterator i = _units.begin(); i != _units.end(); ++i)
-	{
-		if ((*i)->getStatus() == STATUS_IGNORE_ME)
-		{
-			continue;
-		}
-
-		ModScript::scriptCallback<ModScript::NewTurnUnit>((*i)->getArmor(), (*i), this, this->getTurn(), _side);
-	}
-
-	for (auto& item : _items)
-	{
-		ModScript::scriptCallback<ModScript::NewTurnItem>(item->getRules(), item, this, this->getTurn(), _side);
-	}
-
-	reviveUnconsciousUnits(false);
+	newTurnUpdateScripts();
 
 	//fov check will be done by `BattlescapeGame::endTurn`
 
@@ -1503,9 +1512,9 @@ void SavedBattleGame::initUnit(BattleUnit *unit, size_t itemLevel)
  * Init new created item.
  * @param item
  */
-void SavedBattleGame::initItem(BattleItem *item)
+void SavedBattleGame::initItem(BattleItem *item, BattleUnit *unit)
 {
-	ModScript::scriptCallback<ModScript::CreateItem>(item->getRules(), item, this, this->getTurn());
+	ModScript::scriptCallback<ModScript::CreateItem>(item->getRules(), item, unit, this, this->getTurn());
 }
 
 /**
@@ -1530,7 +1539,7 @@ BattleItem *SavedBattleGame::createItemForUnit(const RuleItem *rule, BattleUnit 
 	else
 	{
 		_items.push_back(item);
-		initItem(item);
+		initItem(item, unit);
 	}
 	return item;
 }
@@ -1561,7 +1570,7 @@ BattleItem *SavedBattleGame::createItemForTile(RuleItem *rule, Tile *tile)
 	BattleItem *item = new BattleItem(rule, getCurrentItemId());
 	if (tile)
 	{
-		RuleInventory *ground = _rule->getInventory("STR_GROUND", true);
+		RuleInventory *ground = _rule->getInventoryGround();
 		tile->addItem(item, ground);
 	}
 	_items.push_back(item);
@@ -2455,13 +2464,13 @@ void SavedBattleGame::setPaletteByDepth(State *state)
 {
 	if (_depth == 0)
 	{
-		state->setPalette("PAL_BATTLESCAPE");
+		state->setStandardPalette("PAL_BATTLESCAPE");
 	}
 	else
 	{
 		std::ostringstream ss;
 		ss << "PAL_BATTLESCAPE_" << _depth;
-		state->setPalette(ss.str());
+		state->setStandardPalette(ss.str());
 	}
 }
 
@@ -2855,7 +2864,7 @@ void SavedBattleGame::ScriptRegister(ScriptParserBase* parser)
 
 	sbg.add<&difficultyLevelScript>("difficultyLevel");
 
-	sbg.addScriptValue<&SavedBattleGame::_scriptValues>(true);
+	sbg.addScriptValue<&SavedBattleGame::_scriptValues>();
 
 	sbg.addDebugDisplay<&debugDisplayScript>();
 

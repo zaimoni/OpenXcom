@@ -285,7 +285,7 @@ bool Base::isOverlappingOrOverflowing()
 
 	for (std::vector<BaseFacility*>::iterator f = _facilities.begin(); f != _facilities.end(); ++f)
 	{
-		RuleBaseFacility *rules = (*f)->getRules();
+		const RuleBaseFacility *rules = (*f)->getRules();
 		int facilityX = (*f)->getX();
 		int facilityY = (*f)->getY();
 		int facilitySize = rules->getSize();
@@ -417,35 +417,6 @@ void Base::prepareSoldierStatsWithBonuses()
 	{
 		soldier->prepareStatsWithBonuses(_mod);
 	}
-}
-
-/**
- * Returns the list of crafts in the base.
- * @return Pointer to the craft list.
- */
-std::vector<Craft*> *Base::getCrafts()
-{
-	return &_crafts;
-}
-
-/**
- * Returns the list of transfers destined
- * to this base.
- * @return Pointer to the transfer list.
- */
-std::vector<Transfer*> *Base::getTransfers()
-{
-	return &_transfers;
-}
-
-/**
- * Returns the list of items in the base storage rooms.
- * Does NOT return items assigned to craft or in transfer.
- * @return Pointer to the item list.
- */
-ItemContainer *Base::getStorageItems()
-{
-	return _items;
 }
 
 /**
@@ -812,7 +783,7 @@ int Base::getAvailableQuarters() const
  * and equipment about to arrive.
  * @return Storage space.
  */
-double Base::getUsedStores()
+double Base::getUsedStores() const
 {
 	double total = _items->getTotalSize(_mod);
 	for (std::vector<Craft*>::const_iterator i = _crafts.begin(); i != _crafts.end(); ++i)
@@ -877,18 +848,18 @@ int Base::getAvailableStores() const
  * Determines space taken up by ammo clips about to rearm craft.
  * @return Ignored storage space.
  */
-double Base::getIgnoredStores()
+double Base::getIgnoredStores() const
 {
 	double space = 0;
-	for (std::vector<Craft*>::iterator c = getCrafts()->begin(); c != getCrafts()->end(); ++c)
+	for (auto c : *getCrafts())
 	{
-		if ((*c)->getStatus() == "STR_REARMING")
+		if (c->getStatus() == "STR_REARMING")
 		{
-			for (std::vector<CraftWeapon*>::iterator w = (*c)->getWeapons()->begin(); w != (*c)->getWeapons()->end() ; ++w)
+			for (auto w : *c->getWeapons())
 			{
-				if (*w != 0 && (*w)->isRearming())
+				if (w != nullptr && w->isRearming())
 				{
-					std::string clip = (*w)->getRules()->getClipItem();
+					std::string clip = w->getRules()->getClipItem();
 					int available = getStorageItems()->getItem(clip);
 					if (!clip.empty() && available > 0)
 					{
@@ -896,7 +867,7 @@ double Base::getIgnoredStores()
 						int needed = 0;
 						if (clipSize > 0)
 						{
-							needed = ((*w)->getRules()->getAmmoMax() - (*w)->getAmmo()) / clipSize;
+							needed = (w->getRules()->getAmmoMax() - w->getAmmo()) / clipSize;
 						}
 						space += std::min(available, needed) * _mod->getItem(clip, true)->getSize();
 					}
@@ -2119,24 +2090,211 @@ void Base::cleanupDefenses(bool reclaimItems)
 	Collections::deleteAll(_vehiclesFromBase);
 }
 
-namespace
-{
-
 /**
- * Store unique values from different vectors.
- * @param result Vector where final data will be send.
- * @param temp Temporary data container storing working buffer.
- * @param data Data to add.
+ * Check if any facilities in a given area are used.
  */
-void aggregateUnique(std::vector<std::string> &result, std::vector<std::string> &temp, const std::vector<std::string> &data)
+BasePlacementErrors Base::isAreaInUse(BaseAreaSubset area, const RuleBaseFacility* replacement) const
 {
-	temp.clear();
+	struct Av
+	{
+		int quarters = 0;
+		int stores = 0;
+		int laboratories = 0;
+		int workshops = 0;
+		int hangars = 0;
+		int psiLaboratories = 0;
+		int training = 0;
 
-	std::set_union(std::make_move_iterator(std::begin(result)), std::make_move_iterator(std::end(result)), std::begin(data), std::end(data), std::back_inserter(temp));
+		void add(const RuleBaseFacility* rule)
+		{
+			stores += rule->getStorage();
+			addWithoutStores(rule);
+		}
+		void addWithoutStores(const RuleBaseFacility* rule)
+		{
+			quarters += rule->getPersonnel();
+			laboratories += rule->getLaboratories();
+			workshops += rule->getWorkshops();
+			hangars += rule->getCrafts();
+			psiLaboratories += rule->getPsiLaboratories();
+			training += rule->getTrainingFacilities();
+		}
+	};
 
-	std::swap(result, temp);
-}
+	Av available;
+	Av removed;
+	RuleBaseFacilityFunctions provide;
+	RuleBaseFacilityFunctions require;
+	RuleBaseFacilityFunctions forbidden;
+	RuleBaseFacilityFunctions future;
 
+	int removedBuildings = 0;
+	int removedPrisonType[9] = { };
+	const auto prisonBegin = std::begin(removedPrisonType);
+	const auto prisonEnd = std::end(removedPrisonType);
+	auto prisonCurr = prisonBegin;
+
+	for (auto& bf : _facilities)
+	{
+		auto rule = bf->getRules();
+		if (BaseAreaSubset::intersection(bf->getPlacement(), area))
+		{
+			++removedBuildings;
+
+			// removed one, check what we lose
+			removed.add(rule);
+
+			if (rule->getAliens() > 0)
+			{
+				auto type = rule->getPrisonType();
+				if (std::find(prisonBegin, prisonCurr, type) != prisonCurr)
+				{
+					//too many prison types, give up
+					if (prisonCurr == prisonEnd)
+					{
+						return BPE_Used;
+					}
+					*prisonCurr = type;
+					++prisonCurr;
+				}
+			}
+
+			// if we build over a lift better if the new one is a lift too, right now it is a bit buggy and the game can crash if two lifts are defined but in the future it can be useful.
+			if (replacement && rule->isLift() && !replacement->isLift())
+			{
+				return BPE_Used;
+			}
+		}
+		else
+		{
+			// sum all old one, not removed
+			require |= rule->getRequireBaseFunc();
+			forbidden |= rule->getForbiddenBaseFunc();
+			future |= rule->getProvidedBaseFunc();
+			if (bf->getBuildTime() == 0)
+			{
+				available.add(rule);
+				provide |= rule->getProvidedBaseFunc();
+			}
+			else if (bf->getIfHadPreviousFacility())
+			{
+				if (Options::storageLimitsEnforced)
+				{
+					// with enforced limits we can't allow upgrades that make (temporarily) insufficient storage in a base
+					available.addWithoutStores(rule);
+				}
+				else
+				{
+					available.add(rule);
+				}
+
+				// do not give any `provide`, you need to wait until it finishes upgrading
+			}
+		}
+
+	}
+
+	// sum new one too.
+	if (replacement)
+	{
+		if (Options::storageLimitsEnforced)
+		{
+			// with enforced limits we can't allow upgrades that make (temporarily) insufficient storage in a base
+			available.addWithoutStores(replacement);
+		}
+		else
+		{
+			available.add(replacement);
+		}
+
+		// temporarily allow `provide` from a new building
+		provide |= replacement->getProvidedBaseFunc();
+		require |= replacement->getRequireBaseFunc();
+
+		// there is still some other bulding that prevents placing the new one
+		if ((forbidden & replacement->getProvidedBaseFunc()).any())
+		{
+			return BPE_ForbiddenByOther;
+		}
+
+		// check if there are any other buildings that are forbidden by this one
+		if ((future & replacement->getForbiddenBaseFunc()).any())
+		{
+			return BPE_ForbiddenByThis;
+		}
+	}
+
+	// if there is any required function that we do not have then it means we are trying to remove something still needed
+	if ((~provide & require).any())
+	{
+		return BPE_Used;
+	}
+
+	// nothing removed, skip.
+	if (removedBuildings == 0)
+	{
+		return BPE_None;
+	}
+
+	if (prisonBegin != prisonCurr)
+	{
+		int availablePrisonTypes[std::size(removedPrisonType)] = { };
+
+		auto sumAvailablePrisons = [&](const RuleBaseFacility* rule)
+		{
+			auto prisonSize = rule->getAliens();
+			if (prisonSize > 0)
+			{
+				auto type = rule->getPrisonType();
+				auto find = std::find(prisonBegin, prisonCurr, type);
+				if (find != prisonCurr)
+				{
+					availablePrisonTypes[find - prisonBegin] = prisonSize;
+				}
+			}
+		};
+
+		// sum all available space
+		for (auto& bf : _facilities)
+		{
+			auto rule = bf->getRules();
+			if (!BaseAreaSubset::intersection(bf->getPlacement(), area))
+			{
+				sumAvailablePrisons(rule);
+			}
+		}
+
+		// sum new space too
+		if (replacement)
+		{
+			// same as like with storage, only when limits are not enforced you can upgrade full prison
+			if (!Options::storageLimitsEnforced)
+			{
+				sumAvailablePrisons(replacement);
+			}
+		}
+
+		// check if usage fits space
+		for (std::pair<int, int> typeSize : Collections::zip(Collections::range(prisonBegin, prisonCurr), Collections::range(availablePrisonTypes)))
+		{
+			if (typeSize.second < getUsedContainment(typeSize.first))
+			{
+				return BPE_Used;
+			}
+		}
+	}
+
+	// only check space for things that are removed
+	return (
+		(removed.quarters > 0 && available.quarters < getUsedQuarters()) ||
+		(removed.stores > 0 && available.stores < getUsedStores()) ||
+		(removed.laboratories > 0 && available.laboratories < getUsedLaboratories()) ||
+		(removed.workshops > 0 && available.workshops < getUsedWorkshops()) ||
+		(removed.hangars > 0 && available.hangars < getUsedHangars()) ||
+		(removed.psiLaboratories > 0 && available.psiLaboratories < getUsedPsiLabs()) ||
+		(removed.training > 0 && available.training < getUsedTraining()) ||
+		false
+	) ? BPE_Used : BPE_None;
 }
 
 /**
@@ -2144,21 +2302,21 @@ void aggregateUnique(std::vector<std::string> &result, std::vector<std::string> 
  * @param skip Skip functions provide by this facility.
  * @return List of custom IDs.
  */
-std::vector<std::string> Base::getProvidedBaseFunc(const BaseFacility *skip) const
+RuleBaseFacilityFunctions Base::getProvidedBaseFunc(BaseAreaSubset skip) const
 {
-	std::vector<std::string> ret, temp;
+	RuleBaseFacilityFunctions ret = 0;
 
-	for (std::vector<BaseFacility*>::const_iterator bf = _facilities.begin(); bf != _facilities.end(); ++bf)
+	for (auto& bf : _facilities)
 	{
-		if (*bf == skip)
+		if (BaseAreaSubset::intersection(bf->getPlacement(), skip))
 		{
 			continue;
 		}
-		if ((*bf)->getBuildTime() > 0)
+		if (bf->getBuildTime() > 0)
 		{
 			continue;
 		}
-		aggregateUnique(ret, temp, (*bf)->getRules()->getProvidedBaseFunc());
+		ret |= bf->getRules()->getProvidedBaseFunc();
 	}
 
 	return ret;
@@ -2169,27 +2327,27 @@ std::vector<std::string> Base::getProvidedBaseFunc(const BaseFacility *skip) con
  * @param skip Skip functions require by this facility.
  * @return List of custom IDs.
  */
-std::vector<std::string> Base::getRequireBaseFunc(const BaseFacility *skip) const
+RuleBaseFacilityFunctions Base::getRequireBaseFunc(BaseAreaSubset skip) const
 {
-	std::vector<std::string> ret, temp;
+	RuleBaseFacilityFunctions ret = 0;
 
-	for (std::vector<BaseFacility*>::const_iterator bf = _facilities.begin(); bf != _facilities.end(); ++bf)
+	for (auto& bf : _facilities)
 	{
-		if (*bf == skip)
+		if (BaseAreaSubset::intersection(bf->getPlacement(), skip))
 		{
 			continue;
 		}
-		aggregateUnique(ret, temp,  (*bf)->getRules()->getRequireBaseFunc());
+		ret |= bf->getRules()->getRequireBaseFunc();
 	}
 
 	for (std::vector<ResearchProject*>::const_iterator res = _research.begin(); res != _research.end(); ++res)
 	{
-		aggregateUnique(ret, temp, (*res)->getRules()->getRequireBaseFunc());
+		ret |= (*res)->getRules()->getRequireBaseFunc();
 	}
 
 	for (std::vector<Production*>::const_iterator prod = _productions.begin(); prod != _productions.end(); ++prod)
 	{
-		aggregateUnique(ret, temp, (*prod)->getRules()->getRequireBaseFunc());
+		ret |= (*prod)->getRules()->getRequireBaseFunc();
 	}
 
 	return ret;
@@ -2199,13 +2357,17 @@ std::vector<std::string> Base::getRequireBaseFunc(const BaseFacility *skip) cons
  * Return list of all forbidden functionality in base.
  * @return List of custom IDs.
  */
-std::vector<std::string> Base::getForbiddenBaseFunc() const
+RuleBaseFacilityFunctions Base::getForbiddenBaseFunc(BaseAreaSubset skip) const
 {
-	std::vector<std::string> ret, temp;
+	RuleBaseFacilityFunctions ret = 0;
 
-	for (std::vector<BaseFacility*>::const_iterator bf = _facilities.begin(); bf != _facilities.end(); ++bf)
+	for (auto& bf : _facilities)
 	{
-		aggregateUnique(ret, temp, (*bf)->getRules()->getForbiddenBaseFunc());
+		if (BaseAreaSubset::intersection(bf->getPlacement(), skip))
+		{
+			continue;
+		}
+		ret |= bf->getRules()->getForbiddenBaseFunc();
 	}
 
 	return ret;
@@ -2215,13 +2377,17 @@ std::vector<std::string> Base::getForbiddenBaseFunc() const
  * Return list of all future provided functionality in base.
  * @return List of custom IDs.
  */
-std::vector<std::string> Base::getFutureBaseFunc() const
+RuleBaseFacilityFunctions Base::getFutureBaseFunc(BaseAreaSubset skip) const
 {
-	std::vector<std::string> ret, temp;
+	RuleBaseFacilityFunctions ret = 0;
 
-	for (std::vector<BaseFacility*>::const_iterator bf = _facilities.begin(); bf != _facilities.end(); ++bf)
+	for (auto& bf : _facilities)
 	{
-		aggregateUnique(ret, temp, (*bf)->getRules()->getProvidedBaseFunc());
+		if (BaseAreaSubset::intersection(bf->getPlacement(), skip))
+		{
+			continue;
+		}
+		ret |= bf->getRules()->getProvidedBaseFunc();
 	}
 
 	return ret;
@@ -2250,65 +2416,39 @@ bool Base::isMaxAllowedLimitReached(RuleBaseFacility *rule) const
 }
 
 /**
- * Gets the base's mana recovery rate.
- * @return Mana per day.
+ * Gets the summary of all recovery rates provided by the base.
  */
-int Base::getManaRecoveryPerDay() const
+BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
 {
-	int minimum = 0;
-	int maximum = 0;
+	auto result = BaseSumDailyRecovery{ };
 
-	for (std::vector<BaseFacility*>::const_iterator bf = _facilities.begin(); bf != _facilities.end(); ++bf)
+	int manaMinimum = 0;
+	int manaMaximum = 0;
+
+	int healthMaxinum = 0;
+
+	for (BaseFacility* bf : _facilities)
 	{
-		if ((*bf)->getBuildTime() == 0)
+		if (bf->getBuildTime() == 0)
 		{
-			minimum = std::min(minimum, (*bf)->getRules()->getManaRecoveryPerDay());
-			maximum = std::max(maximum, (*bf)->getRules()->getManaRecoveryPerDay());
+			auto rule = bf->getRules();
+
+			manaMinimum = std::min(manaMinimum, rule->getManaRecoveryPerDay());
+			manaMaximum = std::max(manaMaximum, rule->getManaRecoveryPerDay());
+
+			healthMaxinum = std::max(healthMaxinum, rule->getHealthRecoveryPerDay());
+
+			result.SickBayAbsoluteBonus += rule->getSickBayAbsoluteBonus();
+			result.SickBayRelativeBonus += rule->getSickBayRelativeBonus();
 		}
 	}
 
-	if (maximum > 0)
-		return maximum;
-	else if (minimum < 0)
-		return minimum;
+	if (manaMaximum > 0)
+		result.ManaRecovery = manaMaximum;
+	else if (manaMinimum < 0)
+		result.ManaRecovery =  manaMinimum;
 
-	return 0;
-}
-
-/**
-* Gets the amount of additional HP healed in this base due to sick bay facilities (in absolute number).
-* @return Additional HP healed.
-*/
-float Base::getSickBayAbsoluteBonus() const
-{
-	float result = 0.0f;
-
-	for (std::vector<BaseFacility*>::const_iterator bf = _facilities.begin(); bf != _facilities.end(); ++bf)
-	{
-		if ((*bf)->getBuildTime() == 0)
-		{
-			result += (*bf)->getRules()->getSickBayAbsoluteBonus();
-		}
-	}
-
-	return result;
-}
-
-/**
-* Gets the amount of additional HP healed in this base due to sick bay facilities (as percentage of max HP per soldier).
-* @return Additional percentage of max HP healed.
-*/
-float Base::getSickBayRelativeBonus() const
-{
-	float result = 0.0f;
-
-	for (std::vector<BaseFacility*>::const_iterator bf = _facilities.begin(); bf != _facilities.end(); ++bf)
-	{
-		if ((*bf)->getBuildTime() == 0)
-		{
-			result += (*bf)->getRules()->getSickBayRelativeBonus();
-		}
-	}
+	result.HealthRecovery = healthMaxinum;
 
 	return result;
 }

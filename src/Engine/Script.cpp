@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cmath>
 #include <bitset>
+#include <array>
 
 #include "Logger.h"
 #include "Options.h"
@@ -294,6 +295,51 @@ struct Func_debug_flush
 	static RetEnum func (ScriptWorkerBase& c, ProgPos& p)
 	{
 		c.log_buffer_flush(p);
+		return RetContinue;
+	}
+};
+
+struct Func_set_text
+{
+	[[gnu::always_inline]]
+	static RetEnum func (ScriptWorkerBase& c, ScriptText& a, ScriptText b)
+	{
+		a = b;
+		return RetContinue;
+	}
+};
+
+struct Func_clear_text
+{
+	[[gnu::always_inline]]
+	static RetEnum func (ScriptWorkerBase& c, ScriptText& a)
+	{
+		a = ScriptText::empty;
+		return RetContinue;
+	}
+};
+
+struct Func_test_eq_text
+{
+	[[gnu::always_inline]]
+	static RetEnum func (ProgPos& prog, ScriptText a, ScriptText b, ProgPos labelTrue, ProgPos labelFalse)
+	{
+		if (a.ptr == nullptr && b.ptr == nullptr)
+		{
+			prog = labelTrue;
+		}
+		else if (a.ptr == nullptr || b.ptr == nullptr)
+		{
+			prog = labelFalse;
+		}
+		else if (strcmp(a.ptr, b.ptr) == 0)
+		{
+			prog = labelTrue;
+		}
+		else
+		{
+			prog = labelFalse;
+		}
 		return RetContinue;
 	}
 };
@@ -1329,6 +1375,48 @@ ScriptRef addString(std::vector<std::vector<char>>& list, const std::string& s)
 	return ref;
 }
 
+//groups of different types of ASCII characters
+using CharClasses = Uint8;
+constexpr CharClasses CC_none = 0x1;
+constexpr CharClasses CC_spec = 0x2;
+constexpr CharClasses CC_digit = 0x4;
+constexpr CharClasses CC_digitHex = 0x8;
+constexpr CharClasses CC_charRest = 0x10;
+constexpr CharClasses CC_digitSign = 0x20;
+constexpr CharClasses CC_digitHexX = 0x40;
+constexpr CharClasses CC_quote = 0x80;
+
+constexpr std::array<CharClasses, 256> charDecoderInit()
+{
+	std::array<CharClasses, 256> r = { };
+	for(int i = 0; i < 256; ++i)
+	{
+		if (i == '#' || i == ' ' || i == '\r' || i == '\n' || i == '\t')	r[i] |= CC_none;
+		if (i == ':' || i == ';')	r[i] |= CC_spec;
+
+		if (i == '+' || i == '-')	r[i] |= CC_digitSign;
+		if (i >= '0' && i <= '9')	r[i] |= CC_digit;
+		if (i >= 'A' && i <= 'F')	r[i] |= CC_digitHex;
+		if (i >= 'a' && i <= 'f')	r[i] |= CC_digitHex;
+		if (i == 'x' || i == 'X')	r[i] |= CC_digitHexX;
+
+		if (i >= 'A' && i <= 'Z')	r[i] |= CC_charRest;
+		if (i >= 'a' && i <= 'z')	r[i] |= CC_charRest;
+		if (i == '_' || i == '.')	r[i] |= CC_charRest;
+
+		if (i == '"')				r[i] |= CC_quote;
+	}
+	return r;
+}
+
+CharClasses getCharClassOf(char c)
+{
+	//array storing data about every ASCII character
+	constexpr static std::array<CharClasses, 256> charDecoder = charDecoderInit();
+	return charDecoder[(Uint8)c];
+}
+
+
 } //namespace
 
 ////////////////////////////////////////////////////////////
@@ -1426,42 +1514,6 @@ public:
  */
 SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 {
-	//groups of different types of ASCII characters
-	using CharClasses = Uint8;
-	constexpr CharClasses none = 0x1;
-	constexpr CharClasses spec = 0x2;
-	constexpr CharClasses digit = 0x4;
-	constexpr CharClasses digitHex = 0x8;
-	constexpr CharClasses charRest = 0x10;
-	constexpr CharClasses digitSign = 0x20;
-	constexpr CharClasses digitHexX = 0x40;
-	constexpr CharClasses quote = 0x80;
-
-	//array storing data about every ASCII character
-	static CharClasses charDecoder[256] = { 0 };
-	static bool init = true;
-	if (init)
-	{
-		init = false;
-		for(int i = 0; i < 256; ++i)
-		{
-			if (i == '#' || isspace(i))	charDecoder[i] |= none;
-			if (i == ':' || i == ';')	charDecoder[i] |= spec;
-
-			if (i == '+' || i == '-')	charDecoder[i] |= digitSign;
-			if (i >= '0' && i <= '9')	charDecoder[i] |= digit;
-			if (i >= 'A' && i <= 'F')	charDecoder[i] |= digitHex;
-			if (i >= 'a' && i <= 'f')	charDecoder[i] |= digitHex;
-			if (i == 'x' || i == 'X')	charDecoder[i] |= digitHexX;
-
-			if (i >= 'A' && i <= 'Z')	charDecoder[i] |= charRest;
-			if (i >= 'a' && i <= 'z')	charDecoder[i] |= charRest;
-			if (i == '_' || i == '.')	charDecoder[i] |= charRest;
-
-			if (i == '"')				charDecoder[i] |= quote;
-		}
-	}
-
 	struct NextSymbol
 	{
 		char c;
@@ -1474,14 +1526,15 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 		bool is(CharClasses t) const { return decode & t; }
 
 		/// Is this symbol starting next token?
-		bool isStartOfNextToken() const { return is(spec | none); }
+		bool isStartOfNextToken() const { return is(CC_spec | CC_none); }
 	};
 
 	auto peekCharacter = [&]() -> NextSymbol const
 	{
 		if (_begin != _end)
 		{
-			return NextSymbol{ *_begin, charDecoder[(Uint8)*_begin] };
+			const auto c = *_begin;
+			return NextSymbol{ c, getCharClassOf(c) };
 		}
 		else
 		{
@@ -1506,7 +1559,7 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 	};
 
 	//find first no whitespace character.
-	if (peekCharacter().is(none))
+	if (peekCharacter().is(CC_none))
 	{
 		while(const auto next = readCharacter())
 		{
@@ -1521,7 +1574,7 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 				}
 				continue;
 			}
-			else if (next.is(none))
+			else if (next.is(CC_none))
 			{
 				continue;
 			}
@@ -1545,7 +1598,7 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 	const auto first = readCharacter();
 
 	//text like `"abcdef"`
-	if (first.is(quote))
+	if (first.is(CC_quote))
 	{
 		type = TokenText;
 		while (const auto next = readCharacter())
@@ -1590,7 +1643,7 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 
 	}
 	//special symbol like `;` or `:`
-	else if (first.is(spec))
+	else if (first.is(CC_spec))
 	{
 		if (first.c == ':')
 		{
@@ -1615,17 +1668,17 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 		}
 	}
 	//number like `0x1234` or `5432` or `+232`
-	else if (first.is(digitSign | digit))
+	else if (first.is(CC_digitSign | CC_digit))
 	{
 		auto firstDigit = first;
 		//sign
-		if (firstDigit.is(digitSign))
+		if (firstDigit.is(CC_digitSign))
 		{
 			firstDigit = readCharacter();
 		}
-		if (firstDigit.is(digit))
+		if (firstDigit.is(CC_digit))
 		{
-			const auto hex = firstDigit.c == '0' && peekCharacter().is(digitHexX);
+			const auto hex = firstDigit.c == '0' && peekCharacter().is(CC_digitHexX);
 			if (hex)
 			{
 				//eat `x`
@@ -1637,7 +1690,7 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 				type = TokenNumber;
 			}
 
-			const CharClasses serachClass = hex ? (digitHex | digit) : digit;
+			const CharClasses serachClass = hex ? (CC_digitHex | CC_digit) : CC_digit;
 
 			while (const auto next = readCharacter())
 			{
@@ -1660,7 +1713,7 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 		}
 	}
 	//symbol like `abcd` or `p12345`
-	else if (first.is(charRest))
+	else if (first.is(CC_charRest))
 	{
 		type = TokenSymbol;
 		while (const auto next = readCharacter())
@@ -1671,7 +1724,7 @@ SelectedToken ScriptRefTokens::getNextToken(TokenEnum excepted)
 				backCharacter();
 				break;
 			}
-			else if (!next.is(charRest | digit))
+			else if (!next.is(CC_charRest | CC_digit))
 			{
 				type = TokenInvaild;
 				break;
@@ -2077,6 +2130,10 @@ ScriptParserBase::ScriptParserBase(ScriptGlobal* shared, const std::string& name
 	addParser<helper::FuncGroup<Func_debug_impl_text>>("debug_impl", "");
 	addParser<helper::FuncGroup<Func_debug_flush>>("debug_flush", "");
 
+	addParser<helper::FuncGroup<Func_set_text>>("set", "");
+	addParser<helper::FuncGroup<Func_clear_text>>("clear", "");
+	addParser<helper::FuncGroup<Func_test_eq_text>>("test_eq", "");
+
 	addType<ScriptInt>("int");
 	addType<ScriptText>("text");
 
@@ -2086,6 +2143,8 @@ ScriptParserBase::ScriptParserBase(ScriptGlobal* shared, const std::string& name
 	addSortHelper(_typeList, { labelName, ArgLabel, { } });
 	addSortHelper(_typeList, { nullName, ArgNull, { } });
 	addSortHelper(_refList, { nullName, ArgNull });
+
+	_shared->initParserGlobals(this);
 }
 
 /**
@@ -2601,7 +2660,7 @@ void ScriptParserBase::load(const YAML::Node& node)
 /**
  * Print all metadata
  */
-void ScriptParserBase::logScriptMetadata(bool haveEvents) const
+void ScriptParserBase::logScriptMetadata(bool haveEvents, const std::string& groupName) const
 {
 	if (Options::debug && Options::verboseLogging)
 	{
@@ -2632,10 +2691,12 @@ void ScriptParserBase::logScriptMetadata(bool haveEvents) const
 
 			#undef MACRO_ALL_LOG
 			#undef MACRO_STRCAT
+
+			opLog.get(LOG_DEBUG) << "Total size: " << offset << "\n";
 		}
 
 		Logger refLog;
-		refLog.get(LOG_DEBUG) << "Script info for: " << _name << "\n" << std::left;
+		refLog.get(LOG_DEBUG) << "Script info for:  '" << _name << "'  in group:  '" << groupName << "'\n" << std::left;
 		refLog.get(LOG_DEBUG) << "\n";
 		if (haveEvents)
 		{
@@ -2845,9 +2906,9 @@ int ScriptValuesBase::getBase(size_t t) const
 /**
  * Load values from yaml file.
  */
-void ScriptValuesBase::loadBase(const YAML::Node &node, const ScriptGlobal* shared, ArgEnum type)
+void ScriptValuesBase::loadBase(const YAML::Node &node, const ScriptGlobal* shared, ArgEnum type, const std::string& nodeName)
 {
-	if (const YAML::Node& tags = node["tags"])
+	if (const YAML::Node& tags = node[nodeName])
 	{
 		if (tags.IsMap())
 		{
@@ -2873,7 +2934,7 @@ void ScriptValuesBase::loadBase(const YAML::Node &node, const ScriptGlobal* shar
 /**
  * Save values to yaml file.
  */
-void ScriptValuesBase::saveBase(YAML::Node &node, const ScriptGlobal* shared, ArgEnum type) const
+void ScriptValuesBase::saveBase(YAML::Node &node, const ScriptGlobal* shared, ArgEnum type, const std::string& nodeName) const
 {
 	YAML::Node tags;
 	for (size_t i = 1; i <= values.size(); ++i)
@@ -2886,7 +2947,7 @@ void ScriptValuesBase::saveBase(YAML::Node &node, const ScriptGlobal* shared, Ar
 			tags[data.name.substr(data.name.find('.') + 1u).toString()] = temp;
 		}
 	}
-	node["tags"] = tags;
+	node[nodeName] = tags;
 }
 
 ////////////////////////////////////////////////////////////
@@ -3034,18 +3095,18 @@ ScriptRef ScriptGlobal::addNameRef(const std::string& s)
 /**
  * Store parser.
  */
-void ScriptGlobal::pushParser(ScriptParserBase* parser)
+void ScriptGlobal::pushParser(const std::string& groupName, ScriptParserBase* parser)
 {
-	parser->logScriptMetadata(false);
+	parser->logScriptMetadata(false, groupName);
 	_parserNames.insert(std::make_pair(parser->getName(), parser));
 }
 
 /**
  * Store parser with events.
  */
-void ScriptGlobal::pushParser(ScriptParserEventsBase* parser)
+void ScriptGlobal::pushParser(const std::string& groupName, ScriptParserEventsBase* parser)
 {
-	parser->logScriptMetadata(true);
+	parser->logScriptMetadata(true, groupName);
 	_parserNames.insert(std::make_pair(parser->getName(), parser));
 	_parserEvents.push_back(parser);
 }
@@ -3055,7 +3116,7 @@ void ScriptGlobal::pushParser(ScriptParserEventsBase* parser)
  */
 void ScriptGlobal::addConst(const std::string& name, ScriptValueData i)
 {
-	for (auto p : _parserNames)
+	for (auto& p : _parserNames)
 	{
 		p.second->addConst(name, i);
 	}
@@ -3066,7 +3127,7 @@ void ScriptGlobal::addConst(const std::string& name, ScriptValueData i)
  */
 void ScriptGlobal::updateConst(const std::string& name, ScriptValueData i)
 {
-	for (auto p : _parserNames)
+	for (auto& p : _parserNames)
 	{
 		p.second->updateConst(name, i);
 	}

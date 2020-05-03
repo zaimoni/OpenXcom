@@ -28,6 +28,7 @@ class Globe;
 class TextButton;
 class InteractiveSurface;
 class Text;
+class ComboBox;
 class Timer;
 class DogfightState;
 class Ufo;
@@ -53,6 +54,8 @@ private:
 	Timer *_gameTimer, *_zoomInEffectTimer, *_zoomOutEffectTimer, *_dogfightStartTimer, *_dogfightTimer;
 	bool _pause, _zoomInEffectDone, _zoomOutEffectDone;
 	Text *_txtDebug;
+	ComboBox *_cbxRegion, *_cbxZone;
+	Text *_txtSlacking;
 	std::list<State*> _popups;
 	std::list<DogfightState*> _dogfights, _dogfightsToBeStarted;
 	std::vector<Craft*> _activeCrafts;
@@ -60,6 +63,9 @@ private:
 
 	/// Update list of active crafts.
 	const std::vector<Craft*>* updateActiveCrafts();
+
+	void cbxRegionChange(Action *action);
+	void cbxZoneChange(Action *action);
 
 public:
 	/// Creates the Geoscape state.
@@ -110,6 +116,8 @@ public:
 	void btnGlobalProductionClick(Action *action);
 	/// Handler for clicking the [GlobalResearch] key.
 	void btnGlobalResearchClick(Action *action);
+	/// Handler for clicking the [DogfightExperience] key.
+	void btnDogfightExperienceClick(Action *action);
 	/// Handler for clicking the Bases button.
 	void btnBasesClick(Action *action);
 	/// Handler for clicking the Graph button.
@@ -174,6 +182,7 @@ private:
 	/// Process each individual mission script command.
 	bool processCommand(RuleMissionScript *command);
 	bool buttonsDisabled();
+	void updateSlackingIndicator();
 };
 
 }

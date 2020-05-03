@@ -40,7 +40,6 @@ class InfoboxOKState;
 class SoldierDiary;
 class RuleSkill;
 
-enum BattleActionType : Uint8 { BA_NONE, BA_TURN, BA_WALK, BA_KNEEL, BA_PRIME, BA_UNPRIME, BA_THROW, BA_AUTOSHOT, BA_SNAPSHOT, BA_AIMEDSHOT, BA_HIT, BA_USE, BA_LAUNCH, BA_MINDCONTROL, BA_PANIC, BA_RETHINK, BA_CQB };
 enum BattleActionMove { BAM_NORMAL = 0, BAM_RUN = 1, BAM_STRAFE = 2 };
 
 struct BattleActionCost : RuleItemUseCost
@@ -96,28 +95,23 @@ struct BattleAction : BattleActionCost
 	}
 };
 
-struct BattleActionAttack
+
+/**
+ * Count of different state of units to determine who wins
+ */
+struct BattlescapeTally
 {
-	BattleActionType type;
-	BattleUnit *attacker = nullptr;
-	BattleItem *weapon_item = nullptr;
-	BattleItem *damage_item = nullptr;
-	const RuleSkill *skill_rules = nullptr;
+	/// number of live enemies (aliens and MC'ed soldiers)
+	int liveAliens = 0;
+	/// number of live soldiers (only ones that are not MC'ed, including tanks, but not summoned units)
+	int liveSoldiers = 0;
 
-	/// Default constructor.
-	BattleActionAttack(BattleActionType action = BA_NONE, BattleUnit *unit = nullptr) : type{ action }, attacker{ unit }
-	{
-
-	}
-
-	/// Constructor.
-	BattleActionAttack(BattleActionType action, BattleUnit *unit, BattleItem *item, BattleItem *ammo);
-
-	/// Constructor.
-	BattleActionAttack(const BattleActionCost &action, BattleItem *ammo);
-
-	/// Constructor for skill-based attacks.
-	BattleActionAttack(const BattleAction &action, BattleItem *ammo);
+	/// number of live soldiers on entrance tiles
+	int inEntrance = 0;
+	/// number of live soldiers on exit tiles.
+	int inExit = 0;
+	/// number of live soldiers in the middle of the battlefield.
+	int inField = 0;
 };
 
 /**
@@ -280,7 +274,8 @@ public:
 	BattleActionType getReservedAction();
 	/// Tallies the living units, converting them if necessary.
 	bool isSurrendering(BattleUnit* bu);
-	void tallyUnits(int &liveAliens, int &liveSoldiers);
+	/// Check count of units in diffrent state
+	BattlescapeTally tallyUnits();
 	bool convertInfected();
 	/// Sets the kneel reservation setting.
 	void setKneelReserved(bool reserved);

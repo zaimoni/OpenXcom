@@ -22,6 +22,8 @@
 #include "MapScript.h"
 #include "../Battlescape/Position.h"
 #include "../Engine/Exception.h"
+#include "../Engine/Collections.h"
+#include "../Savegame/Base.h"
 
 
 namespace OpenXcom
@@ -35,8 +37,8 @@ namespace OpenXcom
 RuleBaseFacility::RuleBaseFacility(const std::string &type) :
 	_type(type), _spriteShape(-1), _spriteFacility(-1), _missileAttraction(100), _fakeUnderwater(-1), _lift(false), _hyper(false), _mind(false), _grav(false), _mindPower(1),
 	_size(1), _buildCost(0), _refundValue(0), _buildTime(0), _monthlyCost(0), _storage(0), _personnel(0), _aliens(0), _crafts(0),
-	_labs(0), _workshops(0), _psiLabs(0), _radarRange(0), _radarChance(0), _defense(0), _hitRatio(0), _fireSound(0), _hitSound(0), _listOrder(0),
-	_trainingRooms(0), _maxAllowedPerBase(0), _manaRecoveryPerDay(0), _sickBayAbsoluteBonus(0.0f), _sickBayRelativeBonus(0.0f),
+	_labs(0), _workshops(0), _psiLabs(0), _sightRange(0), _sightChance(0), _radarRange(0), _radarChance(0), _defense(0), _hitRatio(0), _fireSound(0), _hitSound(0), _listOrder(0),
+	_trainingRooms(0), _maxAllowedPerBase(0), _sickBayAbsoluteBonus(0.0f), _sickBayRelativeBonus(0.0f),
 	_prisonType(0), _rightClickActionType(0), _verticalLevels(), _removalTime(0), _canBeBuiltOver(false), _destroyedFacility(0)
 {
 }
@@ -62,19 +64,16 @@ void RuleBaseFacility::load(const YAML::Node &node, Mod *mod, int listOrder)
 	}
 	_type = node["type"].as<std::string>(_type);
 	_requires = node["requires"].as< std::vector<std::string> >(_requires);
-	_requiresBaseFunc = node["requiresBaseFunc"].as< std::vector<std::string> >(_requiresBaseFunc);
-	_provideBaseFunc = node["provideBaseFunc"].as< std::vector<std::string> >(_provideBaseFunc);
-	_forbiddenBaseFunc = node["forbiddenBaseFunc"].as< std::vector<std::string> >(_forbiddenBaseFunc);
 
-	std::sort(_requiresBaseFunc.begin(), _requiresBaseFunc.end());
-	std::sort(_provideBaseFunc.begin(), _provideBaseFunc.end());
-	std::sort(_forbiddenBaseFunc.begin(), _forbiddenBaseFunc.end());
-
+	mod->loadBaseFunction(_type, _requiresBaseFunc, node["requiresBaseFunc"]);
+	mod->loadBaseFunction(_type, _provideBaseFunc, node["provideBaseFunc"]);
+	mod->loadBaseFunction(_type, _forbiddenBaseFunc, node["forbiddenBaseFunc"]);
 
 	mod->loadSpriteOffset(_type, _spriteShape, node["spriteShape"], "BASEBITS.PCK");
 	mod->loadSpriteOffset(_type, _spriteFacility, node["spriteFacility"], "BASEBITS.PCK");
 
 	_fakeUnderwater = node["fakeUnderwater"].as<int>(_fakeUnderwater);
+	_missileAttraction = node["missileAttraction"].as<int>(_missileAttraction);
 	_lift = node["lift"].as<bool>(_lift);
 	_hyper = node["hyper"].as<bool>(_hyper);
 	_mind = node["mind"].as<bool>(_mind);
@@ -92,6 +91,8 @@ void RuleBaseFacility::load(const YAML::Node &node, Mod *mod, int listOrder)
 	_labs = node["labs"].as<int>(_labs);
 	_workshops = node["workshops"].as<int>(_workshops);
 	_psiLabs = node["psiLabs"].as<int>(_psiLabs);
+	_sightRange = node["sightRange"].as<int>(_sightRange);
+	_sightChance = node["sightChance"].as<int>(_sightChance);
 	_radarRange = node["radarRange"].as<int>(_radarRange);
 	_radarChance = node["radarChance"].as<int>(_radarChance);
 	_defense = node["defense"].as<int>(_defense);
@@ -105,6 +106,7 @@ void RuleBaseFacility::load(const YAML::Node &node, Mod *mod, int listOrder)
 	_trainingRooms = node["trainingRooms"].as<int>(_trainingRooms);
 	_maxAllowedPerBase = node["maxAllowedPerBase"].as<int>(_maxAllowedPerBase);
 	_manaRecoveryPerDay = node["manaRecoveryPerDay"].as<int>(_manaRecoveryPerDay);
+	_healthRecoveryPerDay = node["healthRecoveryPerDay"].as<int>(_healthRecoveryPerDay);
 	_sickBayAbsoluteBonus = node["sickBayAbsoluteBonus"].as<float>(_sickBayAbsoluteBonus);
 	_sickBayRelativeBonus = node["sickBayRelativeBonus"].as<float>(_sickBayRelativeBonus);
 	_prisonType = node["prisonType"].as<int>(_prisonType);
@@ -145,10 +147,10 @@ void RuleBaseFacility::load(const YAML::Node &node, Mod *mod, int listOrder)
 		}
 	}
 
-	_leavesBehindOnSell = node["leavesBehindOnSell"].as< std::vector<std::string> >(_leavesBehindOnSell);
+	_leavesBehindOnSellNames = node["leavesBehindOnSell"].as< std::vector<std::string> >(_leavesBehindOnSellNames);
 	_removalTime = node["removalTime"].as<int>(_removalTime);
 	_canBeBuiltOver = node["canBeBuiltOver"].as<bool>(_canBeBuiltOver);
-	_buildOverFacilities = node["buildOverFacilities"].as< std::vector<std::string> >(_buildOverFacilities);
+	_buildOverFacilitiesNames = node["buildOverFacilities"].as< std::vector<std::string> >(_buildOverFacilitiesNames);
 	std::sort(_buildOverFacilities.begin(), _buildOverFacilities.end());
 
 	_storageTiles = node["storageTiles"].as<std::vector<Position> >(_storageTiles);
@@ -168,10 +170,46 @@ void RuleBaseFacility::afterLoad(const Mod* mod)
 			throw Exception("Destroyed version of a facility must have the same size as the original facility.");
 		}
 	}
+	if (_leavesBehindOnSellNames.size())
+	{
+		_leavesBehindOnSell.reserve(_leavesBehindOnSellNames.size());
+		auto first = mod->getBaseFacility(_leavesBehindOnSellNames.at(0), true);
+		if (first->getSize() == _size)
+		{
+			if (_leavesBehindOnSellNames.size() != 1)
+			{
+				throw Exception("Only one replacement facility allowed (when using the same size as the original facility).");
+			}
+			_leavesBehindOnSell.push_back(first);
+		}
+		else
+		{
+			for (const auto& n : _leavesBehindOnSellNames)
+			{
+				auto r = mod->getBaseFacility(n, true);
+				if (r->getSize() != 1)
+				{
+					throw Exception("All replacement facilities must have size=1 (when using different size as the original facility).");
+				}
+				_leavesBehindOnSell.push_back(r);
+			}
+		}
+	}
+	if (_buildOverFacilitiesNames.size())
+	{
+		_buildOverFacilities.reserve(_buildOverFacilitiesNames.size());
+		for (const auto& n : _buildOverFacilitiesNames)
+		{
+			_buildOverFacilities.push_back(mod->getBaseFacility(n, true));
+		}
+		Collections::sortVector(_buildOverFacilities);
+	}
 	if (_mapName.empty())
 	{
 		throw Exception("Battlescape map name is missing.");
 	}
+	Collections::removeAll(_leavesBehindOnSellNames);
+	Collections::removeAll(_buildOverFacilitiesNames);
 }
 
 /**
@@ -180,7 +218,7 @@ void RuleBaseFacility::afterLoad(const Mod* mod)
  * has a unique name.
  * @return The facility's name.
  */
-std::string RuleBaseFacility::getType() const
+const std::string& RuleBaseFacility::getType() const
 {
 	return _type;
 }
@@ -195,32 +233,6 @@ const std::vector<std::string> &RuleBaseFacility::getRequirements() const
 	return _requires;
 }
 
-/**
- * Gets the list of required functions in base to build thins building.
- * @return List of function IDs.
- */
-const std::vector<std::string> &RuleBaseFacility::getRequireBaseFunc() const
-{
-	return _requiresBaseFunc;
-}
-
-/**
- * Get the list of provided functions by this building.
- * @return List of function IDs.
- */
-const std::vector<std::string> &RuleBaseFacility::getProvidedBaseFunc() const
-{
-	return _provideBaseFunc;
-}
-
-/**
- * Gets the list of forbidden functions by this building.
- * @return List of function IDs.
- */
-const std::vector<std::string> &RuleBaseFacility::getForbiddenBaseFunc() const
-{
-	return _forbiddenBaseFunc;
-}
 /**
  * Gets the ID of the sprite used to draw the
  * base structure of the facility that defines its shape.
@@ -531,33 +543,6 @@ int RuleBaseFacility::getMaxAllowedPerBase() const
 }
 
 /**
- * Gets the facility's mana recovery rate.
- * @return Mana per day.
- */
-int RuleBaseFacility::getManaRecoveryPerDay() const
-{
-	return _manaRecoveryPerDay;
-}
-
-/**
-* Gets the facility's bonus to hp healed.
-* @return Amount of HP healed.
-*/
-float RuleBaseFacility::getSickBayAbsoluteBonus() const
-{
-	return _sickBayAbsoluteBonus;
-}
-
-/**
-* Gets the facility's bonus to hp healed (as percentage of max hp of the soldier).
-* @return Amount of HP healed as percentage of max HP.
-*/
-float RuleBaseFacility::getSickBayRelativeBonus() const
-{
-	return _sickBayRelativeBonus;
-}
-
-/**
 * Gets the prison type.
 * @return 0=alien containment, 1=prison, 2=animal cages, etc.
 */
@@ -585,15 +570,6 @@ const std::vector<VerticalLevel> &RuleBaseFacility::getVerticalLevels() const
 }
 
 /**
- * Gets the facility/facilities left behind when this one is sold
- * @return the list of facilities
- */
-const std::vector<std::string> &RuleBaseFacility::getLeavesBehindOnSell() const
-{
-	return _leavesBehindOnSell;
-}
-
-/**
  * Gets how long facilities left behind when this one is sold should take to build
  * @return the number of days, -1 = from other facilities' rulesets, 0 = instant, > 0 is that many days
  */
@@ -612,13 +588,30 @@ bool RuleBaseFacility::getCanBeBuiltOver() const
 }
 
 /**
- * Gets the list of other base facilities this one can be built over
- * If empty, it can be built over anything with canBeBuiltOver: true
- * @return the list of facilities
+ * Check if a given facility `fac` can be replaced by this facility.
  */
-const std::vector<std::string> &RuleBaseFacility::getBuildOverFacilities() const
+BasePlacementErrors RuleBaseFacility::getCanBuildOverOtherFacility(const RuleBaseFacility* fac) const
 {
-	return _buildOverFacilities;
+	if (fac->getCanBeBuiltOver() == true)
+	{
+		// the old facility allows unrestricted build-over.
+		return BPE_None;
+	}
+	else if (_buildOverFacilities.empty())
+	{
+		// the old facility does not allow unrestricted build-over and we do not have any exception list
+		return BPE_UpgradeDisallowed;
+	}
+	else if (Collections::sortVectorHave(_buildOverFacilities, fac))
+	{
+		// the old facility is on the exception list
+		return BPE_None;
+	}
+	else
+	{
+		// we have an exception list, but this facility is not on it.
+		return BPE_UpgradeRequireSpecific;
+	}
 }
 
 /**
@@ -635,7 +628,7 @@ const std::vector<Position> &RuleBaseFacility::getStorageTiles() const
  * Gets the ruleset for the destroyed version of this facility.
  * @return Facility ruleset or null.
  */
-RuleBaseFacility* RuleBaseFacility::getDestroyedFacility() const
+const RuleBaseFacility* RuleBaseFacility::getDestroyedFacility() const
 {
 	return _destroyedFacility;
 }

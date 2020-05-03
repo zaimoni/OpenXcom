@@ -101,10 +101,10 @@ struct ParserWriter
 
 		ReservedCrossRefrenece() {}
 
-		ScriptValueData addValue(CompType defualtValue)
+		ScriptValueData addValue(CompType defaultValue)
 		{
 			auto index = static_cast<Ref>(values.size());
-			values.push_back(defualtValue);
+			values.push_back(defaultValue);
 			return index;
 		}
 
@@ -898,8 +898,19 @@ struct FuncGroup<Func, ListTag<Ver...>> : GetArgs<Func>
 template<auto F>
 struct WarpValue
 {
-	using Type = decltype(F);
-	constexpr static Type val() { return F; }
+	/// Default case, not normal pointer, pass without change
+	template<typename T>
+	static auto optDeref(T t) { return t; }
+
+	/// We have normal pointer, dereference it to get value
+	template<typename T>
+	static auto optDeref(T* t) -> T& { return *t; }
+
+	/// Get value from template parameter
+	constexpr static auto val() { return optDeref(F); }
+
+	/// Type of returned value
+	using Type = decltype(val());
 };
 
 template<typename Ptr, typename... Rest>
@@ -987,40 +998,21 @@ struct BindPropSet
 	}
 };
 
-template<typename T, ScriptValues<T> T::*X>
-struct BindScriptValueGet
+template<typename T, auto... X>
+struct BindPropCustomGet
 {
-	static RetEnum func(const T* t, int& p, typename ScriptValues<T>::Tag st)
+	static RetEnum func(const T* t, int& p, typename BindMemberFinalType<T, X...>::Tag st)
 	{
-		if (t) p = (t->*X).get(st); else p = int{};
+		if (t) p = BindMemberInvoke<X...>::f(t).get(st); else p = int{};
 		return RetContinue;
 	}
 };
-template<typename T, ScriptValues<T> T::*X>
-struct BindScriptValueSet
+template<typename T, auto... X>
+struct BindPropCustomSet
 {
-	static RetEnum func(T* t, typename ScriptValues<T>::Tag st, int p)
+	static RetEnum func(T* t, typename BindMemberFinalType<T, X...>::Tag st, int p)
 	{
-		if (t) (t->*X).set(st, p);
-		return RetContinue;
-	}
-};
-
-template<typename T, typename N, typename P, N T::*X, P N::*XX>
-struct BindPropNestGet
-{
-	static RetEnum func(const T* t, P& p)
-	{
-		if (t) p = (t->*X).*XX; else p = P{};
-		return RetContinue;
-	}
-};
-template<typename T, typename N, typename P, N T::*X, P N::*XX>
-struct BindPropNestSet
-{
-	static RetEnum func(T* t, P p)
-	{
-		if (t) (t->*X).*XX = p;
+		if (t) BindMemberInvoke<X...>::f(t).set(st, p);
 		return RetContinue;
 	}
 };
@@ -1145,6 +1137,11 @@ struct BindBase
 	constexpr static const char* functionWithoutDescription = "-";
 	constexpr static const char* functionInvisible = "";
 
+	/// Tag type to choose allowed operations
+	struct SetAndGet{};
+	/// Tag type to choose allowed operations
+	struct OnlyGet{};
+
 	ScriptParserBase* parser;
 	BindBase(ScriptParserBase* p) : parser{ p }
 	{
@@ -1221,34 +1218,52 @@ struct Bind : BindBase
 		addCustomFunc<helper::BindPropGet<T, MACRO_CLANG_AUTO_HACK(MemPtr0), MACRO_CLANG_AUTO_HACK(MemPtr1), MACRO_CLANG_AUTO_HACK(MemPtrR)...>>(getName(get), "Get inner field of " + prefix);
 	}
 
+	template<typename TagValues = ScriptValues<T>, typename Parent = typename TagValues::Parent*>
 	void addScriptTag()
 	{
-		using Tag = typename ScriptValues<T>::Tag;
+		using Tag = typename TagValues::Tag;
 		parser->getGlobal()->addTagType<Tag>();
 		if (!parser->haveType<Tag>())
 		{
-			parser->addType<Tag>(getName("Tag"));
+			const ScriptTypeData* conf = parser->getType(ScriptParserBase::getArgType<Parent>());
+			if (conf == nullptr)
+			{
+				throw Exception("Errow with adding script tag to unknow type");
+			}
+			parser->addType<Tag>(conf->name.toString() + ".Tag");
 			parser->addParser<helper::FuncGroup<helper::BindSet<Tag>>>("set", "arg1 = arg2");
 			parser->addParser<helper::FuncGroup<helper::BindSwap<Tag>>>("swap", "Swap value of arg1 and arg2");
 			parser->addParser<helper::FuncGroup<helper::BindClear<Tag>>>("clear", "arg1 = null");
 			parser->addParser<helper::FuncGroup<helper::BindEq<Tag>>>("test_eq", BindBase::functionInvisible);
 		}
 	}
-	template<ScriptValues<T> T::*X>
-	void addScriptValue(bool canEdit = true)
+	template<auto MemPtr0, auto... MemPtrR>
+	void addScriptValue()
 	{
-		addScriptTag();
-		addCustomFunc<helper::BindScriptValueGet<T, X>>(getName("getTag"), "Get tag of " + prefix);
-		if (canEdit)
+		return addScriptValue<BindBase::SetAndGet, MemPtr0, MemPtrR...>();
+	}
+	template<typename canEdit, auto MemPtr0, auto... MemPtrR>
+	void addScriptValue()
+	{
+		using TagValues = helper::BindMemberFinalType<T, MACRO_CLANG_AUTO_HACK(MemPtr0), MACRO_CLANG_AUTO_HACK(MemPtrR)...>;
+		addScriptTag<TagValues>();
+		addCustomFunc<helper::BindPropCustomGet<T, MACRO_CLANG_AUTO_HACK(MemPtr0), MACRO_CLANG_AUTO_HACK(MemPtrR)...>>(getName("getTag"), "Get tag of " + prefix);
+		if constexpr (std::is_same_v<canEdit, BindBase::SetAndGet>)
 		{
-			addCustomFunc<helper::BindScriptValueSet<T, X>>(getName("setTag"), "Set tag of " + prefix);
+			addCustomFunc<helper::BindPropCustomSet<T, MACRO_CLANG_AUTO_HACK(MemPtr0), MACRO_CLANG_AUTO_HACK(MemPtrR)...>>(getName("setTag"), "Set tag of " + prefix);
+		}
+		else
+		{
+			static_assert(std::is_same_v<canEdit, BindBase::OnlyGet>, "You can only use OnlyGet or SetAndGet types");
 		}
 	}
+
 	template<std::string (*X)(const T*)>
 	void addDebugDisplay()
 	{
 		addCustomFunc<helper::BindDebugDisplay<T, X>>("debug_impl", BindBase::functionInvisible);
 	}
+
 	template<int X>
 	void addFake(const std::string& get)
 	{

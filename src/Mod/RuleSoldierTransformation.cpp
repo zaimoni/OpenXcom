@@ -18,6 +18,7 @@
  */
 #include <algorithm>
 #include "RuleSoldierTransformation.h"
+#include "Mod.h"
 
 namespace OpenXcom
 {
@@ -31,7 +32,7 @@ RuleSoldierTransformation::RuleSoldierTransformation(const std::string &name) :
 	_keepSoldierArmor(false), _createsClone(false), _needsCorpseRecovered(true),
 	_allowsDeadSoldiers(false), _allowsLiveSoldiers(false), _allowsWoundedSoldiers(false),
 	_listOrder(0), _cost(0), _transferTime(0), _recoveryTime(0), _minRank(0),
-	_showMinMax(false), _lowerBoundAtMinStats(true), _upperBoundAtMaxStats(false), _upperBoundAtStatCaps(false),
+	_showMinMax(false), _lowerBoundAtMinStats(true), _upperBoundAtMaxStats(false), _upperBoundAtStatCaps(false), _upperBoundType(0),
 	_reset(false)
 {
 }
@@ -41,11 +42,11 @@ RuleSoldierTransformation::RuleSoldierTransformation(const std::string &name) :
  * @param node YAML node.
  * @param listOrder The list weight for this transformation project.
  */
-void RuleSoldierTransformation::load(const YAML::Node &node, int listOrder)
+void RuleSoldierTransformation::load(const YAML::Node &node, Mod* mod, int listOrder)
 {
 	if (const YAML::Node &parent = node["refNode"])
 	{
-		load(parent, listOrder);
+		load(parent, mod, listOrder);
 	}
 	_listOrder = node["listOrder"].as<int>(_listOrder);
 	if (!_listOrder)
@@ -54,7 +55,7 @@ void RuleSoldierTransformation::load(const YAML::Node &node, int listOrder)
 	}
 
 	_requires = node["requires"].as<std::vector<std::string > >(_requires);
-	_requiresBaseFunc = node["requiresBaseFunc"].as<std::vector<std::string > >(_requiresBaseFunc);
+	mod->loadBaseFunction(_name, _requiresBaseFunc, node["requiresBaseFunc"]);
 	_producedItem = node["producedItem"].as<std::string >(_producedItem);
 	_producedSoldierType = node["producedSoldierType"].as<std::string >(_producedSoldierType);
 	_producedSoldierArmor = node["producedSoldierArmor"].as<std::string >(_producedSoldierArmor);
@@ -88,10 +89,9 @@ void RuleSoldierTransformation::load(const YAML::Node &node, int listOrder)
 	_lowerBoundAtMinStats = node["lowerBoundAtMinStats"].as<bool >(_lowerBoundAtMinStats);
 	_upperBoundAtMaxStats = node["upperBoundAtMaxStats"].as<bool >(_upperBoundAtMaxStats);
 	_upperBoundAtStatCaps = node["upperBoundAtStatCaps"].as<bool >(_upperBoundAtStatCaps);
+	_upperBoundType = node["upperBoundType"].as<int>(_upperBoundType);
 	_reset = node["reset"].as<bool >(_reset);
 	_soldierBonusType = node["soldierBonusType"].as<std::string >(_soldierBonusType);
-
-	std::sort(_requiresBaseFunc.begin(), _requiresBaseFunc.end());
 }
 
 /**
@@ -119,15 +119,6 @@ int RuleSoldierTransformation::getListOrder() const
 const std::vector<std::string > &RuleSoldierTransformation::getRequiredResearch() const
 {
 	return _requires;
-}
-
-/**
- * Gets the list of required base functions for this project
- * @return The list of required base functions
- */
-const std::vector<std::string > &RuleSoldierTransformation::getRequiredBaseFuncs() const
-{
-	return _requiresBaseFunc;
 }
 
 /**
@@ -222,7 +213,7 @@ const std::vector<std::string > &RuleSoldierTransformation::getRequiredPreviousT
 
 /**
  * Gets the list of previous soldier transformations that make a soldier ineligible for this project
- * @return The list of forbidden previous 
+ * @return The list of forbidden previous
  */
 const std::vector<std::string > &RuleSoldierTransformation::getForbiddenPreviousTransformations() const
 {
@@ -344,6 +335,23 @@ bool RuleSoldierTransformation::hasUpperBoundAtMaxStats() const
 bool RuleSoldierTransformation::hasUpperBoundAtStatCaps() const
 {
 	return _upperBoundAtStatCaps;
+}
+
+/**
+ * Gets whether to use soft upper bound limit or not.
+ * @return Soft upper bound or hard upper bound?
+ */
+bool RuleSoldierTransformation::isSoftLimit(bool isSameSoldierType) const
+{
+	if (_upperBoundType == 0)
+	{
+		return isSameSoldierType; // 0 = dynamic
+	}
+	else if (_upperBoundType == 1)
+	{
+		return true; // 1 = soft limit
+	}
+	return false; // 2+ = hard limit
 }
 
 /**

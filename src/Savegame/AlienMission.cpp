@@ -220,29 +220,57 @@ void AlienMission::think(Game &engine, const Globe &globe)
 			RuleRegion *region = mod.getRegion(_region, true);
 			if ((*c)->canBeInfiltrated() && region->insideRegion((*c)->getRules()->getLabelLongitude(), (*c)->getRules()->getLabelLatitude()))
 			{
-				(*c)->setNewPact();
-				MissionArea area;
 				std::pair<double, double> pos;
 				int tries = 0;
+				bool dynamicBaseType = _rule.getSiteType().empty();
+				AlienDeployment *alienBaseType = nullptr;
+				bool wantsToSpawnFakeUnderwater = false;
+				bool found = false;
 				if (!mod.getBuildInfiltrationBaseCloseToTheCountry())
 				{
 					std::vector<MissionArea> areas = region->getMissionZones().at(_rule.getSpawnZone()).areas;
-					do
+					while (!found)
 					{
-						area = areas.at(RNG::generate(0, areas.size() - 1));
+						MissionArea &area = areas.at(RNG::generate(0, areas.size() - 1));
 						pos.first = RNG::generate(std::min(area.lonMin, area.lonMax), std::max(area.lonMin, area.lonMax));
 						pos.second = RNG::generate(std::min(area.latMin, area.latMax), std::max(area.latMin, area.latMax));
+
+						if (tries == 0 || dynamicBaseType)
+						{
+							alienBaseType = chooseAlienBaseType(mod, area);
+							wantsToSpawnFakeUnderwater = RNG::percent(alienBaseType->getFakeUnderwaterSpawnChance());
+						}
 						++tries;
-					} while (!(globe.insideLand(pos.first, pos.second)
-						&& region->insideRegion(pos.first, pos.second))
-						&& tries < 100);
+
+						if (tries == 100)
+						{
+							found = true; // forced spawn on invalid location
+						}
+						else if (globe.insideLand(pos.first, pos.second) && region->insideRegion(pos.first, pos.second))
+						{
+							bool isFakeUnderwater = globe.insideFakeUnderwaterTexture(pos.first, pos.second);
+							if (wantsToSpawnFakeUnderwater)
+							{
+								if (isFakeUnderwater) found = true; // found spawn point on fakeUnderwater texture
+							}
+							else
+							{
+								if (!isFakeUnderwater) found = true; // found spawn point on land
+							}
+						}
+					}
 				}
 				else
 				{
+					dynamicBaseType = false; // just to make absolutely clear this feature is not supported in this case
+					MissionArea dummyArea;
+					alienBaseType = chooseAlienBaseType(mod, dummyArea);
+					wantsToSpawnFakeUnderwater = RNG::percent(alienBaseType->getFakeUnderwaterSpawnChance());
+
 					RuleCountry* cRule = (*c)->getRules();
 					int pick = 0;
 					double lonMini, lonMaxi, latMini, latMaxi;
-					do
+					while (!found)
 					{
 						pick = RNG::generate(0, cRule->getLonMin().size() - 1);
 						lonMini = cRule->getLonMin()[pick];
@@ -257,18 +285,35 @@ void AlienMission::think(Game &engine, const Globe &globe)
 						pos.first = RNG::generate(std::min(lonMini, lonMaxi), std::max(lonMini, lonMaxi));
 						pos.second = RNG::generate(std::min(latMini, latMaxi), std::max(latMini, latMaxi));
 						++tries;
-					} while (!(globe.insideLand(pos.first, pos.second)
-						&& cRule->insideCountry(pos.first, pos.second))
-						&& tries < 100);
-					// dummy
-					area.texture = 0;
-					area.lonMin = pos.first;
-					area.lonMax = pos.first;
-					area.latMin = pos.second;
-					area.latMax = pos.second;
+
+						if (tries == 100)
+						{
+							found = true; // forced spawn on invalid location
+						}
+						else if (globe.insideLand(pos.first, pos.second) && cRule->insideCountry(pos.first, pos.second))
+						{
+							bool isFakeUnderwater = globe.insideFakeUnderwaterTexture(pos.first, pos.second);
+							if (wantsToSpawnFakeUnderwater)
+							{
+								if (isFakeUnderwater) found = true; // found spawn point on fakeUnderwater texture
+							}
+							else
+							{
+								if (!isFakeUnderwater) found = true; // found spawn point on land
+							}
+						}
+					}
 				}
-				spawnAlienBase((*c), engine, area, pos, 0);
-				break;
+				if (tries < 100 || mod.getAllowAlienBasesOnWrongTextures())
+				{
+					// only create a pact if the base is going to be spawned too
+					(*c)->setNewPact();
+
+					spawnAlienBase((*c), engine, pos, alienBaseType);
+
+					// if the base can't be spawned for this country, try the next country
+					break;
+				}
 			}
 		}
 		if (_rule.isEndlessInfiltration())
@@ -281,20 +326,46 @@ void AlienMission::think(Game &engine, const Globe &globe)
 	{
 		RuleRegion *region = mod.getRegion(_region, true);
 		std::vector<MissionArea> areas = region->getMissionZones().at(_rule.getSpawnZone()).areas;
-		MissionArea area;
 		std::pair<double, double> pos;
 		int tries = 0;
-		do
+		bool dynamicBaseType = _rule.getSiteType().empty();
+		AlienDeployment* alienBaseType = nullptr;
+		bool wantsToSpawnFakeUnderwater = false;
+		bool found = false;
+		while (!found)
 		{
-			area = areas.at(RNG::generate(0, areas.size()-1));
+			MissionArea &area = areas.at(RNG::generate(0, areas.size()-1));
 			pos.first = RNG::generate(std::min(area.lonMin, area.lonMax), std::max(area.lonMin, area.lonMax));
 			pos.second = RNG::generate(std::min(area.latMin, area.latMax), std::max(area.latMin, area.latMax));
+
+			if (tries == 0 || dynamicBaseType)
+			{
+				alienBaseType = chooseAlienBaseType(mod, area);
+				wantsToSpawnFakeUnderwater = RNG::percent(alienBaseType->getFakeUnderwaterSpawnChance());
+			}
 			++tries;
+
+			if (tries == 100)
+			{
+				found = true; // forced spawn on invalid location
+			}
+			else if (globe.insideLand(pos.first, pos.second) && region->insideRegion(pos.first, pos.second, true))
+			{
+				bool isFakeUnderwater = globe.insideFakeUnderwaterTexture(pos.first, pos.second);
+				if (wantsToSpawnFakeUnderwater)
+				{
+					if (isFakeUnderwater) found = true; // found spawn point on fakeUnderwater texture
+				}
+				else
+				{
+					if (!isFakeUnderwater) found = true; // found spawn point on land
+				}
+			}
 		}
-		while (!(globe.insideLand(pos.first, pos.second)
-			&& region->insideRegion(pos.first, pos.second, true))
-			&& tries < 100);
-		spawnAlienBase(0, engine, area, pos, 0);
+		if (tries < 100 || mod.getAllowAlienBasesOnWrongTextures())
+		{
+			spawnAlienBase(0, engine, pos, alienBaseType);
+		}
 	}
 
 	if (_nextWave != _rule.getWaveCount())
@@ -360,7 +431,7 @@ Ufo *AlienMission::spawnUfo(SavedGame &game, const Mod &mod, const Globe &globe,
 			}
 			else if (trajectory.getAltitude(0) == "STR_GROUND")
 			{
-				pos = getLandPoint(globe, regionRules, trajectory.getZone(0));
+				pos = getLandPoint(globe, regionRules, trajectory.getZone(0), *ufo);
 			}
 			else
 			{
@@ -404,7 +475,7 @@ Ufo *AlienMission::spawnUfo(SavedGame &game, const Mod &mod, const Globe &globe,
 		}
 		else if (trajectory.getAltitude(0) == "STR_GROUND")
 		{
-			pos = getLandPoint(globe, regionRules, trajectory.getZone(0));
+			pos = getLandPoint(globe, regionRules, trajectory.getZone(0), *ufo);
 		}
 		else
 		{
@@ -426,7 +497,7 @@ Ufo *AlienMission::spawnUfo(SavedGame &game, const Mod &mod, const Globe &globe,
 			else
 			{
 				// Other ships can land where they want.
-				pos = getLandPoint(globe, regionRules, trajectory.getZone(1));
+				pos = getLandPoint(globe, regionRules, trajectory.getZone(1), *ufo);
 			}
 		}
 		else
@@ -466,7 +537,7 @@ Ufo *AlienMission::spawnUfo(SavedGame &game, const Mod &mod, const Globe &globe,
 	Ufo *ufo = new Ufo(ufoRule, game.getId("STR_UFO_UNIQUE"), hunterKillerPercentage, huntMode, huntBehavior);
 	ufo->setMissionInfo(this, &trajectory);
 	const RuleRegion &regionRules = *mod.getRegion(_region, true);
-	std::pair<double, double> pos = getWaypoint(wave, trajectory, 0, globe, regionRules);
+	std::pair<double, double> pos = getWaypoint(wave, trajectory, 0, globe, regionRules, *ufo);
 	ufo->setAltitude(trajectory.getAltitude(0));
 	if (trajectory.getAltitude(0) == "STR_GROUND")
 	{
@@ -482,7 +553,7 @@ Ufo *AlienMission::spawnUfo(SavedGame &game, const Mod &mod, const Globe &globe,
 		ufo->setLatitude(_base->getLatitude());
 	}
 	Waypoint *wp = new Waypoint();
-	pos = getWaypoint(wave, trajectory, 1, globe, regionRules);
+	pos = getWaypoint(wave, trajectory, 1, globe, regionRules, *ufo);
 	wp->setLongitude(pos.first);
 	wp->setLatitude(pos.second);
 	ufo->setDestination(wp);
@@ -575,27 +646,46 @@ void AlienMission::start(Game &engine, const Globe &globe, size_t initialCount)
 				// 3. spawn a new base
 				RuleRegion *region = mod.getRegion(_region, true);
 				std::vector<MissionArea> areas = region->getMissionZones().at(_rule.getOperationSpawnZone()).areas;
-				MissionArea area;
 				std::pair<double, double> pos;
 				int tries = 0;
-				do
+				auto operationBaseType = mod.getDeployment(_rule.getOperationBaseType(), true);
+				bool wantsToSpawnFakeUnderwater = RNG::percent(operationBaseType->getFakeUnderwaterSpawnChance());
+				bool found = false;
+				while (!found)
 				{
-					area = areas.at(RNG::generate(0, areas.size() - 1));
+					MissionArea &area = areas.at(RNG::generate(0, areas.size() - 1));
 					pos.first = RNG::generate(std::min(area.lonMin, area.lonMax), std::max(area.lonMin, area.lonMax));
 					pos.second = RNG::generate(std::min(area.latMin, area.latMax), std::max(area.latMin, area.latMax));
 					++tries;
-				} while (!(globe.insideLand(pos.first, pos.second)
-					&& region->insideRegion(pos.first, pos.second, true))
-					&& tries < 100);
-				auto operationBaseType = mod.getDeployment(_rule.getOperationBaseType(), true);
-				auto newAlienOperationBase = spawnAlienBase(0, engine, area, pos, operationBaseType);
+
+					if (tries == 100)
+					{
+						found = true; // forced spawn on invalid location
+					}
+					else if (globe.insideLand(pos.first, pos.second) && region->insideRegion(pos.first, pos.second, true))
+					{
+						bool isFakeUnderwater = globe.insideFakeUnderwaterTexture(pos.first, pos.second);
+						if (wantsToSpawnFakeUnderwater)
+						{
+							if (isFakeUnderwater) found = true; // found spawn point on fakeUnderwater texture
+						}
+						else
+						{
+							if (!isFakeUnderwater) found = true; // found spawn point on land
+						}
+					}
+				}
+				AlienBase* newAlienOperationBase = nullptr;
+				if (tries < 100 || mod.getAllowAlienBasesOnWrongTextures())
+				{
+					spawnAlienBase(0, engine, pos, operationBaseType);
+				}
 				if (newAlienOperationBase)
 				{
 					_base = newAlienOperationBase;
 				}
 				else
 				{
-					// can't happen, but I'll leave it here just in case alien base spawning gets changed in the future
 					_interrupted = true;
 				}
 			}
@@ -652,7 +742,7 @@ void AlienMission::ufoReachedWaypoint(Ufo &ufo, Game &engine, const Globe &globe
 	ufo.setAltitude(trajectory.getAltitude(nextWaypoint));
 	ufo.setTrajectoryPoint(nextWaypoint);
 	const RuleRegion &regionRules = *mod.getRegion(_region, true);
-	std::pair<double, double> pos = getWaypoint(wave, trajectory, nextWaypoint, globe, regionRules);
+	std::pair<double, double> pos = getWaypoint(wave, trajectory, nextWaypoint, globe, regionRules, ufo);
 
 	Waypoint *wp = new Waypoint();
 	wp->setLongitude(pos.first);
@@ -708,7 +798,23 @@ void AlienMission::ufoReachedWaypoint(Ufo &ufo, Game &engine, const Globe &globe
 		}
 		else
 		{
-			if (globe.insideLand(ufo.getLongitude(), ufo.getLatitude()))
+			bool landingAllowed = true;
+			if (!globe.insideLand(ufo.getLongitude(), ufo.getLatitude()))
+			{
+				landingAllowed = false; // real water
+			}
+			else if (globe.insideFakeUnderwaterTexture(ufo.getLongitude(), ufo.getLatitude()))
+			{
+				// decision to land on fake water was done earlier already
+				// most of the time it's a proper decision, but sometimes it's a forced decision (i.e. no other option left)
+				// because of forced decisions, let's check if the UFO can (at least theoretically) land on fake water...
+				// ...and if not, don't land!
+				if (ufo.getRules()->getFakeWaterLandingChance() <= 0)
+				{
+					landingAllowed = false; // UFO was forced to go here, but it's not going to land!
+				}
+			}
+			if (landingAllowed)
 			{
 				// Set timer for UFO on the ground.
 				ufo.setSecondsRemaining(trajectory.groundTimer() * 5);
@@ -872,32 +978,13 @@ void AlienMission::addScore(double lon, double lat, SavedGame &game) const
  * Spawn an alien base.
  * @param pactCountry A country that has signed a pact with the aliens and allowed them to build this base.
  * @param engine The game engine, required to get access to game data and game rules.
- * @param zone The mission zone, required for determining the base coordinates.
+ * @param pos The base coordinates.
+ * @param deployment The base type.
  * @return Pointer to the spawned alien base.
  */
-AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, const MissionArea &area, std::pair<double, double> pos, AlienDeployment *deploymentOverride)
+AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, std::pair<double, double> pos, AlienDeployment *deployment)
 {
 	SavedGame &game = *engine.getSavedGame();
-	const Mod &ruleset = *engine.getMod();
-	// Once the last UFO is spawned, the aliens build their base.
-	AlienDeployment *deployment;
-	Texture *texture = ruleset.getGlobe()->getTexture(area.texture);
-	if (deploymentOverride)
-	{
-		deployment = deploymentOverride;
-	}
-	else if (ruleset.getDeployment(_rule.getSiteType()))
-	{
-		deployment = ruleset.getDeployment(_rule.getSiteType());
-	}
-	else if (texture && !texture->getDeployments().empty())
-	{
-		deployment = ruleset.getDeployment(texture->getRandomDeployment(), true);
-	}
-	else
-	{
-		deployment = ruleset.getDeployment("STR_ALIEN_BASE_ASSAULT", true);
-	}
 	AlienBase *ab = new AlienBase(deployment, game.getMonthsPassed());
 	if (pactCountry)
 	{
@@ -910,6 +997,33 @@ AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, cons
 	game.getAlienBases()->push_back(ab);
 	addScore(ab->getLongitude(), ab->getLatitude(), game);
 	return ab;
+}
+
+/**
+ * Chooses a mission type for a new alien base.
+ */
+AlienDeployment *AlienMission::chooseAlienBaseType(const Mod &mod, const MissionArea &area)
+{
+	AlienDeployment *deployment = nullptr;
+	if (!_rule.getSiteType().empty())
+	{
+		deployment = mod.getDeployment(_rule.getSiteType(), true);
+	}
+	if (!deployment)
+	{
+		Texture *texture = mod.getGlobe()->getTexture(area.texture);
+		if (texture && !texture->getDeployments().empty())
+		{
+			// Note: only used in Area51 mod (as of April 2020)
+			deployment = mod.getDeployment(texture->getRandomDeployment(), true);
+		}
+	}
+	if (!deployment)
+	{
+		// Note: emergency fall-back
+		deployment = mod.getDeployment("STR_ALIEN_BASE_ASSAULT", true);
+	}
+	return deployment;
 }
 
 /*
@@ -940,9 +1054,10 @@ void AlienMission::setRegion(const std::string &region, const Mod &mod)
  * @param nextWaypoint the next logical waypoint in sequence (0 for newly spawned UFOs)
  * @param globe The earth globe, required to get access to land checks.
  * @param region the ruleset for the region of our mission.
+ * @param ufo Required when making landing decisions on fake water.
  * @return a set of lon and lat coordinates based on the criteria of the trajectory.
  */
-std::pair<double, double> AlienMission::getWaypoint(const MissionWave &wave, const UfoTrajectory &trajectory, const size_t nextWaypoint, const Globe &globe, const RuleRegion &region)
+std::pair<double, double> AlienMission::getWaypoint(const MissionWave &wave, const UfoTrajectory &trajectory, const size_t nextWaypoint, const Globe &globe, const RuleRegion &region, const Ufo &ufo)
 {
 	if (trajectory.getZone(nextWaypoint) >= region.getMissionZones().size())
 	{
@@ -970,7 +1085,7 @@ std::pair<double, double> AlienMission::getWaypoint(const MissionWave &wave, con
 
 	if (trajectory.getWaypointCount() > nextWaypoint + 1 && trajectory.getAltitude(nextWaypoint + 1) == "STR_GROUND")
 	{
-		return getLandPoint(globe, region, trajectory.getZone(nextWaypoint));
+		return getLandPoint(globe, region, trajectory.getZone(nextWaypoint), ufo);
 	}
 	return region.getRandomPoint(trajectory.getZone(nextWaypoint));
 }
@@ -981,9 +1096,10 @@ std::pair<double, double> AlienMission::getWaypoint(const MissionWave &wave, con
  * @param globe reference to the globe data.
  * @param region reference to the region we want a land point in.
  * @param zone the missionZone set within the region to find a landing zone in.
+ * @param ufo Required when making landing decisions on fake water.
  * @return a set of longitudinal and latitudinal coordinates.
  */
-std::pair<double, double> AlienMission::getLandPoint(const Globe &globe, const RuleRegion &region, size_t zone)
+std::pair<double, double> AlienMission::getLandPoint(const Globe &globe, const RuleRegion &region, size_t zone, const Ufo &ufo)
 {
 	if (zone >= region.getMissionZones().size() || region.getMissionZones().at(zone).areas.size() == 0)
 	{
@@ -999,18 +1115,44 @@ std::pair<double, double> AlienMission::getLandPoint(const Globe &globe, const R
 	else
 	{
 		int tries = 0;
-		do
+		bool wantsToLandOnFakeWater = RNG::percent(ufo.getRules()->getFakeWaterLandingChance());
+		bool found = false;
+		while (!found)
 		{
 			pos = region.getRandomPoint(zone);
 			++tries;
+
+			if (tries == 100)
+			{
+				found = true; // forced decision
+			}
+			else if (globe.insideLand(pos.first, pos.second) && region.insideRegion(pos.first, pos.second))
+			{
+				bool isFakeWater = globe.insideFakeUnderwaterTexture(pos.first, pos.second);
+				if (wantsToLandOnFakeWater)
+				{
+					if (isFakeWater)
+					{
+						found = true; // found landing point on fake water
+					}
+				}
+				else
+				{
+					if (!isFakeWater)
+					{
+						found = true; // found landing point on land
+					}
+				}
+			}
 		}
-		while (!(globe.insideLand(pos.first, pos.second)
-			&& region.insideRegion(pos.first, pos.second))
-			&& tries < 100);
 
 		if (tries == 100)
 		{
 			Log(LOG_DEBUG) << "Region: " << region.getType() << " Longitude: " << pos.first << " Latitude: " << pos.second << " invalid zone: " << zone << " ufo forced to land on water!";
+			if (wantsToLandOnFakeWater)
+			{
+				Log(LOG_DEBUG) << "UFO: " << ufo.getRules()->getType() << " wanted to land on fake water.";
+			}
 		}
 	}
 	return pos;

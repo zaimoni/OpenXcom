@@ -20,6 +20,8 @@
 #include <vector>
 #include <map>
 #include <list>
+#include <unordered_map>
+#include <algorithm>
 #include "Exception.h"
 
 namespace OpenXcom
@@ -229,6 +231,24 @@ public:
 				break;
 			}
 		}
+	}
+
+	/**
+	 * Sort vector using `std::less`.
+	 */
+	template<typename T>
+	static void sortVector(std::vector<T>& vec)
+	{
+		std::sort(vec.begin(), vec.end(), std::less<>());
+	}
+
+	/**
+	 * Check for value in sorted vector by `std::less`.
+	 */
+	template<typename T>
+	static bool sortVectorHave(const std::vector<T>& vec, T v)
+	{
+		return std::binary_search(vec.begin(), vec.end(), v, std::less<>());
 	}
 
 	////////////////////////////////////////////////////////////
@@ -472,6 +492,61 @@ public:
 	{
 		return { { a.begin() }, { a.end() } };
 	}
+
+
+	////////////////////////////////////////////////////////////
+	//					Custom Containers
+	////////////////////////////////////////////////////////////
+
+
+	/**
+	 * Helper providing conversion from some unique strings to indexes.
+	 */
+	class NamesToIndex
+	{
+		std::unordered_map<std::string, size_t> _usedValues;
+		std::unordered_map<size_t, std::string> _usedNames{ { 0, "" } };
+		size_t _last = 1; //zero is reserved for "empty"
+
+	public:
+
+		/**
+		 * Return an index for a given name
+		 * @param name New name or old already added name
+		 * @param max How many unique names we can hold
+		 * @return Index assigned to a name.
+		 */
+		size_t addName(const std::string& name, size_t max)
+		{
+			auto& ref = _usedValues[name];
+			if (ref)
+			{
+				return ref;
+			}
+			if (_last == max)
+			{
+				throw Exception("Number of unique names reached limit because of name '" + name + "'");
+			}
+			ref = _last++;
+			_usedNames[ref] = name;
+			return ref;
+		}
+
+		/**
+		 * Get name based on index
+		 * @param i Index
+		 * @return name or empty string if index is not assigned
+		 */
+		const std::string& getName(size_t i) const
+		{
+			auto f = _usedNames.find(i);
+			if (f != _usedNames.end())
+			{
+				return f->second;
+			}
+			return _usedNames.find(0)->second;
+		}
+	};
 };
 
 }

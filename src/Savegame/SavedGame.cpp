@@ -64,6 +64,7 @@
 #include "BaseFacility.h"
 #include "MissionStatistics.h"
 #include "SoldierDeath.h"
+#include "SoldierDiary.h"
 
 namespace OpenXcom
 {
@@ -1662,8 +1663,7 @@ void SavedGame::getAvailableResearchProjects(std::vector<RuleResearch *> &projec
 			}
 
 			// Check for required buildings/functions in the given base
-			const std::vector<std::string> &baseFunc = base->getProvidedBaseFunc();
-			if (!std::includes(baseFunc.begin(), baseFunc.end(), research->getRequireBaseFunc().begin(), research->getRequireBaseFunc().end()))
+			if ((~base->getProvidedBaseFunc({}) & research->getRequireBaseFunc()).any())
 			{
 				continue;
 			}
@@ -1715,7 +1715,7 @@ void SavedGame::getAvailableProductions (std::vector<RuleManufacture *> & produc
 {
 	const std::vector<std::string> &items = mod->getManufactureList();
 	const std::vector<Production *> &baseProductions = base->getProductions();
-	const std::vector<std::string> &baseFunc = base->getProvidedBaseFunc();
+	auto baseFunc = base->getProvidedBaseFunc({});
 
 	for (std::vector<std::string>::const_iterator iter = items.begin();
 		iter != items.end();
@@ -1730,7 +1730,7 @@ void SavedGame::getAvailableProductions (std::vector<RuleManufacture *> & produc
 		{
 			continue;
 		}
-		if (!std::includes(baseFunc.begin(), baseFunc.end(), m->getRequireBaseFunc().begin(), m->getRequireBaseFunc().end()))
+		if ((~baseFunc & m->getRequireBaseFunc()).any())
 		{
 			if (filter != MANU_FILTER_FACILITY_REQUIRED)
 				continue;
@@ -1783,7 +1783,7 @@ void SavedGame::getDependableManufacture (std::vector<RuleManufacture *> & depen
 void SavedGame::getAvailableTransformations (std::vector<RuleSoldierTransformation *> & transformations, const Mod * mod, Base * base) const
 {
 	const std::vector<std::string> &items = mod->getSoldierTransformationList();
-	const std::vector<std::string> &baseFunc = base->getProvidedBaseFunc();
+	auto baseFunc = base->getProvidedBaseFunc({});
 
 	for (std::vector<std::string>::const_iterator iter = items.begin(); iter != items.end(); ++iter)
 	{
@@ -1792,7 +1792,7 @@ void SavedGame::getAvailableTransformations (std::vector<RuleSoldierTransformati
 		{
 			continue;
 		}
-		if (!std::includes(baseFunc.begin(), baseFunc.end(), m->getRequiredBaseFuncs().begin(), m->getRequiredBaseFuncs().end()))
+		if ((~baseFunc & m->getRequiredBaseFuncs()).any())
 		{
 			continue;
 		}
@@ -2095,6 +2095,25 @@ bool SavedGame::isItemObtained(const std::string &itemType) const
 	}
 	return false;
 }
+/**
+ * Returns if a certain facility has been built in any base.
+ * @param facilityType facility ID.
+ * @return Whether it's been built or not. If false, the facility has not been built in any base.
+ */
+bool SavedGame::isFacilityBuilt(const std::string &facilityType) const
+{
+	for (auto base : _bases)
+	{
+		for (auto fac : *base->getFacilities())
+		{
+			if (fac->getRules()->getType() == facilityType)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
 /**
  * Returns pointer to the Soldier given it's unique ID.
@@ -2298,6 +2317,40 @@ Soldier *SavedGame::inspectSoldiers(std::vector<Soldier*> &soldiers, std::vector
 		}
 	}
 	return highestRanked;
+}
+
+/**
+ * Gets the (approximate) number of idle days since the soldier's last mission.
+ */
+int SavedGame::getSoldierIdleDays(Soldier *soldier)
+{
+	int lastMissionId = -1;
+	int idleDays = 999;
+
+	if (!soldier->getDiary()->getMissionIdList().empty())
+	{
+		lastMissionId = soldier->getDiary()->getMissionIdList().back();
+	}
+
+	if (lastMissionId == -1)
+		return idleDays;
+
+	for (auto missionInfo : _missionStatistics)
+	{
+		if (missionInfo->id == lastMissionId)
+		{
+			idleDays = 0;
+			idleDays += (_time->getYear() - missionInfo->time.getYear()) * 365;
+			idleDays += (_time->getMonth() - missionInfo->time.getMonth()) * 30;
+			idleDays += (_time->getDay() - missionInfo->time.getDay()) * 1;
+			break;
+		}
+	}
+
+	if (idleDays > 999)
+		idleDays = 999;
+
+	return idleDays;
 }
 
 /**

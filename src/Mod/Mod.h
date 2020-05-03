@@ -20,14 +20,17 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <bitset>
 #include <SDL.h>
 #include <yaml-cpp/yaml.h>
 #include "../Engine/Options.h"
 #include "../Engine/FileMap.h"
+#include "../Engine/Collections.h"
 #include "../Savegame/GameTime.h"
 #include "RuleDamageType.h"
 #include "Unit.h"
 #include "RuleAlienMission.h"
+#include "RuleBaseFacilityFunctions.h"
 
 namespace OpenXcom
 {
@@ -185,6 +188,7 @@ private:
 	RuleGlobe *_globe;
 	RuleConverter *_converter;
 	ModScriptGlobal *_scriptGlobal;
+
 	int _maxViewDistance, _maxDarknessToSeeUnits;
 	int _maxStaticLightDistance, _maxDynamicLightDistance, _enhancedLighting;
 	int _costHireEngineer, _costHireScientist;
@@ -197,13 +201,19 @@ private:
 	int _chanceToStopRetaliation;
 	bool _lessAliensDuringBaseDefense;
 	bool _allowCountriesToCancelAlienPact, _buildInfiltrationBaseCloseToTheCountry;
+	bool _allowAlienBasesOnWrongTextures;
 	int _kneelBonusGlobal, _oneHandedPenaltyGlobal;
 	int _enableCloseQuartersCombat, _closeQuartersAccuracyGlobal, _closeQuartersTuCostGlobal, _closeQuartersEnergyCostGlobal;
 	int _noLOSAccuracyPenaltyGlobal;
 	int _surrenderMode;
 	int _bughuntMinTurn, _bughuntMaxEnemies, _bughuntRank, _bughuntLowMorale, _bughuntTimeUnitsLeft;
+
+	int _manaMissingWoundThreshold = 200;
+	int _healthMissingWoundThreshold = 100;
 	bool _manaEnabled, _manaBattleUI, _manaTrainingPrimary, _manaTrainingSecondary, _manaReplenishAfterMission;
+	bool _healthReplenishAfterMission = true;
 	std::string _manaUnlockResearch;
+
 	std::string _loseMoney, _loseRating, _loseDefeat;
 	int _ufoGlancingHitThreshold, _ufoBeamWidthParameter;
 	int _ufoTractorBeamSizeModifiers[5];
@@ -222,8 +232,12 @@ private:
 	int _shortRadarRange;
 	int _defeatScore, _defeatFunds;
 	std::pair<std::string, int> _alienFuel;
-	std::string _fontName, _finalResearch, _psiUnlockResearch, _destroyedFacility;
+	std::string _fontName, _finalResearch, _psiUnlockResearch, _fakeUnderwaterBaseUnlockResearch;
+
+	std::string _destroyedFacility;
 	YAML::Node _startingBaseDefault, _startingBaseBeginner, _startingBaseExperienced, _startingBaseVeteran, _startingBaseGenius, _startingBaseSuperhuman;
+	Collections::NamesToIndex _baseFunctionNames;
+
 	GameTime _startingTime;
 	int _startingDifficulty;
 	int _baseDefenseMapFromLocation;
@@ -246,7 +260,8 @@ private:
 	std::vector<std::string> _alienMissionsIndex, _terrainIndex, _customPalettesIndex, _arcScriptIndex, _eventScriptIndex, _eventIndex, _missionScriptIndex;
 	std::vector<std::vector<int> > _alienItemLevels;
 	std::vector<SDL_Color> _transparencies;
-	int _facilityListOrder, _craftListOrder, _itemCategoryListOrder, _itemListOrder, _researchListOrder,  _manufactureListOrder, _transformationListOrder, _ufopaediaListOrder, _invListOrder, _soldierListOrder;
+	int _facilityListOrder, _craftListOrder, _itemCategoryListOrder, _itemListOrder, _researchListOrder,  _manufactureListOrder;
+	int _soldierBonusListOrder, _transformationListOrder, _ufopaediaListOrder, _invListOrder, _soldierListOrder;
 	std::vector<ModData> _modData;
 	ModData* _modCurrent;
 	const SDL_Color *_statePalette;
@@ -369,7 +384,7 @@ public:
 	/// Gets a particular palette.
 	Palette *getPalette(const std::string &name, bool error = true) const;
 	/// Sets a new palette.
-	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256);
+	void setPaletteForAllResources(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256);
 	/// Gets list of voxel data.
 	std::vector<Uint16> *getVoxelData();
 	/// Returns a specific sound from either the land or underwater sound set.
@@ -391,6 +406,11 @@ public:
 	void loadSoundOffset(const std::string &parent, std::vector<int>& sounds, const YAML::Node &node, const std::string &set) const;
 	/// Gets the mod offset for a generic value.
 	int getOffset(int id, int max) const;
+
+	/// Gets base functions from string array in yaml.
+	void loadBaseFunction(const std::string &parent, RuleBaseFacilityFunctions& f, const YAML::Node &node);
+	/// Get names of function names in given bitset.
+	std::vector<std::string> getBaseFunctionNames(RuleBaseFacilityFunctions f) const;
 
 	/// Loads a list of mods.
 	void loadAll();
@@ -476,10 +496,22 @@ public:
 	const std::vector<std::string> &getUfopaediaList() const;
 	/// Gets the available article categories.
 	const std::vector<std::string> &getUfopaediaCategoryList() const;
+
 	/// Gets the inventory list.
 	std::map<std::string, RuleInventory*> *getInventories();
 	/// Gets the ruleset for a specific inventory.
 	RuleInventory *getInventory(const std::string &id, bool error = false) const;
+	/// Gets the ruleset for right hand inventory slot.
+	RuleInventory *getInventoryRightHand() const { return getInventory("STR_RIGHT_HAND", true); }
+	/// Gets the ruleset for left hand inventory slot.
+	RuleInventory *getInventoryLeftHand() const { return getInventory("STR_LEFT_HAND", true); }
+	/// Gets the ruleset for backpack inventory slot.
+	RuleInventory *getInventoryBackpack() const { return getInventory("STR_BACK_PACK", true); }
+	/// Gets the ruleset for belt inventory slot.
+	RuleInventory *getInventoryBelt() const { return getInventory("STR_BELT", true); }
+	/// Gets the ruleset for ground inventory slot.
+	RuleInventory *getInventoryGround() const { return getInventory("STR_GROUND", true); }
+
 	/// Gets whether or not the inventory slots overlap with the paperdoll button
 	bool getInventoryOverlapsPaperdoll() const { return _inventoryOverlapsPaperdoll; }
 	/// Gets max view distance in BattleScape.
@@ -542,6 +574,8 @@ public:
 	bool getAllowCountriesToCancelAlienPact() const { return _allowCountriesToCancelAlienPact; }
 	/// Should alien infiltration bases be built close to the infiltrated country?
 	bool getBuildInfiltrationBaseCloseToTheCountry() const { return _buildInfiltrationBaseCloseToTheCountry; }
+	/// Should alien bases be allowed (in worst case) on invalid globe textures or not?
+	bool getAllowAlienBasesOnWrongTextures() const { return _allowAlienBasesOnWrongTextures; }
 	/// Gets the global kneel bonus (default = 115).
 	int getKneelBonusGlobal() const { return _kneelBonusGlobal; }
 	/// Gets the global one-handed penalty (default = 80).
@@ -568,6 +602,7 @@ public:
 	int getBughuntLowMorale() const { return _bughuntLowMorale; }
 	/// Gets the bug hunt mode time units % parameter (default = 60).
 	int getBughuntTimeUnitsLeft() const { return _bughuntTimeUnitsLeft; }
+
 	/// Is the mana feature enabled (default false)?
 	bool isManaFeatureEnabled() const { return _manaEnabled; }
 	/// Is the mana bar enabled for the Battlescape UI (default false)?
@@ -576,10 +611,18 @@ public:
 	bool isManaTrainingPrimary() const { return _manaTrainingPrimary; }
 	/// Is the mana trained as a secondary skill (e.g. like strength)?
 	bool isManaTrainingSecondary() const { return _manaTrainingSecondary; }
-	/// Should a soldier's mana be fully replenished after a mission?
-	bool getReplenishManaAfterMission() const { return _manaReplenishAfterMission; }
 	/// Gets the mana unlock research topic (default empty)?
 	const std::string &getManaUnlockResearch() const { return _manaUnlockResearch; }
+
+	/// How much missing mana will act as "fatal wounds" and prevent the soldier from going into battle.
+	int getManaWoundThreshold() const { return _manaMissingWoundThreshold; }
+	/// Should a soldier's mana be fully replenished after a mission?
+	bool getReplenishManaAfterMission() const { return _manaReplenishAfterMission; }
+
+	/// How much missing health will act as "fatal wounds" and prevent the soldier from going into battle.
+	int getHealthWoundThreshold() const { return _healthMissingWoundThreshold; }
+	/// Should a soldier's health be fully replenished after a mission?
+	bool getReplenishHealthAfterMission() const { return _healthReplenishAfterMission; }
 
 	/// Gets the cutscene ID that should be played when the player loses due to poor economy management.
 	const std::string &getLoseMoneyCutscene() const { return _loseMoney; }
@@ -587,6 +630,9 @@ public:
 	const std::string &getLoseRatingCutscene() const { return _loseRating; }
 	/// Gets the cutscene ID that should be played when the player loses the last base.
 	const std::string &getLoseDefeatCutscene() const { return _loseDefeat; }
+
+	/// Gets the research topic required for building XCOM bases on fakeUnderwater globe textures.
+	const std::string &getFakeUnderwaterBaseUnlockResearch() const { return _fakeUnderwaterBaseUnlockResearch; }
 
 	/// Gets the threshold for defining a glancing hit on a ufo during interception
 	int getUfoGlancingHitThreshold() const { return _ufoGlancingHitThreshold; }

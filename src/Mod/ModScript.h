@@ -19,9 +19,11 @@
  */
 #include "../Engine/Script.h"
 
+
 namespace OpenXcom
 {
 
+namespace RNG { class RandomState; }
 class Surface;
 class SurfaceSet;
 class Soldier;
@@ -60,6 +62,10 @@ class RuleUfo;
 class SavedBattleGame;
 class SavedGame;
 
+
+/**
+ * Main class handling all script types used by the game.
+ */
 class ModScript
 {
 	friend class Mod;
@@ -128,7 +134,7 @@ class ModScript
 	{
 		NewTurnUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 	};
-	struct ReturnFromMissionUnitParser : ScriptParserEvents<ScriptOutputArgs<int&, int>, BattleUnit*, SavedBattleGame*, Soldier*, const StatAdjustment*, const StatAdjustment*>
+	struct ReturnFromMissionUnitParser : ScriptParserEvents<ScriptOutputArgs<int&, int, int, int&, int&>, BattleUnit*, SavedBattleGame*, Soldier*, const StatAdjustment*, const StatAdjustment*>
 	{
 		ReturnFromMissionUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 	};
@@ -142,7 +148,7 @@ class ModScript
 	//					item script
 	////////////////////////////////////////////////////////////
 
-	struct CreateItemParser : ScriptParserEvents<ScriptOutputArgs<>, BattleItem*, SavedBattleGame*, int>
+	struct CreateItemParser : ScriptParserEvents<ScriptOutputArgs<>, BattleItem*, BattleUnit*,  SavedBattleGame*, int>
 	{
 		CreateItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 	};
@@ -159,11 +165,16 @@ class ModScript
 		SelectItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 	};
 
+	struct TryPsiAttackItemParser : ScriptParserEvents<ScriptOutputArgs<int&>, const BattleItem*, const BattleUnit*, const BattleUnit*, int, int, int, RNG::RandomState*, int, int>
+	{
+		TryPsiAttackItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
+	};
+
 	////////////////////////////////////////////////////////////
 	//					bonus stat script
 	////////////////////////////////////////////////////////////
 
-	struct BonusStatsBaseParser : ScriptParserEvents<ScriptOutputArgs<int&>, const BattleUnit*, int>
+	struct BonusStatsBaseParser : ScriptParserEvents<ScriptOutputArgs<int&>, const BattleUnit*, int, const BattleItem*, const BattleItem*, int, const RuleSkill*>
 	{
 		BonusStatsBaseParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 
@@ -264,6 +275,7 @@ public:
 	using SelectItemSprite = MACRO_NAMED_SCRIPT("selectItemSprite", SelectItemParser);
 
 	using ReactionWeaponAction = MACRO_NAMED_SCRIPT("reactionWeaponAction", ReactionUnitParser);
+	using TryPsiAttackItem = MACRO_NAMED_SCRIPT("tryPsiAttackItem", TryPsiAttackItemParser);
 
 	using CreateItem = MACRO_NAMED_SCRIPT("createItem", CreateItemParser);
 	using NewTurnItem = MACRO_NAMED_SCRIPT("newTurnItem", NewTurnItemParser);
@@ -345,6 +357,7 @@ public:
 		SelectItemSprite,
 
 		ReactionWeaponAction,
+		TryPsiAttackItem,
 
 		CreateItem,
 		NewTurnItem
@@ -392,12 +405,12 @@ public:
 	////////////////////////////////////////////////////////////
 	//					members
 	////////////////////////////////////////////////////////////
-	BattleUnitScripts battleUnitScripts = { _shared, _mod, };
-	BattleItemScripts battleItemScripts = { _shared, _mod, };
-	BonusStatsScripts bonusStatsScripts = { _shared, _mod, };
-	SkillScripts skillScripts = { _shared, _mod, };
-	UfoScripts ufoScripts = { _shared, _mod, };
-	SoldierBonusScripts soldierBonusScripts = { _shared, _mod, };
+	BattleUnitScripts battleUnitScripts = { _shared, _mod, "unit" };
+	BattleItemScripts battleItemScripts = { _shared, _mod, "item" };
+	BonusStatsScripts bonusStatsScripts = { _shared, _mod, "bonuses" };
+	SkillScripts skillScripts = { _shared, _mod, "skill" };
+	UfoScripts ufoScripts = { _shared, _mod, "ufo" };
+	SoldierBonusScripts soldierBonusScripts = { _shared, _mod, "soldier" };
 
 
 	////////////////////////////////////////////////////////////

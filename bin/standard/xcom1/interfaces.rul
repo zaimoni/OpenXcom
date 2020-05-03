@@ -230,6 +230,27 @@ interfaces:
         border: 239  # bright green
       - id: button
         color: 133   # minty green
+  - type: dogfightExperience
+    backgroundImage: BACK01.SCR
+    elements:
+      - id: palette
+        color: 0     # brown
+      - id: window
+        color: 239   # bright green
+      - id: text1
+        color: 239   # bright green
+        color2: 138  # yellow
+        border: 133  # minty green
+      - id: text2
+        color: 133   # minty green
+        color2: 138  # yellow
+        border: 133  # minty green
+      - id: button
+        color: 133   # minty green
+      - id: list
+        color: 239   # bright green
+        color2: 138  # yellow
+        border: 133  # minty green
   - type: intercept
     backgroundImage: BACK12.SCR
     elements:
@@ -910,6 +931,10 @@ interfaces:
         color2: 245  # slightly lighter blue
       - id: text
         color: 244   # even lighter blue
+      - id: slackingIndicator
+        color: 244   # even lighter blue
+        color2: 133  # minty green
+        custom: -12  # above Intercept button
       - id: genericWindow
         color: 239   # bright green
       - id: genericText

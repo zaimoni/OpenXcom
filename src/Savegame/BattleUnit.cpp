@@ -148,7 +148,7 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 
 	_tu = _stats.tu;
 	_energy = _stats.stamina;
-	_health = _stats.health;
+	_health = std::max(1, _stats.health - soldier->getHealthMissing());
 	_mana = std::max(0, _stats.mana - soldier->getManaMissing());
 	_morale = 100;
 	// wounded soldiers (defending the base) start with lowered morale
@@ -231,7 +231,7 @@ void BattleUnit::updateArmorFromSoldier(const Mod *mod, Soldier *soldier, Armor 
 
 	_tu = _stats.tu;
 	_energy = _stats.stamina;
-	_health = _stats.health;
+	_health = std::max(1, _stats.health - soldier->getHealthMissing());
 	_mana = std::max(0, _stats.mana - soldier->getManaMissing());
 	_maxArmor[SIDE_FRONT] = _armor->getFrontArmor();
 	_maxArmor[SIDE_LEFT] = _armor->getLeftSideArmor();
@@ -553,7 +553,7 @@ BattleUnit::~BattleUnit()
  * Loads the unit from a YAML file.
  * @param node YAML node.
  */
-void BattleUnit::load(const YAML::Node &node, const ScriptGlobal *shared)
+void BattleUnit::load(const YAML::Node &node, const Mod *mod, const ScriptGlobal *shared)
 {
 	_id = node["id"].as<int>(_id);
 	_faction = (UnitFaction)node["faction"].as<int>(_faction);
@@ -596,7 +596,10 @@ void BattleUnit::load(const YAML::Node &node, const ScriptGlobal *shared)
 	_kills = node["kills"].as<int>(_kills);
 	_dontReselect = node["dontReselect"].as<bool>(_dontReselect);
 	_charging = 0;
-	_spawnUnit = node["spawnUnit"].as<std::string>(_spawnUnit);
+	if (const YAML::Node& spawn = node["spawnUnit"])
+	{
+		_spawnUnit = mod->getUnit(spawn.as<std::string>(), false); //ignored bugged types
+	}
 	_motionPoints = node["motionPoints"].as<int>(0);
 	_respawn = node["respawn"].as<bool>(_respawn);
 	_alreadyRespawned = node["alreadyRespawned"].as<bool>(_alreadyRespawned);
@@ -680,8 +683,10 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 		node["kills"] = _kills;
 	if (_faction == FACTION_PLAYER && _dontReselect)
 		node["dontReselect"] = _dontReselect;
-	if (!_spawnUnit.empty())
-		node["spawnUnit"] = _spawnUnit;
+	if (_spawnUnit)
+	{
+		node["spawnUnit"] = _spawnUnit->getType();
+	}
 	node["motionPoints"] = _motionPoints;
 	node["respawn"] = _respawn;
 	node["alreadyRespawned"] = _alreadyRespawned;
@@ -1570,11 +1575,11 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
 		// check if this unit turns others into zombies
 		if (specialDamegeTransform && RNG::percent(std::get<toTransform>(args.data))
 			&& getArmor()->getZombiImmune() == false
-			&& getSpawnUnit().empty())
+			&& !getSpawnUnit())
 		{
 			// converts the victim to a zombie on death
 			setRespawn(true);
-			setSpawnUnit(specialDamegeTransform->getZombieUnit(this));
+			setSpawnUnit(save->getMod()->getUnit(specialDamegeTransform->getZombieUnit(this)));
 		}
 
 		setFatalShotInfo(side, bodypart);
@@ -1625,7 +1630,7 @@ bool BattleUnit::hasNegativeHealthRegen() const
  */
 void BattleUnit::knockOut(BattlescapeGame *battle)
 {
-	if (!_spawnUnit.empty())
+	if (_spawnUnit)
 	{
 		setRespawn(false);
 		BattleUnit *newUnit = battle->convertUnit(this);
@@ -1662,6 +1667,23 @@ void BattleUnit::keepFalling()
 		}
 		else
 			_status = STATUS_UNCONSCIOUS;
+	}
+}
+
+/**
+ * Set final falling state. Skipping animation.
+ */
+void BattleUnit::instaFalling()
+{
+	startFalling();
+	_fallPhase =  _armor->getDeathFrames() - 1;
+	if (_health <= 0)
+	{
+		_status = STATUS_DEAD;
+	}
+	else
+	{
+		_status = STATUS_UNCONSCIOUS;
 	}
 }
 
@@ -1723,7 +1745,7 @@ RuleItemUseCost BattleUnit::getActionTUs(BattleActionType actionType, const Rule
 	}
 	RuleItemUseCost cost(skillRules->getCost());
 	applyPercentages(cost, skillRules->getFlat());
-	
+
 	return cost;
 }
 
@@ -2011,8 +2033,11 @@ void BattleUnit::clearVisibleTiles()
  * @param item Psi-Amp.
  * @return Attack bonus.
  */
-int BattleUnit::getPsiAccuracy(BattleActionType actionType, const BattleItem *item) const
+int BattleUnit::getPsiAccuracy(BattleActionAttack::ReadOnly attack)
 {
+	auto actionType = attack.type;
+	auto item = attack.weapon_item;
+
 	int psiAcc = 0;
 	if (actionType == BA_MINDCONTROL)
 	{
@@ -2027,7 +2052,7 @@ int BattleUnit::getPsiAccuracy(BattleActionType actionType, const BattleItem *it
 		psiAcc = item->getRules()->getAccuracyUse();
 	}
 
-	psiAcc += item->getRules()->getAccuracyMultiplier(this);
+	psiAcc += item->getRules()->getAccuracyMultiplier(attack);
 
 	return psiAcc;
 }
@@ -2039,37 +2064,40 @@ int BattleUnit::getPsiAccuracy(BattleActionType actionType, const BattleItem *it
  * @param item
  * @return firing Accuracy
  */
-int BattleUnit::getFiringAccuracy(BattleActionType actionType, BattleItem *item, Mod *mod)
+int BattleUnit::getFiringAccuracy(BattleActionAttack::ReadOnly attack, Mod *mod)
 {
-	const int modifier = getAccuracyModifier(item);
+	auto actionType = attack.type;
+	auto item = attack.weapon_item;
+	const int modifier = attack.attacker->getAccuracyModifier(item);
 	int result = 0;
-	bool kneeled = _kneeled;
+	bool kneeled = attack.attacker->_kneeled;
+
 	if (actionType == BA_SNAPSHOT)
 	{
-		result = item->getRules()->getAccuracyMultiplier(this) * item->getRules()->getAccuracySnap() / 100;
+		result = item->getRules()->getAccuracyMultiplier(attack) * item->getRules()->getAccuracySnap() / 100;
 	}
 	else if (actionType == BA_AIMEDSHOT || actionType == BA_LAUNCH)
 	{
-		result = item->getRules()->getAccuracyMultiplier(this) * item->getRules()->getAccuracyAimed() / 100;
+		result = item->getRules()->getAccuracyMultiplier(attack) * item->getRules()->getAccuracyAimed() / 100;
 	}
 	else if (actionType == BA_AUTOSHOT)
 	{
-		result = item->getRules()->getAccuracyMultiplier(this) * item->getRules()->getAccuracyAuto() / 100;
+		result = item->getRules()->getAccuracyMultiplier(attack) * item->getRules()->getAccuracyAuto() / 100;
 	}
 	else if (actionType == BA_HIT)
 	{
 		kneeled = false;
-		result = item->getRules()->getMeleeMultiplier(this) * item->getRules()->getAccuracyMelee() / 100;
+		result = item->getRules()->getMeleeMultiplier(attack) * item->getRules()->getAccuracyMelee() / 100;
 	}
 	else if (actionType == BA_THROW)
 	{
 		kneeled = false;
-		result = item->getRules()->getThrowMultiplier(this) * item->getRules()->getAccuracyThrow() / 100;
+		result = item->getRules()->getThrowMultiplier(attack) * item->getRules()->getAccuracyThrow() / 100;
 	}
 	else if (actionType == BA_CQB)
 	{
 		kneeled = false;
-		result = item->getRules()->getCloseQuartersMultiplier(this) * item->getRules()->getAccuracyCloseQuarters(mod) / 100;
+		result = item->getRules()->getCloseQuartersMultiplier(attack) * item->getRules()->getAccuracyCloseQuarters(mod) / 100;
 	}
 
 	if (kneeled)
@@ -2080,14 +2108,14 @@ int BattleUnit::getFiringAccuracy(BattleActionType actionType, BattleItem *item,
 	if (item->getRules()->isTwoHanded())
 	{
 		// two handed weapon, means one hand should be empty
-		if (getRightHandWeapon() != 0 && getLeftHandWeapon() != 0)
+		if (attack.attacker->getRightHandWeapon() != 0 && attack.attacker->getLeftHandWeapon() != 0)
 		{
 			result = result * item->getRules()->getOneHandedPenalty(mod) / 100;
 		}
 		else if (item->getRules()->isSpecialUsingEmptyHand())
 		{
 			// for special weapons that use an empty hand... already one hand with an item is enough for the penalty to apply
-			if (getRightHandWeapon() != 0 || getLeftHandWeapon() != 0)
+			if (attack.attacker->getRightHandWeapon() != 0 || attack.attacker->getLeftHandWeapon() != 0)
 			{
 				result = result * item->getRules()->getOneHandedPenalty(mod) / 100;
 			}
@@ -2103,7 +2131,7 @@ int BattleUnit::getFiringAccuracy(BattleActionType actionType, BattleItem *item,
  * @param item the item we are shooting right now.
  * @return modifier
  */
-int BattleUnit::getAccuracyModifier(BattleItem *item)
+int BattleUnit::getAccuracyModifier(const BattleItem *item) const
 {
 	int wounds = _fatalWounds[BODYPART_HEAD];
 
@@ -2115,13 +2143,18 @@ int BattleUnit::getAccuracyModifier(BattleItem *item)
 		}
 		else
 		{
-			if (getRightHandWeapon() == item)
+			auto slot = item->getSlot();
+			if (slot)
 			{
-				wounds += _fatalWounds[BODYPART_RIGHTARM];
-			}
-			else
-			{
-				wounds += _fatalWounds[BODYPART_LEFTARM];
+				// why broken hands should affect your aim if you shoot not using them?
+				if (slot->isRightHand())
+				{
+					wounds += _fatalWounds[BODYPART_RIGHTARM];
+				}
+				if (slot->isLeftHand())
+				{
+					wounds += _fatalWounds[BODYPART_LEFTARM];
+				}
 			}
 		}
 	}
@@ -2380,7 +2413,7 @@ void BattleUnit::updateUnitStats(bool tuAndEnergy, bool rest)
 			}
 		}
 
-		//unit update will be after other stat calucalted and updated
+		//unit update will be done after other stats are calculated and updated
 	}
 
 	if (rest)
@@ -2550,8 +2583,8 @@ bool BattleUnit::fitItemToInventory(RuleInventory *slot, BattleItem *item)
  */
 bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip, bool allowAutoLoadout, bool allowUnloadedWeapons)
 {
-	RuleInventory *rightHand = mod->getInventory("STR_RIGHT_HAND");
-	RuleInventory *leftHand = mod->getInventory("STR_LEFT_HAND");
+	RuleInventory *rightHand = mod->getInventoryRightHand();
+	RuleInventory *leftHand = mod->getInventoryLeftHand();
 	bool placed = false;
 	bool loaded = false;
 	const RuleItem *rule = item->getRules();
@@ -2593,10 +2626,10 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 	if (rule->isFixed())
 	{
 		// either in the default slot provided in the ruleset
-		if (!rule->getDefaultInventorySlot().empty())
+		if (rule->getDefaultInventorySlot())
 		{
-			RuleInventory *defaultSlot = mod->getInventory(rule->getDefaultInventorySlot());
-			BattleItem *defaultSlotWeapon = getItem(rule->getDefaultInventorySlot());
+			RuleInventory *defaultSlot = rule->getDefaultInventorySlot();
+			BattleItem *defaultSlotWeapon = getItem(defaultSlot);
 			if (!defaultSlotWeapon)
 			{
 				item->moveToOwner(this);
@@ -2713,9 +2746,14 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 		{
 			if (getBaseStats()->strength >= weight) // weight is always considered 0 for aliens
 			{
+				// this is `n*(log(n) + log(n))` code, it could be `n` but we would lose predefined order, as `RuleItem` have them in effective in random order (depending on global memory allocations)
 				for (const std::string &s : mod->getInvsList())
 				{
 					RuleInventory *slot = mod->getInventory(s);
+					if (rule->canBePlacedIntoInventorySection(slot) == false)
+					{
+						continue;
+					}
 					if (slot->getType() == INV_SLOT)
 					{
 						placed = fitItemToInventory(slot, item);
@@ -2952,41 +2990,6 @@ BattleItem *BattleUnit::getItem(RuleInventory *slot, int x, int y) const
 }
 
 /**
- * Checks if there's an inventory item in
- * the specified inventory position.
- * @param slot Inventory slot.
- * @param x X position in slot.
- * @param y Y position in slot.
- * @return Item in the slot, or NULL if none.
- */
-BattleItem *BattleUnit::getItem(const std::string &slot, int x, int y) const
-{
-	// Soldier items
-	if (slot != "STR_GROUND")
-	{
-		for (std::vector<BattleItem*>::const_iterator i = _inventory.begin(); i != _inventory.end(); ++i)
-		{
-			if ((*i)->getSlot() != 0 && (*i)->getSlot()->getId() == slot && (*i)->occupiesSlot(x, y))
-			{
-				return *i;
-			}
-		}
-	}
-	// Ground items
-	else if (_tile != 0)
-	{
-		for (std::vector<BattleItem*>::const_iterator i = _tile->getInventory()->begin(); i != _tile->getInventory()->end(); ++i)
-		{
-			if ((*i)->getSlot() != 0 && (*i)->occupiesSlot(x, y))
-			{
-				return *i;
-			}
-		}
-	}
-	return 0;
-}
-
-/**
  * Get the "main hand weapon" from the unit.
  * @param quickest Whether to get the quickest weapon, default true
  * @return Pointer to item.
@@ -3023,7 +3026,7 @@ BattleItem *BattleUnit::getMainHandWeapon(bool quickest) const
 	// otherwise pick the one with the least snapshot TUs
 	int tuRightHand = getActionTUs(BA_SNAPSHOT, weaponRightHand).Time;
 	int tuLeftHand = getActionTUs(BA_SNAPSHOT, weaponLeftHand).Time;
-	BattleItem *weaponCurrentHand = getItem(getActiveHand());
+	BattleItem *weaponCurrentHand = getActiveHand(weaponLeftHand, weaponRightHand);
 	//prioritize blaster
 	if (!quickest && _faction != FACTION_PLAYER)
 	{
@@ -3128,6 +3131,32 @@ BattleItem *BattleUnit::getLeftHandWeapon() const
 }
 
 /**
+ * Set the right hand as main active hand.
+ */
+void BattleUnit::setActiveRightHand()
+{
+	_activeHand = "STR_RIGHT_HAND";
+}
+
+/**
+ * Set the left hand as main active hand.
+ */
+void BattleUnit::setActiveLeftHand()
+{
+	_activeHand = "STR_LEFT_HAND";
+}
+
+/**
+ * Choose what weapon was last use by unit.
+ */
+BattleItem *BattleUnit::getActiveHand(BattleItem *left, BattleItem *right) const
+{
+	if (_activeHand == "STR_RIGHT_HAND" && right) return right;
+	if (_activeHand == "STR_LEFT_HAND" && left) return left;
+	return left ? left : right;
+}
+
+/**
  * Check if we have ammo and reload if needed (used for AI).
  * @return Do we have ammo?
  */
@@ -3187,7 +3216,7 @@ bool BattleUnit::reloadAmmo()
  */
 bool BattleUnit::isInExitArea(SpecialTileType stt) const
 {
-	return _tile && _tile->getMapData(O_FLOOR) && (_tile->getMapData(O_FLOOR)->getSpecialType() == stt);
+	return liesInExitArea(_tile, stt);
 }
 
 /**
@@ -3310,10 +3339,12 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
 	statsOld.statGrowth = (*stats);
 	statsDiff.statGrowth = -(*stats);        // subtract old stat
 	const UnitStats caps = s->getRules()->getStatCaps();
-	int healthLoss = _stats.health - _health;
-	int manaLoss = mod->getReplenishManaAfterMission() ? 0 : _stats.mana - _mana;
+	int manaLossOriginal = _stats.mana - _mana;
+	int healthLossOriginal = _stats.health - _health;
+	int manaLoss = mod->getReplenishManaAfterMission() ? 0 : manaLossOriginal;
+	int healthLoss = mod->getReplenishHealthAfterMission() ? 0 : healthLossOriginal;
 
-	auto recovery = (int)RNG::generate((healthLoss*0.5),(healthLoss*1.5));
+	auto recovery = (int)RNG::generate((healthLossOriginal*0.5),(healthLossOriginal*1.5));
 
 	if (_exp.bravery && stats->bravery < caps.bravery)
 	{
@@ -3381,11 +3412,16 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
 	}
 
 	{
-		recovery = ModScript::scriptFunc2<ModScript::ReturnFromMissionUnit>(
-			getArmor(),
-			recovery, healthLoss,
-			this, battle, s, &statsDiff, &statsOld
-		);
+		ModScript::ReturnFromMissionUnit::Output arg { };
+		ModScript::ReturnFromMissionUnit::Worker work{ this, battle, s, &statsDiff, &statsOld };
+
+		auto ref = std::tie(recovery, manaLossOriginal, healthLossOriginal, manaLoss, healthLoss);
+
+		arg.data = ref;
+
+		work.execute(getArmor()->getScript<ModScript::ReturnFromMissionUnit>(), arg);
+
+		ref = arg.data;
 	}
 
 	//after mod execution this value could change
@@ -3393,6 +3429,7 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
 
 	s->setWoundRecovery(recovery);
 	s->setManaMissing(manaLoss);
+	s->setHealthMissing(healthLoss);
 
 	if (s->isWounded())
 	{
@@ -3823,7 +3860,7 @@ bool BattleUnit::getAlreadyRespawned() const
  * Get the unit that is spawned when this one dies.
  * @return unit.
  */
-std::string BattleUnit::getSpawnUnit() const
+const Unit *BattleUnit::getSpawnUnit() const
 {
 	return _spawnUnit;
 }
@@ -3832,7 +3869,7 @@ std::string BattleUnit::getSpawnUnit() const
  * Set the unit that is spawned when this one dies.
  * @param spawnUnit unit.
  */
-void BattleUnit::setSpawnUnit(const std::string &spawnUnit)
+void BattleUnit::setSpawnUnit(const Unit *spawnUnit)
 {
 	_spawnUnit = spawnUnit;
 }
@@ -3841,7 +3878,7 @@ void BattleUnit::setSpawnUnit(const std::string &spawnUnit)
  * Get the units's rank string.
  * @return rank.
  */
-std::string BattleUnit::getRankString() const
+const std::string& BattleUnit::getRankString() const
 {
 	return _rank;
 }
@@ -3867,29 +3904,9 @@ void BattleUnit::addKillCount()
  * Get unit type.
  * @return unit type.
  */
-std::string BattleUnit::getType() const
+const std::string& BattleUnit::getType() const
 {
 	return _type;
-}
-
-/**
- * Set unit's active hand.
- * @param hand active hand.
- */
-void BattleUnit::setActiveHand(const std::string &hand)
-{
-	_activeHand = hand;
-}
-
-/**
- * Get unit's active hand.
- * @return active hand.
- */
-std::string BattleUnit::getActiveHand() const
-{
-	if (getItem(_activeHand)) return _activeHand;
-	if (getLeftHandWeapon()) return "STR_LEFT_HAND";
-	return "STR_RIGHT_HAND";
 }
 
 /**
@@ -4709,6 +4726,8 @@ bool BattleUnit::isSummonedPlayerUnit() const
 {
 	return _summonedPlayerUnit;
 }
+
+
 ////////////////////////////////////////////////////////////
 //					Script binding
 ////////////////////////////////////////////////////////////
@@ -4824,7 +4843,7 @@ struct getGeoscapeSoldierConstScript
 	}
 };
 
-void geReactionScoreScript(const BattleUnit *bu, int &ret)
+void getReactionScoreScript(const BattleUnit *bu, int &ret)
 {
 	if (bu)
 	{
@@ -5107,6 +5126,69 @@ void getFactionScript(const BattleUnit *bu, int &faction)
 	faction = 0;
 }
 
+void setSpawnUnitScript(BattleUnit *bu, const Unit* unitType)
+{
+	if (bu && unitType)
+	{
+		bu->setSpawnUnit(unitType);
+		bu->setRespawn(true);
+	}
+	else if (bu)
+	{
+		bu->setSpawnUnit(nullptr);
+		bu->setRespawn(false);
+	}
+}
+
+void getInventoryItemScript(BattleUnit* bu, BattleItem *&foundItem, const RuleItem *itemRules)
+{
+	foundItem = nullptr;
+	if (bu)
+	{
+		for (auto* i : *bu->getInventory())
+		{
+			if (i->getRules() == itemRules)
+			{
+				foundItem = i;
+				break;
+			}
+		}
+	}
+}
+
+void getInventoryItemScript1(BattleUnit* bu, BattleItem *&foundItem, const RuleInventory *inv, const RuleItem *itemRules)
+{
+	foundItem = nullptr;
+	if (bu)
+	{
+		for (auto* i : *bu->getInventory())
+		{
+			if (i->getSlot() == inv && i->getRules() == itemRules)
+			{
+				foundItem = i;
+				break;
+			}
+		}
+	}
+}
+
+void getInventoryItemScript2(BattleUnit* bu, BattleItem *&foundItem, const RuleInventory *inv)
+{
+	foundItem = nullptr;
+	if (bu)
+	{
+		for (auto* i : *bu->getInventory())
+		{
+			if (i->getSlot() == inv)
+			{
+				foundItem = i;
+				break;
+			}
+		}
+	}
+}
+
+
 std::string debugDisplayScript(const BattleUnit* bu)
 {
 	if (bu)
@@ -5157,9 +5239,10 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	parser->registerPointerType<BattleItem>();
 	parser->registerPointerType<Soldier>();
 	parser->registerPointerType<RuleSkill>();
+	parser->registerPointerType<Unit>();
+	parser->registerPointerType<RuleInventory>();
 
 	Bind<BattleUnit> bu = { parser };
-
 
 	bu.addField<&BattleUnit::_id>("getId");
 	bu.addField<&BattleUnit::_rankInt>("getRank");
@@ -5174,10 +5257,14 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.add<&isFlyingScript>("isFlying");
 	bu.add<&isCollapsingScript>("isCollapsing");
 	bu.add<&isAimingScript>("isAiming");
-	bu.add<&geReactionScoreScript>("geReactionScore");
+	bu.add<&getReactionScoreScript>("getReactionScore");
 	bu.add<&BattleUnit::getDirection>("getDirection");
 	bu.add<&BattleUnit::getTurretDirection>("getTurretDirection");
 	bu.add<&BattleUnit::getWalkingPhase>("getWalkingPhase");
+	bu.add<&setSpawnUnitScript>("setSpawnUnit");
+	bu.add<&getInventoryItemScript>("getInventoryItem");
+	bu.add<&getInventoryItemScript1>("getInventoryItem");
+	bu.add<&getInventoryItemScript2>("getInventoryItem");
 
 
 	bu.addField<&BattleUnit::_tu>("getTimeUnits");
@@ -5239,6 +5326,7 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.addField<&BattleUnit::_turnsSinceStunned>("getTurnsSinceStunned");
 	bu.add<&setBaseStatRangeScript<&BattleUnit::_turnsSinceStunned, 0, 255>>("setTurnsSinceStunned");
 
+	bu.addScriptValue<BindBase::OnlyGet, &BattleUnit::_armor, &Armor::getScriptValuesRaw>();
 	bu.addScriptValue<&BattleUnit::_scriptValues>();
 	bu.addDebugDisplay<&debugDisplayScript>();
 
@@ -5558,7 +5646,10 @@ ModScript::NewTurnUnitParser::NewTurnUnitParser(ScriptGlobal* shared, const std:
 
 ModScript::ReturnFromMissionUnitParser::ReturnFromMissionUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
 	"recovery_time",
+	"mana_loss",
 	"health_loss",
+	"final_mana_loss",
+	"final_health_loss",
 	"unit", "battle_game", "soldier", "statChange", "statPrevious" }
 {
 	BindBase b { this };

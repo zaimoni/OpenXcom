@@ -37,6 +37,7 @@
 #include "../Mod/RuleCraft.h"
 #include "../Mod/RuleCraftWeapon.h"
 #include "../Mod/RuleInterface.h"
+#include "../Mod/RuleInventory.h"
 #include "../Mod/RuleItem.h"
 #include "../Mod/RuleSoldierBonus.h"
 #include "../Mod/RuleUfo.h"
@@ -490,6 +491,37 @@ void StatsForNerdsState::endHeading()
 }
 
 /**
+ * Adds a vector of generic types
+ */
+template<typename T, typename Callback>
+void StatsForNerdsState::addVectorOfGeneric(std::ostringstream &ss, const std::vector<T> &vec, const std::string &propertyName, Callback&& callback)
+{
+	if (vec.empty() && !_showDefaults)
+	{
+		return;
+	}
+	resetStream(ss);
+	int i = 0;
+	ss << "{";
+	for (auto &item : vec)
+	{
+		if (i > 0)
+		{
+			ss << ", ";
+		}
+		addTranslation(ss, callback(item));
+		i++;
+	}
+	ss << "}";
+	_lstRawData->addRow(2, trp(propertyName).c_str(), ss.str().c_str());
+	++_counter;
+	if (!vec.empty())
+	{
+		_lstRawData->setCellColor(_lstRawData->getTexts() - 1, 1, _pink);
+	}
+}
+
+/**
  * Adds a single string value to the table.
  */
 void StatsForNerdsState::addSingleString(std::ostringstream &ss, const std::string &id, const std::string &propertyName, const std::string &defaultId, bool translate)
@@ -515,34 +547,13 @@ void StatsForNerdsState::addSingleString(std::ostringstream &ss, const std::stri
 	}
 }
 
+
 /**
  * Adds a vector of strings to the table.
  */
 void StatsForNerdsState::addVectorOfStrings(std::ostringstream &ss, const std::vector<std::string> &vec, const std::string &propertyName)
 {
-	if (vec.empty() && !_showDefaults)
-	{
-		return;
-	}
-	resetStream(ss);
-	int i = 0;
-	ss << "{";
-	for (auto &item : vec)
-	{
-		if (i > 0)
-		{
-			ss << ", ";
-		}
-		addTranslation(ss, item);
-		i++;
-	}
-	ss << "}";
-	_lstRawData->addRow(2, trp(propertyName).c_str(), ss.str().c_str());
-	++_counter;
-	if (!vec.empty())
-	{
-		_lstRawData->setCellColor(_lstRawData->getTexts() - 1, 1, _pink);
-	}
+	addVectorOfGeneric(ss, vec, propertyName, [](const std::string& s) -> const std::string& { return s; });
 }
 
 /**
@@ -550,28 +561,74 @@ void StatsForNerdsState::addVectorOfStrings(std::ostringstream &ss, const std::v
  */
 void StatsForNerdsState::addVectorOfResearch(std::ostringstream &ss, const std::vector<const RuleResearch *> &vec, const std::string &propertyName)
 {
-	if (vec.empty() && !_showDefaults)
+	addVectorOfRulesNamed(ss, vec, propertyName);
+}
+
+/**
+ * Adds generic Rule (requires `getType()`)
+ */
+template<typename T>
+void StatsForNerdsState::addRule(std::ostringstream &ss, T* rule, const std::string &propertyName)
+{
+	addSingleString(ss, rule ? rule->getType() : "", propertyName);
+}
+
+/**
+ * Adds generic Rule (requires `getId()`)
+ */
+template<typename T>
+void StatsForNerdsState::addRuleId(std::ostringstream &ss, T* rule, const std::string &propertyName)
+{
+	addSingleString(ss, rule ? rule->getId() : "", propertyName);
+}
+
+/**
+ * Adds generic Rule (requires `getName()`)
+ */
+template<typename T>
+void StatsForNerdsState::addRuleNamed(std::ostringstream &ss, T* rule, const std::string &propertyName)
+{
+	addSingleString(ss, rule ? rule->getName() : "", propertyName);
+}
+
+/**
+ * Adds a vector of generic Rules (requires `getType()`)
+ */
+template<typename T>
+void StatsForNerdsState::addVectorOfRules(std::ostringstream &ss, const std::vector<T*> &vec, const std::string &propertyName)
+{
+	addVectorOfGeneric(ss, vec, propertyName, [](T* item){ return item->getType(); });
+}
+
+/**
+ * Adds a vector of generic Rules (requires `getId()`)
+ */
+template<typename T>
+void StatsForNerdsState::addVectorOfRulesId(std::ostringstream &ss, const std::vector<T*> &vec, const std::string &propertyName)
+{
+	addVectorOfGeneric(ss, vec, propertyName, [](T* item){ return item->getId(); });
+}
+
+/**
+ * Adds a vector of generic Rules (requires `getName()`)
+ */
+template<typename T>
+void StatsForNerdsState::addVectorOfRulesNamed(std::ostringstream &ss, const std::vector<T*> &vec, const std::string &propertyName)
+{
+	addVectorOfGeneric(ss, vec, propertyName, [](T* item){ return item->getName(); });
+}
+
+
+template<typename T, typename I>
+void StatsForNerdsState::addScriptTags(std::ostringstream &ss, const ScriptValues<T, I> &values)
+{
+	auto& tagValues = values.getValuesRaw();
+	ArgEnum index = ScriptParserBase::getArgType<ScriptTag<T, I>>();
+	auto tagNames = _game->getMod()->getScriptGlobal()->getTagNames().at(index);
+	for (size_t i = 0; i < tagValues.size(); ++i)
 	{
-		return;
-	}
-	resetStream(ss);
-	int i = 0;
-	ss << "{";
-	for (auto &item : vec)
-	{
-		if (i > 0)
-		{
-			ss << ", ";
-		}
-		addTranslation(ss, item->getName());
-		i++;
-	}
-	ss << "}";
-	_lstRawData->addRow(2, trp(propertyName).c_str(), ss.str().c_str());
-	++_counter;
-	if (!vec.empty())
-	{
-		_lstRawData->setCellColor(_lstRawData->getTexts() - 1, 1, _pink);
+		auto nameAsString = tagNames.values[i].name.toString().substr(4);
+		addIntegerScriptTag(ss, tagValues.at(i), nameAsString);
 	}
 }
 
@@ -1699,6 +1756,7 @@ void StatsForNerdsState::initItemList()
 	addHeading("confAimed");
 	{
 		addInteger(ss, itemRule->getConfigAimed()->shots, "shots", 1);
+		addBoolean(ss, itemRule->getConfigAimed()->followProjectiles, "followProjectiles", true);
 		addSingleString(ss, itemRule->getConfigAimed()->name, "name", "STR_AIMED_SHOT");
 		addInteger(ss, itemRule->getConfigAimed()->ammoSlot, "ammoSlot");
 		addBoolean(ss, itemRule->getConfigAimed()->arcing, "arcing");
@@ -1708,6 +1766,7 @@ void StatsForNerdsState::initItemList()
 	addHeading("confAuto");
 	{
 		addInteger(ss, itemRule->getConfigAuto()->shots, "shots", 3);
+		addBoolean(ss, itemRule->getConfigAuto()->followProjectiles, "followProjectiles", true);
 		addSingleString(ss, itemRule->getConfigAuto()->name, "name", "STR_AUTO_SHOT");
 		addInteger(ss, itemRule->getConfigAuto()->ammoSlot, "ammoSlot");
 		addBoolean(ss, itemRule->getConfigAuto()->arcing, "arcing");
@@ -1717,6 +1776,7 @@ void StatsForNerdsState::initItemList()
 	addHeading("confSnap");
 	{
 		addInteger(ss, itemRule->getConfigSnap()->shots, "shots", 1);
+		addBoolean(ss, itemRule->getConfigSnap()->followProjectiles, "followProjectiles", true);
 		addSingleString(ss, itemRule->getConfigSnap()->name, "name", "STR_SNAP_SHOT");
 		addInteger(ss, itemRule->getConfigSnap()->ammoSlot, "ammoSlot");
 		addBoolean(ss, itemRule->getConfigSnap()->arcing, "arcing");
@@ -1726,6 +1786,7 @@ void StatsForNerdsState::initItemList()
 	addHeading("confMelee");
 	{
 		addInteger(ss, itemRule->getConfigMelee()->shots, "shots", 1);
+		addBoolean(ss, itemRule->getConfigMelee()->followProjectiles, "followProjectiles", true);
 		addSingleString(ss, itemRule->getConfigMelee()->name, "name");
 		int ammoSlotCurrent = itemRule->getConfigMelee()->ammoSlot;
 		int ammoSlotDefault = itemBattleType == BT_MELEE ? 0 : RuleItem::AmmoSlotSelfUse;
@@ -1801,9 +1862,9 @@ void StatsForNerdsState::initItemList()
 
 	addVectorOfResearch(ss, itemRule->getRequirements(), "requires");
 	addVectorOfResearch(ss, itemRule->getBuyRequirements(), "requiresBuy");
-	addVectorOfStrings(ss, itemRule->getRequiresBuyBaseFunc(), "requiresBuyBaseFunc");
+	addVectorOfStrings(ss, mod->getBaseFunctionNames(itemRule->getRequiresBuyBaseFunc()), "requiresBuyBaseFunc");
 	addVectorOfStrings(ss, itemRule->getCategories(), "categories");
-	addVectorOfStrings(ss, itemRule->getSupportedInventorySections(), "supportedInventorySections");
+	addVectorOfRulesId(ss, itemRule->getSupportedInventorySections(), "supportedInventorySections");
 
 	addDouble(ss, itemRule->getSize(), "size");
 	addInteger(ss, itemRule->getBuyCost(), "costBuy", 0, true);
@@ -1827,7 +1888,7 @@ void StatsForNerdsState::initItemList()
 		addVectorOfIntegers(ss, itemRule->getCustomItemPreviewIndex(), "customItemPreviewIndex");
 		addInteger(ss, itemRule->getInventoryWidth(), "invWidth", -1); // always show!
 		addInteger(ss, itemRule->getInventoryHeight(), "invHeight", -1); // always show!
-		addSingleString(ss, itemRule->getDefaultInventorySlot(), "defaultInventorySlot");
+		addRuleId(ss, itemRule->getDefaultInventorySlot(), "defaultInventorySlot");
 		addInteger(ss, itemRule->getDefaultInventorySlotX(), "defaultInvSlotX");
 		addInteger(ss, itemRule->getDefaultInventorySlotY(), "defaultInvSlotY");
 		addBoolean(ss, itemRule->isFixed(), "fixedWeapon");
@@ -1971,14 +2032,7 @@ void StatsForNerdsState::initItemList()
 
 		addSection("{Script tags}", "", _white, true);
 		{
-			auto tagValues = itemRule->getScriptValuesRaw().getValuesRaw();
-			ArgEnum index = ScriptParserBase::getArgType<ScriptTag<RuleItem>>();
-			auto tagNames = mod->getScriptGlobal()->getTagNames().at(index);
-			for (size_t i = 0; i < tagValues.size(); ++i)
-			{
-				auto nameAsString = tagNames.values[i].name.toString().substr(4);
-				addIntegerScriptTag(ss, tagValues.at(i), nameAsString);
-			}
+			addScriptTags(ss, itemRule->getScriptValuesRaw());
 			endHeading();
 		}
 	}
@@ -2408,14 +2462,7 @@ void StatsForNerdsState::initArmorList()
 
 		addSection("{Script tags}", "", _white, true);
 		{
-			auto tagValues = armorRule->getScriptValuesRaw().getValuesRaw();
-			ArgEnum index = ScriptParserBase::getArgType<ScriptTag<Armor>>();
-			auto tagNames = mod->getScriptGlobal()->getTagNames().at(index);
-			for (size_t i = 0; i < tagValues.size(); ++i)
-			{
-				auto nameAsString = tagNames.values[i].name.toString().substr(4);
-				addIntegerScriptTag(ss, tagValues.at(i), nameAsString);
-			}
+			addScriptTags(ss, armorRule->getScriptValuesRaw());
 			endHeading();
 		}
 	}
@@ -2465,14 +2512,7 @@ void StatsForNerdsState::initSoldierBonusList()
 
 	addSection("{Script tags}", "", _white, true);
 	{
-		auto tagValues = bonusRule->getScriptValuesRaw().getValuesRaw();
-		ArgEnum index = ScriptParserBase::getArgType<ScriptTag<RuleSoldierBonus>>();
-		auto tagNames = mod->getScriptGlobal()->getTagNames().at(index);
-		for (size_t i = 0; i < tagValues.size(); ++i)
-		{
-			auto nameAsString = tagNames.values[i].name.toString().substr(4);
-			addIntegerScriptTag(ss, tagValues.at(i), nameAsString);
-		}
+		addScriptTags(ss, bonusRule->getScriptValuesRaw());
 		endHeading();
 	}
 }
@@ -2600,9 +2640,9 @@ void StatsForNerdsState::initFacilityList()
 	addInteger(ss, facilityRule->getMonthlyCost(), "monthlyCost", 0, true);
 	addInteger(ss, facilityRule->getRefundValue(), "refundValue", 0, true);
 
-	addVectorOfStrings(ss, facilityRule->getRequireBaseFunc(), "requiresBaseFunc");
-	addVectorOfStrings(ss, facilityRule->getProvidedBaseFunc(), "provideBaseFunc");
-	addVectorOfStrings(ss, facilityRule->getForbiddenBaseFunc(), "forbiddenBaseFunc");
+	addVectorOfStrings(ss, mod->getBaseFunctionNames(facilityRule->getRequireBaseFunc()), "requiresBaseFunc");
+	addVectorOfStrings(ss, mod->getBaseFunctionNames(facilityRule->getProvidedBaseFunc()), "provideBaseFunc");
+	addVectorOfStrings(ss, mod->getBaseFunctionNames(facilityRule->getForbiddenBaseFunc()), "forbiddenBaseFunc");
 
 	addBoolean(ss, facilityRule->isLift(), "lift");
 	addBoolean(ss, facilityRule->isHyperwave(), "hyper");
@@ -2620,6 +2660,8 @@ void StatsForNerdsState::initFacilityList()
 	addInteger(ss, facilityRule->getPsiLaboratories(), "psiLabs");
 	addInteger(ss, facilityRule->getTrainingFacilities(), "trainingRooms");
 
+	addIntegerNauticalMiles(ss, facilityRule->getSightRange(), "sightRange");
+	addIntegerPercent(ss, facilityRule->getSightChance(), "sightChance");
 	addIntegerNauticalMiles(ss, facilityRule->getRadarRange(), "radarRange");
 	addIntegerPercent(ss, facilityRule->getRadarChance(), "radarChance");
 	addInteger(ss, facilityRule->getDefenseValue(), "defense");
@@ -2632,10 +2674,10 @@ void StatsForNerdsState::initFacilityList()
 
 	addRightClickActionType(ss, facilityRule->getRightClickActionType(), "rightClickActionType");
 
-	addVectorOfStrings(ss, facilityRule->getLeavesBehindOnSell(), "leavesBehindOnSell");
+	addVectorOfRules(ss, facilityRule->getLeavesBehindOnSell(), "leavesBehindOnSell");
 	addInteger(ss, facilityRule->getRemovalTime(), "removalTime");
 	addBoolean(ss, facilityRule->getCanBeBuiltOver(), "canBeBuiltOver");
-	addVectorOfStrings(ss, facilityRule->getBuildOverFacilities(), "buildOverFacilities");
+	addVectorOfRules(ss, facilityRule->getBuildOverFacilities(), "buildOverFacilities");
 
 	if (_showDebug)
 	{
@@ -2645,7 +2687,7 @@ void StatsForNerdsState::initFacilityList()
 		addSingleString(ss, facilityRule->getType(), "type");
 		addInteger(ss, facilityRule->getListOrder(), "listOrder");
 		addInteger(ss, facilityRule->getMissileAttraction(), "missileAttraction", 100);
-		addSingleString(ss, facilityRule->getDestroyedFacility() == 0 ? "" : facilityRule->getDestroyedFacility()->getType(), "destroyedFacility");
+		addRule(ss, facilityRule->getDestroyedFacility(), "destroyedFacility");
 
 		addSection("{Visuals}", "", _white);
 		addInteger(ss, facilityRule->getFakeUnderwaterRaw(), "fakeUnderwater", -1);
@@ -2700,7 +2742,7 @@ void StatsForNerdsState::initCraftList()
 	std::ostringstream ss;
 
 	addVectorOfStrings(ss, craftRule->getRequirements(), "requires");
-	addVectorOfStrings(ss, craftRule->getRequiresBuyBaseFunc(), "requiresBuyBaseFunc");
+	addVectorOfStrings(ss, mod->getBaseFunctionNames(craftRule->getRequiresBuyBaseFunc()), "requiresBuyBaseFunc");
 
 	addInteger(ss, craftRule->getBuyCost(), "costBuy", 0, true);
 	addInteger(ss, craftRule->getRentCost(), "costRent", 0, true);
@@ -3045,6 +3087,12 @@ void StatsForNerdsState::initUfoList()
 		addSection("{Naming}", "", _white);
 		addSingleString(ss, ufoRule->getType(), "type");
 
+		addSection("{Exotic}", "", _white);
+		addInteger(ss, ufoRule->getMissilePower(), "missilePower");
+		addBoolean(ss, ufoRule->isUnmanned(), "unmanned");
+		addInteger(ss, ufoRule->getSplashdownSurvivalChance(), "splashdownSurvivalChance", 100);
+		addInteger(ss, ufoRule->getFakeWaterLandingChance(), "fakeWaterLandingChance", 0);
+
 		addSection("{Visuals}", "", _white);
 		addInteger(ss, ufoRule->getSprite(), "sprite", -1); // INTERWIN.DAT
 		addSingleString(ss, ufoRule->getModSprite(), "modSprite", "", false);
@@ -3068,6 +3116,12 @@ void StatsForNerdsState::initUfoList()
 		tmpSoundVector.clear();
 		tmpSoundVector.push_back(ufoRule->getHuntAlertSound());
 		addSoundVectorResourcePaths(ss, mod, "GEO.CAT", tmpSoundVector);
+	}
+
+	addSection("{Script tags}", "", _white, true);
+	{
+		addScriptTags(ss, ufoRule->getScriptValuesRaw());
+		endHeading();
 	}
 }
 
