@@ -64,6 +64,8 @@
 		5BD0BB3A2242E0C1008E6DFB /* RuleStatBonus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB342242E0C1008E6DFB /* RuleStatBonus.cpp */; };
 		5BD0BB3D2242E0DF008E6DFB /* SoldierAvatar.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB3B2242E0DE008E6DFB /* SoldierAvatar.cpp */; };
 		5BD0BB402242E0F0008E6DFB /* StatsForNerdsState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0BB3E2242E0EF008E6DFB /* StatsForNerdsState.cpp */; };
+		5BD535AB2461B53C0041673F /* InventoryPersonalState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD5359F2461B53B0041673F /* InventoryPersonalState.cpp */; };
+		5BD535AE2461B54C0041673F /* DogfightExperienceState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD535AC2461B54B0041673F /* DogfightExperienceState.cpp */; };
 		B235EF4A201C4DF200FF7AC3 /* iOS Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = FA86C0361D9765BA009CB637 /* iOS Launch Screen.storyboard */; };
 		B235EF51201C4DF200FF7AC3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FABA34D31D8B5E5600915323 /* AVFoundation.framework */; };
 		B235EF52201C4DF200FF7AC3 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FAE0E9691BAF96A00098DFA4 /* GameController.framework */; };
@@ -619,6 +621,11 @@
 		5BD0BB3C2242E0DE008E6DFB /* SoldierAvatar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoldierAvatar.h; sourceTree = "<group>"; };
 		5BD0BB3E2242E0EF008E6DFB /* StatsForNerdsState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StatsForNerdsState.cpp; sourceTree = "<group>"; };
 		5BD0BB3F2242E0EF008E6DFB /* StatsForNerdsState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StatsForNerdsState.h; sourceTree = "<group>"; };
+		5BD5359F2461B53B0041673F /* InventoryPersonalState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InventoryPersonalState.cpp; sourceTree = "<group>"; };
+		5BD535AA2461B53C0041673F /* InventoryPersonalState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InventoryPersonalState.h; sourceTree = "<group>"; };
+		5BD535AC2461B54B0041673F /* DogfightExperienceState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DogfightExperienceState.cpp; sourceTree = "<group>"; };
+		5BD535AD2461B54C0041673F /* DogfightExperienceState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DogfightExperienceState.h; sourceTree = "<group>"; };
+		5BD535AF2461B5590041673F /* RuleBaseFacilityFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleBaseFacilityFunctions.h; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B235EF5E201C4DF200FF7AC3 /* Game.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Game.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B235EF5F201C4DF200FF7AC3 /* OpenXcom-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "OpenXcom-Info.plist"; sourceTree = SOURCE_ROOT; };
@@ -1499,6 +1506,8 @@
 		B283421C201F6D9B00BAEC9D /* Geoscape */ = {
 			isa = PBXGroup;
 			children = (
+				5BD535AC2461B54B0041673F /* DogfightExperienceState.cpp */,
+				5BD535AD2461B54C0041673F /* DogfightExperienceState.h */,
 				5B95F033233D1ADB0018C910 /* GeoscapeEventState.cpp */,
 				5B95F034233D1ADB0018C910 /* GeoscapeEventState.h */,
 				5BD0BB102242E079008E6DFB /* AllocateTrainingState.cpp */,
@@ -1801,6 +1810,8 @@
 		B283430A201F6D9C00BAEC9D /* Battlescape */ = {
 			isa = PBXGroup;
 			children = (
+				5BD5359F2461B53B0041673F /* InventoryPersonalState.cpp */,
+				5BD535AA2461B53C0041673F /* InventoryPersonalState.h */,
 				5B76D7A7241000F800F6D311 /* SkillMenuState.cpp */,
 				5B76D79C241000F700F6D311 /* SkillMenuState.h */,
 				5B7C32DC23BA241B0070A6D9 /* TurnDiaryState.cpp */,
@@ -2132,6 +2143,7 @@
 		B283440E201F6D9D00BAEC9D /* Mod */ = {
 			isa = PBXGroup;
 			children = (
+				5BD535AF2461B5590041673F /* RuleBaseFacilityFunctions.h */,
 				5B189CEB241CBF2C00E11BE9 /* RuleManufactureShortcut.cpp */,
 				5B189CE0241CBF2C00E11BE9 /* RuleManufactureShortcut.h */,
 				5B76D7AA2410011D00F6D311 /* RuleSkill.cpp */,
@@ -2532,6 +2544,7 @@
 				B283453E201F6D9E00BAEC9D /* Text.cpp in Sources */,
 				B2834566201F6D9E00BAEC9D /* SelectStartFacilityState.cpp in Sources */,
 				5BD0BADB2242E009008E6DFB /* SoldierSortUtil.cpp in Sources */,
+				5BD535AE2461B54C0041673F /* DogfightExperienceState.cpp in Sources */,
 				B28344F1201F6D9E00BAEC9D /* EquipmentLayoutItem.cpp in Sources */,
 				5BD0BAF02242E02A008E6DFB /* InventoryLoadState.cpp in Sources */,
 				B28344B6201F6D9E00BAEC9D /* scale3x.cpp in Sources */,
@@ -2617,6 +2630,7 @@
 				B28344AA201F6D9E00BAEC9D /* FastLineClip.cpp in Sources */,
 				5BD0BB022242E05B008E6DFB /* Script.cpp in Sources */,
 				B2834584201F6D9E00BAEC9D /* RuleInterface.cpp in Sources */,
+				5BD535AB2461B53C0041673F /* InventoryPersonalState.cpp in Sources */,
 				B2834542201F6D9E00BAEC9D /* ArrowButton.cpp in Sources */,
 				5BD0BB172242E079008E6DFB /* CraftNotEnoughPilotsState.cpp in Sources */,
 				B283458D201F6D9E00BAEC9D /* RuleCraftWeapon.cpp in Sources */,
