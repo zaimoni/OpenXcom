@@ -80,6 +80,7 @@ OPT bool oxceRememberDisabledCraftWeapons;
 OPT bool oxceHighlightNewTopicsHidden;
 OPT bool oxceEnableUnitResponseSounds;
 OPT bool oxceEnableSlackingIndicator;
+OPT bool oxceEnablePaletteFlickerFix;
 
 OPT int oxceManufactureScrollSpeed;
 OPT int oxceManufactureScrollSpeedWithCtrl;

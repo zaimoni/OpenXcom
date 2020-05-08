@@ -624,6 +624,8 @@ void BattleUnit::load(const YAML::Node &node, const Mod *mod, const ScriptGlobal
 	}
 	_mindControllerID = node["mindControllerID"].as<int>(_mindControllerID);
 	_summonedPlayerUnit = node["summonedPlayerUnit"].as<bool>(_summonedPlayerUnit);
+	_meleeAttackedBy = node["meleeAttackedBy"].as<std::vector<int> >(_meleeAttackedBy);
+
 	_scriptValues.load(node, shared);
 }
 
@@ -707,6 +709,11 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	}
 	node["mindControllerID"] = _mindControllerID;
 	node["summonedPlayerUnit"] = _summonedPlayerUnit;
+	if (!_meleeAttackedBy.empty())
+	{
+		node["meleeAttackedBy"] = _meleeAttackedBy;
+	}
+
 	_scriptValues.save(node, shared);
 
 	return node;
@@ -2349,6 +2356,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
 
 	_isSurrendering = false;
 	_unitsSpottedThisTurn.clear();
+	_meleeAttackedBy.clear();
 
 	_hitByFire = false;
 	_dontReselect = false;
@@ -2687,7 +2695,8 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 				{
 					placed = true;
 				}
-				if (!placed && getFaction() != FACTION_PLAYER && fitItemToInventory(leftHand, item))
+				bool allowTwoMainWeapons = (getFaction() != FACTION_PLAYER) || _armor->getAllowTwoMainWeapons();
+				if (!placed && allowTwoMainWeapons && fitItemToInventory(leftHand, item))
 				{
 					placed = true;
 				}
@@ -4699,6 +4708,25 @@ bool BattleUnit::getHitState()
 void BattleUnit::resetHitState()
 {
 	_hitByAnything = false;
+}
+
+/**
+ * Was this unit melee attacked by a given attacker this turn (both hit and miss count)?
+ */
+bool BattleUnit::wasMeleeAttackedBy(int attackerId) const
+{
+	return std::find(_meleeAttackedBy.begin(), _meleeAttackedBy.end(), attackerId) != _meleeAttackedBy.end();
+}
+
+/**
+ * Set the "melee attacked by" flag.
+ */
+void BattleUnit::setMeleeAttackedBy(int attackerId)
+{
+	if (!wasMeleeAttackedBy(attackerId))
+	{
+		_meleeAttackedBy.push_back(attackerId);
+	}
 }
 
 /**
