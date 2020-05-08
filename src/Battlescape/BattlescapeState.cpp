@@ -2128,8 +2128,8 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 	if (_battleGame->getCurrentAction()->targeting)
 	{
 		BattleItem *currentItem = _battleGame->getCurrentAction()->weapon;
-		BattleItem *leftHandItem = battleUnit->getItem("STR_LEFT_HAND");
-		BattleItem *rightHandItem = battleUnit->getItem("STR_RIGHT_HAND");
+		BattleItem *leftHandItem = battleUnit->getLeftHandWeapon();
+		BattleItem *rightHandItem = battleUnit->getRightHandWeapon();
 		if (currentItem == leftHandItem)
 		{
 			_leftWpnActive->setVisible(true);
@@ -2381,8 +2381,8 @@ void BattlescapeState::handleItemClick(BattleItem *item, bool middleClick)
             BattleUnit *battleUnit = _save->getSelectedUnit();
             if (battleUnit)
             {
-                BattleItem *leftHandItem = battleUnit->getItem("STR_LEFT_HAND");
-                BattleItem *rightHandItem = battleUnit->getItem("STR_RIGHT_HAND");
+                BattleItem *leftHandItem = battleUnit->getLeftHandWeapon();
+                BattleItem *rightHandItem = battleUnit->getRightHandWeapon();
                 if (item == leftHandItem)
                 {
                     _leftWpnActive->setVisible(true);
