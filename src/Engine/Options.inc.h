@@ -64,8 +64,7 @@ OPT SDL_Keycode keyBasescapeBuildNewBase, keyBasescapeBaseInfo, keyBasescapeSold
 	keyBasescapeFacilities, keyBasescapeResearch, keyBasescapeManufacture, keyBasescapeTransfer,
 	keyBasescapePurchase, keyBasescapeSell;
 
-// Extra options (OXCE)
-OPT int oxceStartUpTextMode;
+// OXCE, accessible via GUI
 OPT bool oxceUpdateCheck;
 
 OPT bool oxceUfoLandingAlert;
@@ -76,16 +75,20 @@ OPT bool oxceAutoSell;
 OPT int oxceAutoNightVisionThreshold;
 OPT bool oxceRememberDisabledCraftWeapons;
 
-// Extra options (OXCE), accessible only via options.cfg
+// OXCE hidden, accessible only via options.cfg
 OPT bool oxceHighlightNewTopicsHidden;
 OPT bool oxceEnableUnitResponseSounds;
 OPT bool oxceEnableSlackingIndicator;
 OPT bool oxceEnablePaletteFlickerFix;
 
+// OXCE hidden, but moddable via fixedUserOptions and/or recommendedUserOptions
+OPT int oxceStartUpTextMode;
 OPT int oxceManufactureScrollSpeed;
 OPT int oxceManufactureScrollSpeedWithCtrl;
 OPT int oxceResearchScrollSpeed;
 OPT int oxceResearchScrollSpeedWithCtrl;
+
+OPT bool oxceRecommendedOptionsWereSet;
 
 OPT std::string password;
 

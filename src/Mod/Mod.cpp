@@ -333,7 +333,7 @@ Mod::Mod() :
 	_costEngineer(0), _costScientist(0), _timePersonnel(0), _initialFunding(0),
 	_aiUseDelayBlaster(3), _aiUseDelayFirearm(0), _aiUseDelayGrenade(3), _aiUseDelayMelee(0), _aiUseDelayPsionic(0),
 	_aiFireChoiceIntelCoeff(5), _aiFireChoiceAggroCoeff(5), _aiExtendedFireModeChoice(false), _aiRespectMaxRange(false), _aiDestroyBaseFacilities(false),
-	_aiPickUpWeaponsMoreActively(false),
+	_aiPickUpWeaponsMoreActively(false), _aiPickUpWeaponsMoreActivelyCiv(false),
 	_maxLookVariant(0), _tooMuchSmokeThreshold(10), _customTrainingFactor(100), _minReactionAccuracy(0), _chanceToStopRetaliation(0), _lessAliensDuringBaseDefense(false),
 	_allowCountriesToCancelAlienPact(false), _buildInfiltrationBaseCloseToTheCountry(false), _allowAlienBasesOnWrongTextures(true),
 	_kneelBonusGlobal(115), _oneHandedPenaltyGlobal(80),
@@ -1010,6 +1010,105 @@ int Mod::getModOffset() const
 	return _modCurrent->offset;
 }
 
+
+
+namespace
+{
+
+const std::string YamlTagSeq = "tag:yaml.org,2002:seq";
+const std::string YamlTagMap = "tag:yaml.org,2002:map";
+const std::string YamlTagNonSpecific = "?";
+
+const std::string AddTag = "!add";
+const std::string RemoveTag = "!remove";
+
+bool isListHelper(const YAML::Node &node)
+{
+	return node.IsSequence() == true && (node.Tag() == YamlTagSeq || node.Tag() == YamlTagNonSpecific);
+}
+
+bool isListAddTagHelper(const YAML::Node &node)
+{
+	return node.IsSequence() == true && node.Tag() == AddTag;
+}
+
+bool isListRemoveTagHelper(const YAML::Node &node)
+{
+	return node.IsSequence() == true && node.Tag() == RemoveTag;
+}
+
+bool isMapHelper(const YAML::Node &node)
+{
+	return node.IsMap() == true && (node.Tag() == YamlTagMap || node.Tag() == YamlTagNonSpecific);
+}
+
+void throwOnBadListHelper(const std::string &parent, const YAML::Node &node)
+{
+	std::ostringstream err;
+	if (node.IsSequence())
+	{
+		//is sequence but still could not be loaded, this mean tag is wrong
+		err << "unsupported node tag '" << node.Tag() << "'";
+	}
+	else
+	{
+		err << "wrong node type, expected list";
+	}
+	throw LoadRuleException(parent, node, err.str());
+}
+
+template<typename T>
+void loadVectorHelper(const std::string &parent, std::vector<T>& v, const YAML::Node &node)
+{
+	if (node)
+	{
+		if (isListHelper(node))
+		{
+			v = node.as< std::vector<T> >();
+		}
+		else
+		{
+			throwOnBadListHelper(parent, node);
+		}
+	}
+}
+
+template<typename T>
+void loadUnorderedVectorHelper(const std::string &parent, std::vector<T>& v, const YAML::Node &node)
+{
+	if (node)
+	{
+		if (isListHelper(node))
+		{
+			v = node.as< std::vector<T> >();
+		}
+		else if (isListAddTagHelper(node))
+		{
+			v.reserve(v.size() + node.size());
+			for (const YAML::Node& n : node)
+			{
+				v.push_back(n.as<T>());
+			}
+		}
+		else if (isListRemoveTagHelper(node))
+		{
+			const auto begin = v.begin();
+			auto end = v.end();
+			for (const YAML::Node& n : node)
+			{
+				end = std::remove(begin, end, n.as<T>());
+			}
+			v.erase(end, v.end());
+		}
+		else
+		{
+			throwOnBadListHelper(parent, node);
+		}
+	}
+}
+
+} // namespace
+
 /**
  * Get offset and index for sound set or sprite set.
  * @param parent Name of parent node, used for better error message
@@ -1026,7 +1125,7 @@ void Mod::loadOffsetNode(const std::string &parent, int& offset, const YAML::Nod
 	{
 		offset = node.as<int>();
 	}
-	else if (node.IsMap())
+	else if (isMapHelper(node))
 	{
 		offset = node["index"].as<int>();
 		std::string mod = node["mod"].as<std::string>();
@@ -1058,17 +1157,21 @@ void Mod::loadOffsetNode(const std::string &parent, int& offset, const YAML::Nod
 			else
 			{
 				std::ostringstream err;
-				err << "Error for '" << parent << "': unknown mod '" << mod << "' used";
-				throw Exception(err.str());
+				err << "unknown mod '" << mod << "' used";
+				throw LoadRuleException(parent, node, err.str());
 			}
 		}
+	}
+	else
+	{
+		throw LoadRuleException(parent, node, "unsupported yaml node");
 	}
 
 	if (offset < -1)
 	{
 		std::ostringstream err;
-		err << "Error for '" << parent << "': offset '" << offset << "' has incorrect value in set '" << set << "'";
-		throw Exception(err.str());
+		err << "offset '" << offset << "' has incorrect value in set '" << set << "'";
+		throw LoadRuleException(parent, node, err.str());
 	}
 	else if (offset == -1)
 	{
@@ -1081,8 +1184,8 @@ void Mod::loadOffsetNode(const std::string &parent, int& offset, const YAML::Nod
 		if ((size_t)f > curr->size)
 		{
 			std::ostringstream err;
-			err << "Error for '" << parent << "': offset '" << offset << "' exceeds mod size limit " << (curr->size / multiplier) << " in set '" << set << "'";
-			throw Exception(err.str());
+			err << "offset '" << offset << "' exceeds mod size limit " << (curr->size / multiplier) << " in set '" << set << "'";
+			throw LoadRuleException(parent, node, err.str());
 		}
 		if (f >= shared)
 			f += curr->offset;
@@ -1120,7 +1223,7 @@ void Mod::loadSpriteOffset(const std::string &parent, std::vector<int>& sprites,
 	{
 		int maxShared = getRule(set, "Sprite Set", _sets, true)->getMaxSharedFrames();
 		sprites.clear();
-		if (node.IsSequence())
+		if (isListHelper(node))
 		{
 			for (YAML::const_iterator i = node.begin(); i != node.end(); ++i)
 			{
@@ -1165,7 +1268,7 @@ void Mod::loadSoundOffset(const std::string &parent, std::vector<int>& sounds, c
 	{
 		int maxShared = getSoundSet(set)->getMaxSharedSounds();
 		sounds.clear();
-		if (node.IsSequence())
+		if (isListHelper(node))
 		{
 			for (YAML::const_iterator i = node.begin(); i != node.end(); ++i)
 			{
@@ -1205,15 +1308,41 @@ void Mod::loadBaseFunction(const std::string& parent, std::bitset<128>& f, const
 	{
 		try
 		{
-			f.reset();
-			for (YAML::const_iterator i = node.begin(); i != node.end(); ++i)
+			if (isListHelper(node))
 			{
-				f.set(_baseFunctionNames.addName(i->as<std::string>(), f.size()));
+				f.reset();
+				for (const YAML::Node& n : node)
+				{
+					f.set(_baseFunctionNames.addName(n.as<std::string>(), f.size()));
+				}
 			}
+			else if (isListAddTagHelper(node))
+			{
+				for (const YAML::Node& n : node)
+				{
+					f.set(_baseFunctionNames.addName(n.as<std::string>(), f.size()));
+				}
+			}
+			else if (isListRemoveTagHelper(node))
+			{
+				for (const YAML::Node& n : node)
+				{
+					f.set(_baseFunctionNames.addName(n.as<std::string>(), f.size()), false);
+				}
+			}
+			else
+			{
+				throwOnBadListHelper(parent, node);
+			}
+		}
+		catch(LoadRuleException& ex)
+		{
+			//context is already included in exception, no need add more
+			throw;
 		}
 		catch(Exception& ex)
 		{
-			throw Exception("Error for '" + parent + "': " + ex.what());
+			throw LoadRuleException(parent, node, ex.what());
 		}
 	}
 }
@@ -1233,6 +1362,42 @@ std::vector<std::string> Mod::getBaseFunctionNames(RuleBaseFacilityFunctions f) 
 		}
 	}
 	return vec;
+}
+
+/**
+ * Gets list of ints.
+ * Another mod can only override whole list, no partial edits of it.
+ */
+void Mod::loadInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node)
+{
+	loadVectorHelper(parent, ints, node);
+}
+
+/**
+ * Gets list of ints where order do not matter.
+ * Another mod can remove or add new values without altering whole list.
+ */
+void Mod::loadUnorderedInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node)
+{
+	loadUnorderedVectorHelper(parent, ints, node);
+}
+
+/**
+ * Gets list of names.
+ * Another mod can only override whole list, no partial edits of it.
+ */
+void Mod::loadNames(const std::string &parent, std::vector<std::string>& names, const YAML::Node &node)
+{
+	loadVectorHelper(parent, names, node);
+}
+
+/**
+ * Gets list of names where order do not matter.
+ * Another mod can remove or add new values without altering whole list.
+ */
+void Mod::loadUnorderedNames(const std::string &parent, std::vector<std::string>& names, const YAML::Node &node)
+{
+	loadUnorderedVectorHelper(parent, names, node);
 }
 
 
@@ -1463,6 +1628,22 @@ void Mod::loadAll()
 		{
 			ruleNew->breakDown(this, shortcutPair.second);
 		}
+	}
+
+	// recommended user options
+	if (!_recommendedUserOptions.empty() && !Options::oxceRecommendedOptionsWereSet)
+	{
+		const std::vector<OptionInfo> &options = Options::getOptionInfo();
+		for (std::vector<OptionInfo>::const_iterator i = options.begin(); i != options.end(); ++i)
+		{
+			if (i->type() != OPTION_KEY && !i->category().empty())
+			{
+				i->load(_recommendedUserOptions, false);
+			}
+		}
+
+		Options::oxceRecommendedOptionsWereSet = true;
+		Options::save();
 	}
 
 	// fixed user options
@@ -1775,7 +1956,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		RuleSkill *rule = loadRule(*i, &_skills, &_skillsIndex);
 		if (rule != 0)
 		{
-			rule->load(*i, parsers);
+			rule->load(*i, this, parsers);
 		}
 	}
 	for (YAML::const_iterator i = doc["soldiers"].begin(); i != doc["soldiers"].end(); ++i)
@@ -1816,7 +1997,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		RuleStartingCondition *rule = loadRule(*i, &_startingConditions, &_startingConditionsIndex);
 		if (rule != 0)
 		{
-			rule->load(*i);
+			rule->load(*i, this);
 		}
 	}
 	for (YAML::const_iterator i = doc["alienDeployments"].begin(); i != doc["alienDeployments"].end(); ++i)
@@ -1942,9 +2123,16 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		YAML::Node base = docRef[startingBaseType];
 		if (base)
 		{
-			for (YAML::const_iterator i = base.begin(); i != base.end(); ++i)
+			if (isMapHelper(base))
 			{
-				destRef[i->first.as<std::string>()] = YAML::Node(i->second);
+				for (YAML::const_iterator i = base.begin(); i != base.end(); ++i)
+				{
+					destRef[i->first.as<std::string>()] = YAML::Node(i->second);
+				}
+			}
+			else
+			{
+				throw LoadRuleException(startingBaseType, base, "expected normal map node");
 			}
 		}
 	};
@@ -1990,6 +2178,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		_aiRespectMaxRange = nodeAI["respectMaxRange"].as<bool>(_aiRespectMaxRange);
 		_aiDestroyBaseFacilities = nodeAI["destroyBaseFacilities"].as<bool>(_aiDestroyBaseFacilities);
 		_aiPickUpWeaponsMoreActively = nodeAI["pickUpWeaponsMoreActively"].as<bool>(_aiPickUpWeaponsMoreActively);
+		_aiPickUpWeaponsMoreActivelyCiv = nodeAI["pickUpWeaponsMoreActivelyCiv"].as<bool>(_aiPickUpWeaponsMoreActivelyCiv);
 	}
 	_maxLookVariant = doc["maxLookVariant"].as<int>(_maxLookVariant);
 	_tooMuchSmokeThreshold = doc["tooMuchSmokeThreshold"].as<int>(_tooMuchSmokeThreshold);
@@ -2093,6 +2282,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_missionRatings = doc["missionRatings"].as<std::map<int, std::string> >(_missionRatings);
 	_monthlyRatings = doc["monthlyRatings"].as<std::map<int, std::string> >(_monthlyRatings);
 	_fixedUserOptions = doc["fixedUserOptions"].as<std::map<std::string, std::string> >(_fixedUserOptions);
+	_recommendedUserOptions = doc["recommendedUserOptions"].as<std::map<std::string, std::string> >(_recommendedUserOptions);
 	_hiddenMovementBackgrounds = doc["hiddenMovementBackgrounds"].as<std::vector<std::string> >(_hiddenMovementBackgrounds);
 	_baseNamesFirst = doc["baseNamesFirst"].as<std::vector<std::string> >(_baseNamesFirst);
 	_baseNamesMiddle = doc["baseNamesMiddle"].as<std::vector<std::string> >(_baseNamesMiddle);
@@ -3860,11 +4050,6 @@ const std::map<int, std::string> *Mod::getMissionRatings() const
 const std::map<int, std::string> *Mod::getMonthlyRatings() const
 {
 	return &_monthlyRatings;
-}
-
-const std::map<std::string, std::string> &Mod::getFixedUserOptions() const
-{
-	return _fixedUserOptions;
 }
 
 const std::vector<std::string> &Mod::getHiddenMovementBackgrounds() const

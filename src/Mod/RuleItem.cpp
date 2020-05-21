@@ -76,6 +76,21 @@ void UpdateAmmo(BattleActionAttack& attack)
 	}
 }
 
+/**
+ * Update grenade `damage_item` from `weapon_item`.
+ */
+void UpdateGrenade(BattleActionAttack& attack)
+{
+	if (attack.weapon_item && !attack.damage_item)
+	{
+		const auto battleType = attack.weapon_item->getRules()->getBattleType();
+		if (battleType == BT_PROXIMITYGRENADE || battleType == BT_GRENADE)
+		{
+			attack.damage_item = attack.weapon_item;
+		}
+	}
+}
+
 }
 
 /**
@@ -114,6 +129,7 @@ BattleActionAttack BattleActionAttack::GetAferShoot(BattleActionType type, Battl
 	UpdateAttacker(attack);
 	attack.damage_item = ammo;
 	attack.skill_rules = skill;
+	UpdateGrenade(attack);
 	return attack;
 }
 
@@ -356,14 +372,14 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_nameAsAmmo = node["nameAsAmmo"].as<std::string>(_nameAsAmmo);
 
 	//requires
-	_requiresName = node["requires"].as< std::vector<std::string> >(_requiresName);
-	_requiresBuyName = node["requiresBuy"].as< std::vector<std::string> >(_requiresBuyName);
+	mod->loadUnorderedNames(_type, _requiresName, node["requires"]);
+	mod->loadUnorderedNames(_type, _requiresBuyName, node["requiresBuy"]);
 	mod->loadBaseFunction(_type, _requiresBuyBaseFunc, node["requiresBuyBaseFunc"]);
 
 
 	_recoveryDividers = node["recoveryDividers"].as< std::map<std::string, int> >(_recoveryDividers);
 	_recoveryTransformationsName = node["recoveryTransformations"].as< std::map<std::string, std::vector<int> > >(_recoveryTransformationsName);
-	_categories = node["categories"].as< std::vector<std::string> >(_categories);
+	mod->loadUnorderedNames(_type, _categories, node["categories"]);
 	_size = node["size"].as<double>(_size);
 	_costBuy = node["costBuy"].as<int>(_costBuy);
 	_costSell = node["costSell"].as<int>(_costSell);
@@ -537,7 +553,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	{
 		if (n)
 		{
-			_compatibleAmmo[offset] = n["compatibleAmmo"].as<std::vector<std::string>>(_compatibleAmmo[offset]);
+			mod->loadUnorderedNames(_type, _compatibleAmmo[offset], n["compatibleAmmo"]);
 			_tuLoad[offset] = n["tuLoad"].as<int>(_tuLoad[offset]);
 			_tuUnload[offset] = n["tuUnload"].as<int>(_tuUnload[offset]);
 		}
@@ -571,7 +587,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_defaultInventorySlotName = node["defaultInventorySlot"].as<std::string>(_defaultInventorySlotName);
 	_defaultInvSlotX = node["defaultInvSlotX"].as<int>(_defaultInvSlotX);
 	_defaultInvSlotY = node["defaultInvSlotY"].as<int>(_defaultInvSlotY);
-	_supportedInventorySectionsNames = node["supportedInventorySections"].as< std::vector<std::string> >(_supportedInventorySectionsNames);
+	mod->loadUnorderedNames(_type, _supportedInventorySectionsNames, node["supportedInventorySections"]);
 	_isConsumable = node["isConsumable"].as<bool>(_isConsumable);
 	_isFireExtinguisher = node["isFireExtinguisher"].as<bool>(_isFireExtinguisher);
 	_isExplodingInHands = node["isExplodingInHands"].as<bool>(_isExplodingInHands);
@@ -1838,7 +1854,7 @@ bool RuleItem::isCorpseRecoverable() const
 {
 	// Explanation:
 	// Since the "recover" flag applies to both live body (prisoner capture) and dead body (corpse recovery) in OXC,
-	// OXCE+ adds this new flag to allow recovery of a live body, but disable recovery of the corpse
+	// OXCE adds this new flag to allow recovery of a live body, but disable recovery of the corpse
 	// (used in mods mostly to ignore dead bodies of killed humans)
 	return _recoverCorpse;
 }

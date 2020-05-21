@@ -70,7 +70,8 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 	_exp{ }, _expTmp{ },
 	_motionPoints(0), _scannedTurn(-1), _kills(0), _hitByFire(false), _hitByAnything(false), _alreadyExploded(false), _fireMaxHit(0), _smokeMaxHit(0), _moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
 	_statistics(), _murdererId(0), _mindControllerID(0), _fatalShotSide(SIDE_FRONT), _fatalShotBodyPart(BODYPART_HEAD), _armor(0),
-	_geoscapeSoldier(soldier), _unitRules(0), _rankInt(0), _turretType(-1), _hidingForTurn(false), _floorAbove(false), _respawn(false), _alreadyRespawned(false), _isLeeroyJenkins(false), _summonedPlayerUnit(false), _capturable(true)
+	_geoscapeSoldier(soldier), _unitRules(0), _rankInt(0), _turretType(-1), _hidingForTurn(false), _floorAbove(false), _respawn(false), _alreadyRespawned(false),
+	_isLeeroyJenkins(false), _summonedPlayerUnit(false), _pickUpWeaponsMoreActively(false), _capturable(true)
 {
 	_name = soldier->getName(true);
 	_id = soldier->getId();
@@ -176,6 +177,7 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 		_specWeapon[i] = 0;
 
 	_activeHand = "STR_RIGHT_HAND";
+	_preferredHandForReactions = "";
 
 	lastCover = TileEngine::invalid;
 
@@ -402,7 +404,8 @@ BattleUnit::BattleUnit(const Mod *mod, Unit *unit, UnitFaction faction, int id, 
 	_moraleRestored(0), _coverReserve(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
 	_statistics(), _murdererId(0), _mindControllerID(0), _fatalShotSide(SIDE_FRONT),
 	_fatalShotBodyPart(BODYPART_HEAD), _armor(armor), _geoscapeSoldier(0),  _unitRules(unit),
-	_rankInt(0), _turretType(-1), _hidingForTurn(false), _respawn(false), _alreadyRespawned(false), _isLeeroyJenkins(false), _summonedPlayerUnit(false)
+	_rankInt(0), _turretType(-1), _hidingForTurn(false), _respawn(false), _alreadyRespawned(false),
+	_isLeeroyJenkins(false), _summonedPlayerUnit(false), _pickUpWeaponsMoreActively(false)
 {
 	if (enviro)
 	{
@@ -428,6 +431,17 @@ BattleUnit::BattleUnit(const Mod *mod, Unit *unit, UnitFaction faction, int id, 
 	_faceDirection = -1;
 	_capturable = unit->getCapturable();
 	_isLeeroyJenkins = unit->isLeeroyJenkins();
+	if (unit->getPickUpWeaponsMoreActively() != -1)
+	{
+		_pickUpWeaponsMoreActively = (unit->getPickUpWeaponsMoreActively() != 0);
+	}
+	else
+	{
+		if (faction == FACTION_HOSTILE)
+			_pickUpWeaponsMoreActively = mod->getAIPickUpWeaponsMoreActively();
+		else
+			_pickUpWeaponsMoreActively = mod->getAIPickUpWeaponsMoreActivelyCiv();
+	}
 
 	_movementType = _armor->getMovementType();
 	if (_movementType == MT_FLOAT)
@@ -495,6 +509,7 @@ BattleUnit::BattleUnit(const Mod *mod, Unit *unit, UnitFaction faction, int id, 
 		_specWeapon[i] = 0;
 
 	_activeHand = "STR_RIGHT_HAND";
+	_preferredHandForReactions = "";
 	_gender = GENDER_MALE;
 
 	lastCover = TileEngine::invalid;
@@ -604,6 +619,7 @@ void BattleUnit::load(const YAML::Node &node, const Mod *mod, const ScriptGlobal
 	_respawn = node["respawn"].as<bool>(_respawn);
 	_alreadyRespawned = node["alreadyRespawned"].as<bool>(_alreadyRespawned);
 	_activeHand = node["activeHand"].as<std::string>(_activeHand);
+	_preferredHandForReactions = node["preferredHandForReactions"].as<std::string>(_preferredHandForReactions);
 	if (node["tempUnitStatistics"])
 	{
 		_statistics->load(node["tempUnitStatistics"]);
@@ -624,6 +640,7 @@ void BattleUnit::load(const YAML::Node &node, const Mod *mod, const ScriptGlobal
 	}
 	_mindControllerID = node["mindControllerID"].as<int>(_mindControllerID);
 	_summonedPlayerUnit = node["summonedPlayerUnit"].as<bool>(_summonedPlayerUnit);
+	_pickUpWeaponsMoreActively = node["pickUpWeaponsMoreActively"].as<bool>(_pickUpWeaponsMoreActively);
 	_meleeAttackedBy = node["meleeAttackedBy"].as<std::vector<int> >(_meleeAttackedBy);
 
 	_scriptValues.load(node, shared);
@@ -693,6 +710,8 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	node["respawn"] = _respawn;
 	node["alreadyRespawned"] = _alreadyRespawned;
 	node["activeHand"] = _activeHand;
+	if (!_preferredHandForReactions.empty())
+		node["preferredHandForReactions"] = _preferredHandForReactions;
 	node["tempUnitStatistics"] = _statistics->save();
 	node["murdererId"] = _murdererId;
 	node["fatalShotSide"] = (int)_fatalShotSide;
@@ -709,6 +728,8 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	}
 	node["mindControllerID"] = _mindControllerID;
 	node["summonedPlayerUnit"] = _summonedPlayerUnit;
+	if (_pickUpWeaponsMoreActively)
+		node["pickUpWeaponsMoreActively"] = _pickUpWeaponsMoreActively;
 	if (!_meleeAttackedBy.empty())
 	{
 		node["meleeAttackedBy"] = _meleeAttackedBy;
@@ -727,7 +748,7 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
  */
 void BattleUnit::setRecolor(int basicLook, int utileLook, int rankLook)
 {
-	_recolor.clear(); // reset in case of OXCE+ on-the-fly armor changes/transformations
+	_recolor.clear(); // reset in case of OXCE on-the-fly armor changes/transformations
 	const int colorsMax = 4;
 	std::pair<int, int> colors[colorsMax] =
 	{
@@ -2645,7 +2666,7 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 				item->setSlotX(rule->getDefaultInventorySlotX());
 				item->setSlotY(rule->getDefaultInventorySlotY());
 				placed = true;
-				item->setXCOMProperty(getFaction() == FACTION_PLAYER);
+				item->setXCOMProperty(getFaction() == FACTION_PLAYER && !isSummonedPlayerUnit());
 				if (item->getRules()->getTurretType() > -1)
 				{
 					setTurretType(item->getRules()->getTurretType());
@@ -2656,7 +2677,7 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 		if (!placed && (fitItemToInventory(rightHand, item) || fitItemToInventory(leftHand, item)))
 		{
 			placed = true;
-			item->setXCOMProperty(getFaction() == FACTION_PLAYER);
+			item->setXCOMProperty(getFaction() == FACTION_PLAYER && !isSummonedPlayerUnit());
 			if (item->getRules()->getTurretType() > -1)
 			{
 				setTurretType(item->getRules()->getTurretType());
@@ -2777,7 +2798,7 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 		break;
 	}
 
-	item->setXCOMProperty(getFaction() == FACTION_PLAYER);
+	item->setXCOMProperty(getFaction() == FACTION_PLAYER && !isSummonedPlayerUnit());
 
 	return placed;
 }
@@ -3216,6 +3237,91 @@ bool BattleUnit::reloadAmmo()
 		}
 	}
 	return false;
+}
+
+/**
+ * Toggle the right hand as main hand for reactions.
+ */
+void BattleUnit::toggleRightHandForReactions()
+{
+	if (isRightHandPreferredForReactions())
+		_preferredHandForReactions = "";
+	else
+		_preferredHandForReactions = "STR_RIGHT_HAND";
+}
+
+/**
+ * Toggle the left hand as main hand for reactions.
+ */
+void BattleUnit::toggleLeftHandForReactions()
+{
+	if (isLeftHandPreferredForReactions())
+		_preferredHandForReactions = "";
+	else
+		_preferredHandForReactions = "STR_LEFT_HAND";
+}
+
+/**
+ * Is right hand preferred for reactions?
+ */
+bool BattleUnit::isRightHandPreferredForReactions() const
+{
+	return _preferredHandForReactions == "STR_RIGHT_HAND";
+}
+
+/**
+ * Is left hand preferred for reactions?
+ */
+bool BattleUnit::isLeftHandPreferredForReactions() const
+{
+	return _preferredHandForReactions == "STR_LEFT_HAND";
+}
+
+/**
+ * Get preferred weapon for reactions, if applicable.
+ */
+BattleItem *BattleUnit::getWeaponForReactions(bool meleeOnly) const
+{
+	if (_preferredHandForReactions.empty())
+		return nullptr;
+
+	BattleItem* weapon = nullptr;
+	if (isRightHandPreferredForReactions())
+		weapon = getRightHandWeapon();
+	else
+		weapon = getLeftHandWeapon();
+
+	if (!weapon && meleeOnly)
+	{
+		// try also empty hands melee
+		weapon = getSpecialWeapon(BT_MELEE);
+		if (weapon && !weapon->getRules()->isSpecialUsingEmptyHand())
+		{
+			weapon = nullptr;
+		}
+	}
+
+	if (!weapon)
+		return nullptr;
+
+	if (meleeOnly)
+	{
+		if (weapon->getRules()->getBattleType() == BT_MELEE)
+			return weapon;
+	}
+	else
+	{
+		// ignore weapons without ammo (rules out grenades)
+		if (!weapon->haveAnyAmmo())
+			return nullptr;
+
+		int tu = getActionTUs(BA_SNAPSHOT, weapon).Time;
+		if (tu > 0)
+			return weapon;
+
+	}
+
+	return nullptr;
 }
 
 /**
