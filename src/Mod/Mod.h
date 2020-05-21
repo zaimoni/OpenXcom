@@ -120,6 +120,17 @@ struct ModData
 };
 
 /**
+ * Helper exception represent finall error with all required context for end user to fix error in rulesets
+ */
+struct LoadRuleException : Exception
+{
+	LoadRuleException(const std::string& parent, const YAML::Node &node, const std::string& message) : Exception{ "Error for '" + parent + "': " + message + " at line " + std::to_string(node.Mark().line)}
+	{
+
+	}
+};
+
+/**
  * Contains all the game-specific static data that never changes
  * throughout the game, like rulesets and resources.
  */
@@ -196,7 +207,7 @@ private:
 	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayMelee, _aiUseDelayPsionic;
 	int _aiFireChoiceIntelCoeff, _aiFireChoiceAggroCoeff;
 	bool _aiExtendedFireModeChoice, _aiRespectMaxRange, _aiDestroyBaseFacilities;
-	bool _aiPickUpWeaponsMoreActively;
+	bool _aiPickUpWeaponsMoreActively, _aiPickUpWeaponsMoreActivelyCiv;
 	int _maxLookVariant, _tooMuchSmokeThreshold, _customTrainingFactor, _minReactionAccuracy;
 	int _chanceToStopRetaliation;
 	bool _lessAliensDuringBaseDefense;
@@ -243,7 +254,7 @@ private:
 	int _startingDifficulty;
 	int _baseDefenseMapFromLocation;
 	std::map<int, std::string> _missionRatings, _monthlyRatings;
-	std::map<std::string, std::string> _fixedUserOptions;
+	std::map<std::string, std::string> _fixedUserOptions, _recommendedUserOptions;
 	std::vector<std::string> _hiddenMovementBackgrounds;
 	std::vector<std::string> _baseNamesFirst, _baseNamesMiddle, _baseNamesLast;
 	std::vector<std::string> _operationNamesFirst, _operationNamesLast;
@@ -414,6 +425,16 @@ public:
 	/// Get names of function names in given bitset.
 	std::vector<std::string> getBaseFunctionNames(RuleBaseFacilityFunctions f) const;
 
+	/// Gets list of ints.
+	void loadInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node);
+	/// Gets list of ints where order do not matter.
+	void loadUnorderedInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node);
+
+	/// Gets list of names.
+	void loadNames(const std::string &parent, std::vector<std::string>& names, const YAML::Node &node);
+	/// Gets list of names where order do not matter.
+	void loadUnorderedNames(const std::string &parent, std::vector<std::string>& names, const YAML::Node &node);
+
 	/// Loads a list of mods.
 	void loadAll();
 	/// Generates the starting saved game.
@@ -558,8 +579,10 @@ public:
 	bool getAIRespectMaxRange() const {return _aiRespectMaxRange;}
 	/// Gets whether or not the AI should be allowed to continue destroying base facilities after first encountering XCom
 	bool getAIDestroyBaseFacilities() const { return _aiDestroyBaseFacilities; }
-	/// Gets whether or not the AI should pick up weapons more actively.
+	/// Gets whether or not the alien AI should pick up weapons more actively.
 	bool getAIPickUpWeaponsMoreActively() const { return _aiPickUpWeaponsMoreActively; }
+	/// Gets whether or not the civilian AI should pick up weapons more actively.
+	bool getAIPickUpWeaponsMoreActivelyCiv() const { return _aiPickUpWeaponsMoreActivelyCiv; }
 	/// Gets maximum supported lookVariant (0-15)
 	int getMaxLookVariant() const  {return abs(_maxLookVariant) % 16;}
 	/// Gets the threshold for too much smoke (vanilla default = 10).
@@ -802,7 +825,8 @@ public:
 	RuleBaseFacility *getDestroyedFacility() const;
 	const std::map<int, std::string> *getMissionRatings() const;
 	const std::map<int, std::string> *getMonthlyRatings() const;
-	const std::map<std::string, std::string> &getFixedUserOptions() const;
+	const std::map<std::string, std::string> &getFixedUserOptions() const { return _fixedUserOptions; }
+	const std::map<std::string, std::string> &getRecommendedUserOptions() const { return _recommendedUserOptions; }
 	const std::vector<std::string> &getHiddenMovementBackgrounds() const;
 	const std::vector<std::string> &getBaseNamesFirst() const { return _baseNamesFirst; }
 	const std::vector<std::string> &getBaseNamesMiddle() const { return _baseNamesMiddle; }
