@@ -28,6 +28,8 @@
 	<true/>
 	<key>UIFileSharingEnabled</key>
 	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>iOS Launch Screen</string>
 	<key>UIRequiresFullScreen</key>
