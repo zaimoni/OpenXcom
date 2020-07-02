@@ -120,7 +120,7 @@ void SDLRenderer::flip()
 void SDLRenderer::screenshot(const std::string &filename) const
 {
 	int width, height;
-	SDL_GetWindowSize(_window, &width, &height);
+	SDL_GetRendererOutputSize(SDL_GetRenderer(_window), &width, &height);
 	unsigned char *pixels = new unsigned char[width * height * 4];
 	int error = SDL_RenderReadPixels(_renderer, NULL, SDL_PIXELFORMAT_ABGR8888, (void*)pixels, width * 4);
 	if (error)
