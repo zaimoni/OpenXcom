@@ -115,6 +115,7 @@ MainMenuState::MainMenuState(bool updateCheck)
 
 	_btnQuit->setText(tr("STR_QUIT"));
 	_btnQuit->onMouseClick((ActionHandler)&MainMenuState::btnQuitClick);
+	_btnQuit->setVisible(false);
 
 	_btnUpdate->setText(tr("STR_UPDATE"));
 	_btnUpdate->onMouseClick((ActionHandler)& MainMenuState::btnUpdateClick);
