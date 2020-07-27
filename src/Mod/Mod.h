@@ -21,6 +21,7 @@
 #include <vector>
 #include <string>
 #include <bitset>
+#include <type_traits>
 #include <SDL.h>
 #include <yaml-cpp/yaml.h>
 #include "../Engine/Options.h"
@@ -28,9 +29,9 @@
 #include "../Engine/Collections.h"
 #include "../Savegame/GameTime.h"
 #include "RuleDamageType.h"
-#include "Unit.h"
 #include "RuleAlienMission.h"
 #include "RuleBaseFacilityFunctions.h"
+#include "RuleItem.h"
 
 namespace OpenXcom
 {
@@ -120,7 +121,7 @@ struct ModData
 };
 
 /**
- * Helper exception represent finall error with all required context for end user to fix error in rulesets
+ * Helper exception representing the final message with all the required context for the end user to fix the errors in rulesets
  */
 struct LoadRuleException : Exception
 {
@@ -243,6 +244,7 @@ private:
 	int _shortRadarRange;
 	int _buildTimeReductionScaling;
 	int _defeatScore, _defeatFunds;
+	bool _difficultyDemigod;
 	std::pair<std::string, int> _alienFuel;
 	std::string _fontName, _finalResearch, _psiUnlockResearch, _fakeUnderwaterBaseUnlockResearch;
 
@@ -263,7 +265,7 @@ private:
 	std::map<std::string, std::vector<int> > _selectUnitSound, _startMovingSound, _selectWeaponSound, _annoyedSound;
 	std::vector<int> _flagByKills;
 	int _pediaReplaceCraftFuelWithRangeType;
-	StatAdjustment _statAdjustment[5];
+	std::vector<StatAdjustment> _statAdjustment;
 
 	std::map<std::string, int> _ufopaediaSections;
 	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
@@ -277,7 +279,12 @@ private:
 	std::vector<ModData> _modData;
 	ModData* _modCurrent;
 	const SDL_Color *_statePalette;
+
 	std::vector<std::string> _psiRequirements; // it's a cache for psiStrengthEval
+	std::vector<const Armor*> _armorsForSoldiersCache;
+	std::vector<const RuleItem*> _armorStorageItemsCache;
+	std::vector<const RuleItem*> _craftWeaponStorageItemsCache;
+
 	size_t _surfaceOffsetBigobs = 0;
 	size_t _surfaceOffsetFloorob = 0;
 	size_t _surfaceOffsetHandob = 0;
@@ -355,7 +362,6 @@ public:
 	static std::string DEBRIEF_MUSIC_GOOD;
 	static std::string DEBRIEF_MUSIC_BAD;
 	static int DIFFICULTY_COEFFICIENT[5];
-	static int DIFFICULTY_BASED_RETAL_DELAY[5];
 	static int UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
 	static bool EXTENDED_ITEM_RELOAD_COST;
 	static bool EXTENDED_RUNNING_COST;
@@ -396,8 +402,6 @@ public:
 	const std::map<std::string, Palette*> &getPalettes() const { return _palettes; }
 	/// Gets a particular palette.
 	Palette *getPalette(const std::string &name, bool error = true) const;
-	/// Sets a new palette.
-	void setPaletteForAllResources(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256);
 	/// Gets list of voxel data.
 	std::vector<Uint16> *getVoxelData();
 	/// Returns a specific sound from either the land or underwater sound set.
@@ -425,15 +429,101 @@ public:
 	/// Get names of function names in given bitset.
 	std::vector<std::string> getBaseFunctionNames(RuleBaseFacilityFunctions f) const;
 
-	/// Gets list of ints.
-	void loadInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node);
-	/// Gets list of ints where order do not matter.
-	void loadUnorderedInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node);
+	/// Loads a list of ints.
+	void loadInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node) const;
+	/// Loads a list of ints where order of items does not matter.
+	void loadUnorderedInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node) const;
 
-	/// Gets list of names.
-	void loadNames(const std::string &parent, std::vector<std::string>& names, const YAML::Node &node);
-	/// Gets list of names where order do not matter.
-	void loadUnorderedNames(const std::string &parent, std::vector<std::string>& names, const YAML::Node &node);
+	/// Loads a list of names.
+	void loadNames(const std::string &parent, std::vector<std::string>& names, const YAML::Node &node) const;
+	/// Loads a list of names where order of items does not matter.
+	void loadUnorderedNames(const std::string &parent, std::vector<std::string>& names, const YAML::Node &node) const;
+
+	/// Loads a map from names to names.
+	void loadUnorderedNamesToNames(const std::string &parent, std::map<std::string, std::string>& names, const YAML::Node &node) const;
+	/// Loads a map from names to ints.
+	void loadUnorderedNamesToInt(const std::string &parent, std::map<std::string, int>& names, const YAML::Node &node) const;
+	/// Loads a map from names to names to int.
+	void loadUnorderedNamesToNamesToInt(const std::string &parent, std::map<std::string, std::map<std::string, int>>& names, const YAML::Node &node) const;
+
+
+	/// Convert names to correct rule objects
+	template<typename T>
+	void linkRule(const T*& rule, std::string& name) const
+	{
+		if constexpr (std::is_same_v<T, RuleItem>)
+		{
+			rule = getItem(name, true);
+		}
+		else if constexpr (std::is_same_v<T, RuleSoldier>)
+		{
+			rule = getSoldier(name, true);
+		}
+		else if constexpr (std::is_same_v<T, RuleSoldierBonus>)
+		{
+			rule = getSoldierBonus(name, true);
+		}
+		else if constexpr (std::is_same_v<T, Armor>)
+		{
+			rule = getArmor(name, true);
+		}
+		else if constexpr (std::is_same_v<T, RuleResearch>)
+		{
+			rule = getResearch(name, true);
+		}
+		else if constexpr (std::is_same_v<T, Unit>)
+		{
+			rule = getUnit(name, true);
+		}
+		else if constexpr (std::is_same_v<T, RuleSkill>)
+		{
+			rule = getSkill(name, true);
+		}
+		else if constexpr (std::is_same_v<T, RuleCraft>)
+		{
+			rule = getCraft(name, true);
+		}
+		else if constexpr (std::is_same_v<T, RuleUfo>)
+		{
+			rule = getUfo(name, true);
+		}
+		else if constexpr (std::is_same_v<T, RuleBaseFacility>)
+		{
+			rule = getBaseFacility(name, true);
+		}
+		else if constexpr (std::is_same_v<T, RuleInventory>)
+		{
+			rule = getInventory(name, true);
+		}
+		else
+		{
+			static_assert(sizeof(T) == 0, "Unsupported type to link");
+		}
+		name = {};
+	}
+	/// Convert names to correct rule objects
+	template<typename T>
+	void linkRule(std::vector<T>& rule, std::vector<std::string>& names) const
+	{
+		rule.reserve(names.size());
+		for (auto& n : names)
+		{
+			linkRule(rule.emplace_back(), n);
+		}
+		names = {};
+	}
+	/// Convert names to correct rule objects
+	template<typename T>
+	void linkRule(std::vector<T>& rule, std::vector<std::vector<std::string>>& names) const
+	{
+		rule.reserve(names.size());
+		for (auto& n : names)
+		{
+			linkRule(rule.emplace_back(), n);
+		}
+		names = {};
+	}
+
 
 	/// Loads a list of mods.
 	void loadAll();
@@ -459,10 +549,14 @@ public:
 	RuleCraft *getCraft(const std::string &id, bool error = false) const;
 	/// Gets the available crafts.
 	const std::vector<std::string> &getCraftsList() const;
+
 	/// Gets the ruleset for a craft weapon type.
 	RuleCraftWeapon *getCraftWeapon(const std::string &id, bool error = false) const;
 	/// Gets the available craft weapons.
 	const std::vector<std::string> &getCraftWeaponsList() const;
+	/// Is given item a launcher or ammo for craft weapon.
+	bool isCraftWeaponStorageItem(const RuleItem* item) const;
+
 	/// Gets the ruleset for an item category type.
 	RuleItemCategory *getItemCategory(const std::string &id, bool error = false) const;
 	/// Gets the available item categories.
@@ -509,10 +603,16 @@ public:
 	AlienDeployment *getDeployment(const std::string &name, bool error = false) const;
 	/// Gets the available alien deployments.
 	const std::vector<std::string> &getDeploymentsList() const;
+
 	/// Gets armor rules.
 	Armor *getArmor(const std::string &name, bool error = false) const;
-	/// Gets the available armors.
+	/// Gets the all armors.
 	const std::vector<std::string> &getArmorsList() const;
+	/// Gets the available armors for soldiers.
+	const std::vector<const Armor*> &getArmorsForSoldiers() const;
+	/// Check if item is used for armor storage.
+	bool isArmorStorageItem(const RuleItem* item) const;
+
 	/// Gets Ufopaedia article definition.
 	ArticleDefinition *getUfopaediaArticle(const std::string &name, bool error = false) const;
 	/// Gets the available articles.
@@ -842,6 +942,7 @@ public:
 	StatAdjustment *getStatAdjustment(int difficulty);
 	int getDefeatScore() const;
 	int getDefeatFunds() const;
+	bool isDemigod() const;
 };
 
 }

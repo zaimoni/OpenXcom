@@ -47,6 +47,7 @@
 #include "Vehicle.h"
 #include "AlienStrategy.h"
 #include "AlienMission.h"
+#include "Soldier.h"
 #include "../Mod/RuleResearch.h"
 #include "../Mod/RuleRegion.h"
 #include "../Mod/ArticleDefinition.h"
@@ -887,7 +888,7 @@ void SaveConverter::loadDatCraft()
 					for (int v = 0; v < qty; ++v)
 					{
 						RuleItem *rule = _mod->getItem(_rules->getItems()[k + 10], true);
-						craft->getVehicles()->push_back(new Vehicle(rule, rule->getClipSize(), 4));
+						craft->getVehicles()->push_back(new Vehicle(rule, rule->getVehicleClipSize(), 4));
 					}
 				}
 				// items

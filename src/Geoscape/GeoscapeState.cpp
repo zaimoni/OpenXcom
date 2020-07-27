@@ -2027,11 +2027,11 @@ void GeoscapeState::time1Hour()
 			}
 			else if ((*j)->getStatus() == "STR_REARMING")
 			{
-				std::string s = (*j)->rearm(_game->getMod());
-				if (!s.empty())
+				auto s = (*j)->rearm();
+				if (s)
 				{
 					std::string msg = tr("STR_NOT_ENOUGH_ITEM_TO_REARM_CRAFT_AT_BASE")
-									   .arg(tr(s))
+									   .arg(tr(s->getType()))
 									   .arg((*j)->getName(_game->getLanguage()))
 									   .arg((*i)->getName());
 					popup(new CraftErrorState(this, msg));
@@ -2287,10 +2287,10 @@ void GeoscapeState::time1Day()
 				auto ruleUnit = mod->getUnit(research->getName(), false);
 				if (ruleUnit)
 				{
-					auto ruleCorpse = mod->getItem(ruleUnit->getArmor()->getCorpseGeoscape(), false);
+					auto ruleCorpse = ruleUnit->getArmor()->getCorpseGeoscape();
 					if (ruleCorpse && ruleCorpse->isRecoverable() && ruleCorpse->isCorpseRecoverable())
 					{
-						base->getStorageItems()->addItem(ruleUnit->getArmor()->getCorpseGeoscape());
+						base->getStorageItems()->addItem(ruleCorpse->getType());
 					}
 				}
 			}
@@ -2385,8 +2385,8 @@ void GeoscapeState::time1Day()
 					if (man && !man->getRequirements().empty())
 					{
 						const auto &req = man->getRequirements();
-						RuleItem *ammo = mod->getItem(item->getPrimaryCompatibleAmmo()->front());
-						if (ammo && std::find_if(req.begin(), req.end(), [&](const RuleResearch* r){ return r->getName() == ammo->getType(); }) != req.end() && !saveGame->isResearched(req, true))
+						const RuleItem *ammo = item->getPrimaryCompatibleAmmo()->front();
+						if (std::find_if(req.begin(), req.end(), [&](const RuleResearch* r){ return r->getName() == ammo->getType(); }) != req.end() && !saveGame->isResearched(req, true))
 						{
 							popup(new ResearchRequiredState(item));
 						}

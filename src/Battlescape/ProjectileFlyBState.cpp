@@ -27,9 +27,11 @@
 #include "../Savegame/BattleItem.h"
 #include "../Savegame/SavedBattleGame.h"
 #include "../Savegame/Tile.h"
+#include "../Savegame/HitLog.h"
 #include "../Mod/Mod.h"
 #include "../Engine/Sound.h"
 #include "../Engine/RNG.h"
+#include "../Mod/Armor.h"
 #include "../Mod/RuleItem.h"
 #include "../Engine/Options.h"
 #include "AIModule.h"
@@ -584,11 +586,15 @@ void ProjectileFlyBState::think()
 			&& _ammo->getAmmoQuantity() != 0
 			&& (hasFloor || unitCanFly))
 		{
-			createNewProjectile();
+			bool success = createNewProjectile();
 			if (_action.cameraPosition.z != -1)
 			{
 				_parent->getMap()->getCamera()->setMapOffset(_action.cameraPosition);
 				_parent->getMap()->invalidate();
+			}
+			if (!success)
+			{
+				_parent->getMap()->setFollowProjectile(true); // turn back on when done shooting
 			}
 		}
 		else
@@ -678,9 +684,10 @@ void ProjectileFlyBState::think()
 			}
 			else
 			{
-				if (_parent->getSave()->getTile(_action.target)->getUnit())
+				auto tmpUnit = _parent->getSave()->getTile(_action.target)->getUnit();
+				if (tmpUnit && tmpUnit != _unit)
 				{
-					_parent->getSave()->getTile(_action.target)->getUnit()->getStatistics()->shotAtCounter++; // Only counts for guns, not throws or launches
+					tmpUnit->getStatistics()->shotAtCounter++; // Only counts for guns, not throws or launches
 				}
 
 				_parent->getMap()->resetCameraSmoothing();

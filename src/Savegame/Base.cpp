@@ -725,7 +725,7 @@ int Base::getTotalOtherStaffAndInventoryCost(int& staffCount, int& inventoryCoun
 	}
 	for (auto soldier : _soldiers)
 	{
-		auto ruleItem = _mod->getItem(soldier->getArmor()->getStoreItem(), false);
+		auto ruleItem = soldier->getArmor()->getStoreItem();
 		if (ruleItem && ruleItem->getMonthlySalary() != 0)
 		{
 			staffCount += 1;
@@ -788,11 +788,7 @@ double Base::getUsedStores() const
 	double total = _items->getTotalSize(_mod);
 	for (std::vector<Craft*>::const_iterator i = _crafts.begin(); i != _crafts.end(); ++i)
 	{
-		total += (*i)->getItems()->getTotalSize(_mod);
-		for (std::vector<Vehicle*>::const_iterator j = (*i)->getVehicles()->begin(); j != (*i)->getVehicles()->end(); ++j)
-		{
-			total += (*j)->getRules()->getSize();
-		}
+		total += (*i)->getTotalItemStorageSize(_mod);
 	}
 	for (std::vector<Transfer*>::const_iterator i = _transfers.begin(); i != _transfers.end(); ++i)
 	{
@@ -803,10 +799,9 @@ double Base::getUsedStores() const
 		else if ((*i)->getType() == TRANSFER_CRAFT)
 		{
 			Craft *craft = (*i)->getCraft();
-			total += craft->getItems()->getTotalSize(_mod);
+			total += craft->getTotalItemStorageSize(_mod);
 		}
 	}
-	total -= getIgnoredStores();
 	return total;
 }
 
@@ -819,11 +814,34 @@ double Base::getUsedStores() const
  * @param offset Adjusts the used capacity.
  * @return True if the base's stores are over their limit.
  */
-bool Base::storesOverfull(double offset)
+bool Base::storesOverfull(double offset) const
 {
 	int capacity = getAvailableStores() * 100;
 	double used = (getUsedStores() + offset) * 100;
 	return (int)used > capacity;
+}
+
+/**
+ * Checks if the base's stores are so full that even crafts cargo can't fit.
+ */
+bool Base::storesOverfullCritical() const
+{
+	int capacity = getAvailableStores() * 100;
+	double total = 0;
+	for (std::vector<Craft*>::const_iterator i = _crafts.begin(); i != _crafts.end(); ++i)
+	{
+		total += (*i)->getTotalItemStorageSize(_mod);
+	}
+	for (std::vector<Transfer*>::const_iterator i = _transfers.begin(); i != _transfers.end(); ++i)
+	{
+		if ((*i)->getType() == TRANSFER_CRAFT)
+		{
+			Craft *craft = (*i)->getCraft();
+			total += craft->getTotalItemStorageSize(_mod);
+		}
+	}
+	int used = total * 100;
+	return used > capacity;
 }
 
 /**
@@ -842,40 +860,6 @@ int Base::getAvailableStores() const
 		}
 	}
 	return total;
-}
-
-/**
- * Determines space taken up by ammo clips about to rearm craft.
- * @return Ignored storage space.
- */
-double Base::getIgnoredStores() const
-{
-	double space = 0;
-	for (auto c : *getCrafts())
-	{
-		if (c->getStatus() == "STR_REARMING")
-		{
-			for (auto w : *c->getWeapons())
-			{
-				if (w != nullptr && w->isRearming())
-				{
-					std::string clip = w->getRules()->getClipItem();
-					int available = getStorageItems()->getItem(clip);
-					if (!clip.empty() && available > 0)
-					{
-						int clipSize = _mod->getItem(clip, true)->getClipSize();
-						int needed = 0;
-						if (clipSize > 0)
-						{
-							needed = (w->getRules()->getAmmoMax() - w->getAmmo()) / clipSize;
-						}
-						space += std::min(available, needed) * _mod->getItem(clip, true)->getSize();
-					}
-				}
-			}
-		}
-	}
-	return space;
 }
 
 /**
@@ -1620,11 +1604,11 @@ void Base::setupDefenses()
 		if (rule->getVehicleUnit())
 		{
 			int size = rule->getVehicleUnit()->getArmor()->getTotalSize();
-			if (rule->getPrimaryCompatibleAmmo()->empty()) // so this vehicle does not need ammo
+			if (rule->getVehicleClipAmmo() == nullptr) // so this vehicle does not need ammo
 			{
 				for (int j = 0; j < itemQty; ++j)
 				{
-					auto vehicle = new Vehicle(rule, rule->getClipSize(), size);
+					auto vehicle = new Vehicle(rule, rule->getVehicleClipSize(), size);
 					_vehicles.push_back(vehicle);
 					_vehiclesFromBase.push_back(vehicle);
 				}
@@ -1632,19 +1616,10 @@ void Base::setupDefenses()
 			}
 			else // so this vehicle needs ammo
 			{
-				RuleItem *ammo = _mod->getItem(rule->getPrimaryCompatibleAmmo()->front(), true);
-				int ammoPerVehicle, clipSize;
-				if (ammo->getClipSize() > 0 && rule->getClipSize() > 0)
-				{
-					clipSize = rule->getClipSize();
-					ammoPerVehicle = clipSize / ammo->getClipSize();
-				}
-				else
-				{
-					clipSize = ammo->getClipSize();
-					ammoPerVehicle = clipSize;
-				}
-				int baseQty = _items->getItem(ammo->getType()) / ammoPerVehicle;
+				const RuleItem *ammo = rule->getVehicleClipAmmo();
+				int ammoPerVehicle = rule->getVehicleClipsLoaded();
+
+				int baseQty = _items->getItem(ammo) / ammoPerVehicle;
 				if (!baseQty)
 				{
 					++i;
@@ -1653,10 +1628,10 @@ void Base::setupDefenses()
 				int canBeAdded = std::min(itemQty, baseQty);
 				for (int j=0; j<canBeAdded; ++j)
 				{
-					auto vehicle = new Vehicle(rule, clipSize, size);
+					auto vehicle = new Vehicle(rule, rule->getVehicleClipSize(), size);
 					_vehicles.push_back(vehicle);
 					_vehiclesFromBase.push_back(vehicle);
-					_items->removeItem(ammo->getType(), ammoPerVehicle);
+					_items->removeItem(ammo, ammoPerVehicle);
 				}
 				_items->removeItem(itemId, canBeAdded);
 			}
@@ -1688,6 +1663,8 @@ std::vector<Vehicle*> *Base::getVehicles()
  */
 void Base::damageFacilities(Ufo *ufo)
 {
+	_destroyedFacilitiesCache.clear();
+
 	for (int i = 0; i < ufo->getRules()->getMissilePower();)
 	{
 		WeightedOptions options;
@@ -2050,6 +2027,8 @@ void Base::destroyFacility(std::vector<BaseFacility*>::iterator facility)
 			);
 		}
 	}
+
+	_destroyedFacilitiesCache[(*facility)->getRules()] += 1;
 	delete *facility;
 	_facilities.erase(facility);
 }
@@ -2069,19 +2048,9 @@ void Base::cleanupDefenses(bool reclaimItems)
 			RuleItem *rule = v->getRules();
 			std::string type = rule->getType();
 			_items->addItem(type);
-			if (!rule->getPrimaryCompatibleAmmo()->empty())
+			if (rule->getVehicleClipAmmo())
 			{
-				RuleItem *ammo = _mod->getItem(rule->getPrimaryCompatibleAmmo()->front(), true);
-				int ammoPerVehicle;
-				if (ammo->getClipSize() > 0 && rule->getClipSize() > 0)
-				{
-					ammoPerVehicle = rule->getClipSize() / ammo->getClipSize();
-				}
-				else
-				{
-					ammoPerVehicle = ammo->getClipSize();
-				}
-				_items->addItem(ammo->getType(), ammoPerVehicle);
+				_items->addItem(rule->getVehicleClipAmmo(), rule->getVehicleClipsLoaded());
 			}
 		}
 	}
@@ -2127,6 +2096,7 @@ BasePlacementErrors Base::isAreaInUse(BaseAreaSubset area, const RuleBaseFacilit
 	RuleBaseFacilityFunctions require;
 	RuleBaseFacilityFunctions forbidden;
 	RuleBaseFacilityFunctions future;
+	RuleBaseFacilityFunctions missed;
 
 	int removedBuildings = 0;
 	int removedPrisonType[9] = { };
@@ -2143,6 +2113,7 @@ BasePlacementErrors Base::isAreaInUse(BaseAreaSubset area, const RuleBaseFacilit
 
 			// removed one, check what we lose
 			removed.add(rule);
+			missed |= rule->getProvidedBaseFunc();
 
 			if (rule->getAliens() > 0)
 			{
@@ -2224,8 +2195,10 @@ BasePlacementErrors Base::isAreaInUse(BaseAreaSubset area, const RuleBaseFacilit
 		}
 	}
 
-	// if there is any required function that we do not have then it means we are trying to remove something still needed
-	if ((~provide & require).any())
+	// if there is any required function that we do not have then it means we are trying to remove something still needed.
+	// in case when building was destroyed by aliens attack we can lack some functions,
+	// if we do not remove anything now then we can add new building even if we lack some functions.
+	if ((~provide & require & missed).any())
 	{
 		return BPE_Used;
 	}
@@ -2463,7 +2436,7 @@ std::vector<Craft*>::iterator Base::removeCraft(Craft *craft, bool unload)
 	// Unload craft
 	if (unload)
 	{
-		craft->unload(_mod);
+		craft->unload();
 	}
 
 	// Clear hangar

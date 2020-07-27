@@ -17,6 +17,8 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <algorithm>
+#include "Mod.h"
+#include "Armor.h"
 #include "Unit.h"
 #include "RuleItem.h"
 #include "RuleInventory.h"
@@ -29,8 +31,7 @@
 #include "../Engine/Surface.h"
 #include "../Engine/ScriptBind.h"
 #include "../Engine/RNG.h"
-#include "Mod.h"
-#include <algorithm>
+#include "../Battlescape/BattlescapeGame.h"
 
 namespace OpenXcom
 {
@@ -377,7 +378,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	mod->loadBaseFunction(_type, _requiresBuyBaseFunc, node["requiresBuyBaseFunc"]);
 
 
-	_recoveryDividers = node["recoveryDividers"].as< std::map<std::string, int> >(_recoveryDividers);
+	mod->loadUnorderedNamesToInt(_type, _recoveryDividers, node["recoveryDividers"]);
 	_recoveryTransformationsName = node["recoveryTransformations"].as< std::map<std::string, std::vector<int> > >(_recoveryTransformationsName);
 	mod->loadUnorderedNames(_type, _categories, node["categories"]);
 	_size = node["size"].as<double>(_size);
@@ -553,7 +554,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	{
 		if (n)
 		{
-			mod->loadUnorderedNames(_type, _compatibleAmmo[offset], n["compatibleAmmo"]);
+			mod->loadUnorderedNames(_type, _compatibleAmmoNames[offset], n["compatibleAmmo"]);
 			_tuLoad[offset] = n["tuLoad"].as<int>(_tuLoad[offset]);
 			_tuUnload[offset] = n["tuUnload"].as<int>(_tuUnload[offset]);
 		}
@@ -572,7 +573,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	{
 		for (RuleItemAction* conf : { &_confAimed, &_confAuto, &_confSnap, &_confMelee, })
 		{
-			if (conf->ammoSlot != RuleItem::AmmoSlotSelfUse && _compatibleAmmo[conf->ammoSlot].empty())
+			if (conf->ammoSlot != RuleItem::AmmoSlotSelfUse && _compatibleAmmoNames[conf->ammoSlot].empty())
 			{
 				throw Exception("Weapon " + _type + " has clip size 0 and no ammo defined. Please use 'clipSize: -1' for unlimited ammo, or allocate a compatibleAmmo item.");
 			}
@@ -647,9 +648,9 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_shotgunBehaviorType = node["shotgunBehavior"].as<int>(_shotgunBehaviorType);
 	_shotgunSpread = node["shotgunSpread"].as<int>(_shotgunSpread);
 	_shotgunChoke = node["shotgunChoke"].as<int>(_shotgunChoke);
-	_zombieUnitByArmorMale = node["zombieUnitByArmorMale"].as< std::map<std::string, std::string> >(_zombieUnitByArmorMale);
-	_zombieUnitByArmorFemale = node["zombieUnitByArmorFemale"].as< std::map<std::string, std::string> >(_zombieUnitByArmorFemale);
-	_zombieUnitByType = node["zombieUnitByType"].as< std::map<std::string, std::string> >(_zombieUnitByType);
+	mod->loadUnorderedNamesToNames(_type, _zombieUnitByArmorMale, node["zombieUnitByArmorMale"]);
+	mod->loadUnorderedNamesToNames(_type, _zombieUnitByArmorFemale, node["zombieUnitByArmorFemale"]);
+	mod->loadUnorderedNamesToNames(_type, _zombieUnitByType, node["zombieUnitByType"]);
 	_zombieUnit = node["zombieUnit"].as<std::string>(_zombieUnit);
 	_spawnUnit = node["spawnUnit"].as<std::string>(_spawnUnit);
 	_spawnUnitFaction = node["spawnUnitFaction"].as<int>(_spawnUnitFaction);
@@ -727,22 +728,41 @@ void RuleItem::afterLoad(const Mod* mod)
 		}
 	}
 
-	_defaultInventorySlot = mod->getInventory(_defaultInventorySlotName, true);
+	mod->linkRule(_defaultInventorySlot, _defaultInventorySlotName);
 	if (_supportedInventorySectionsNames.size())
 	{
-		_supportedInventorySections.reserve(_supportedInventorySectionsNames.size());
-		for (auto& n : _supportedInventorySectionsNames)
-		{
-			_supportedInventorySections.push_back(mod->getInventory(n, true));
-		}
+		mod->linkRule(_supportedInventorySections, _supportedInventorySectionsNames);
 		Collections::sortVector(_supportedInventorySections);
+	}
+	for (int i = 0; i < AmmoSlotMax; ++i)
+	{
+		mod->linkRule(_compatibleAmmo[i], _compatibleAmmoNames[i]);
+		Collections::sortVector(_compatibleAmmo[i]);
+	}
+	if (_vehicleUnit)
+	{
+		if (_compatibleAmmo[0].size() > 1)
+		{
+			throw Exception("Vehicle weapons support only one ammo type");
+		}
+		if (_compatibleAmmo[0].size() == 1)
+		{
+			auto ammo = _compatibleAmmo[0][0];
+			if (ammo->getClipSize() > 0 && getClipSize() > 0)
+			{
+				if (getClipSize() % ammo->getClipSize())
+				{
+					throw Exception("Vehicle weapon clip size is not a multiple of '" + ammo->getType() +  "' clip size");
+				}
+			}
+		}
 	}
 
 	//remove not needed data
 	Collections::removeAll(_requiresName);
 	Collections::removeAll(_requiresBuyName);
 	Collections::removeAll(_recoveryTransformationsName);
-	Collections::removeAll(_supportedInventorySectionsNames);
+	Collections::removeAll(_compatibleAmmoNames);
 }
 
 /**
@@ -1440,10 +1460,63 @@ int RuleItem::getTUUnload(int slot) const
 }
 
 /**
+ * Gets the ammo type for a vehicle.
+ */
+const RuleItem* RuleItem::getVehicleClipAmmo() const
+{
+	return _compatibleAmmo[0].empty() ? nullptr : _compatibleAmmo[0].front();
+}
+
+/**
+ * Gets the maximum number of rounds for a vehicle. E.g. a vehicle that can load 6 clips with 10 rounds each, returns 60.
+ */
+int RuleItem::getVehicleClipSize() const
+{
+	auto ammo = getVehicleClipAmmo();
+	if (ammo)
+	{
+		if (ammo->getClipSize() > 0 && getClipSize() > 0)
+		{
+			return getClipSize();
+		}
+		else
+		{
+			return ammo->getClipSize();
+		}
+	}
+	else
+	{
+		return getClipSize();
+	}
+}
+
+/**
+ * Gets the number of clips needed to fully load a vehicle. E.g. a vehicle that holds max 60 rounds and clip size is 10, returns 6.
+ */
+int RuleItem::getVehicleClipsLoaded() const
+{
+	auto ammo = getVehicleClipAmmo();
+	if (ammo)
+	{
+		if (ammo->getClipSize() > 0 && getClipSize() > 0)
+		{
+			return getClipSize() / ammo->getClipSize();
+		}
+		else
+		{
+			return ammo->getClipSize();
+		}
+	}
+	else
+	{
+		return 0;
+	}
+}
+/**
  * Gets a list of compatible ammo.
  * @return Pointer to a list of compatible ammo.
  */
-const std::vector<std::string> *RuleItem::getPrimaryCompatibleAmmo() const
+const std::vector<const RuleItem*> *RuleItem::getPrimaryCompatibleAmmo() const
 {
 	return &_compatibleAmmo[0];
 }
@@ -1453,16 +1526,13 @@ const std::vector<std::string> *RuleItem::getPrimaryCompatibleAmmo() const
  * @param type Type of ammo item.
  * @return Slot position.
  */
-int RuleItem::getSlotForAmmo(const std::string& type) const
+int RuleItem::getSlotForAmmo(const RuleItem* type) const
 {
 	for (int i = 0; i < AmmoSlotMax; ++i)
 	{
-		for (const auto& t : _compatibleAmmo[i])
+		if (Collections::sortVectorHave(_compatibleAmmo[i], type))
 		{
-			if (t == type)
-			{
-				return i;
-			}
+			return i;
 		}
 	}
 	return -1;
@@ -1471,7 +1541,7 @@ int RuleItem::getSlotForAmmo(const std::string& type) const
 /**
  *  Get slot position for ammo type.
  */
-const std::vector<std::string> *RuleItem::getCompatibleAmmoForSlot(int slot) const
+const std::vector<const RuleItem*> *RuleItem::getCompatibleAmmoForSlot(int slot) const
 {
 	return &_compatibleAmmo[slot];
 }
@@ -2529,6 +2599,20 @@ void isSingleTargetScript(const RuleItem* r, int &ret)
 	}
 }
 
+void hasCategoryScript(const RuleItem* ri, int& val, const std::string& cat)
+{
+	if (ri)
+	{
+		auto it = std::find(ri->getCategories().begin(), ri->getCategories().end(), cat);
+		if (it != ri->getCategories().end())
+		{
+			val = 1;
+			return;
+		}
+	}
+	val = 0;
+}
+
 std::string debugDisplayScript(const RuleItem* ri)
 {
 	if (ri)
@@ -2583,6 +2667,9 @@ void RuleItem::ScriptRegister(ScriptParserBase* parser)
 	ri.add<&RuleItem::getAccuracyThrow>("getAccuracyThrow");
 	ri.add<&RuleItem::getAccuracyUse>("getAccuracyUse");
 
+	ri.add<&RuleItem::getPower>("getPower", "base power before applying unit bonuses, random rolls or other modifiers");
+	ri.add<&RuleItem::getMeleePower>("getMeleePower", "base melee power for normal weapons before applying unit bonuses, random rolls or other modifiers");
+
 	ri.add<&RuleItem::getArmor>("getArmorValue");
 	ri.add<&RuleItem::getWeight>("getWeight");
 	ri.add<&getBattleTypeScript>("getBattleType");
@@ -2591,6 +2678,7 @@ void RuleItem::ScriptRegister(ScriptParserBase* parser)
 	ri.add<&RuleItem::isTwoHanded>("isTwoHanded");
 	ri.add<&RuleItem::isBlockingBothHands>("isBlockingBothHands");
 	ri.add<&isSingleTargetScript>("isSingleTarget");
+	ri.add<&hasCategoryScript>("hasCategory");
 
 	ri.addScriptValue<BindBase::OnlyGet, &RuleItem::_scriptValues>();
 	ri.addDebugDisplay<&debugDisplayScript>();
