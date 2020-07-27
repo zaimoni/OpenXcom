@@ -42,7 +42,6 @@
 #include "../Mod/RuleSkill.h"
 #include "../Mod/RuleSoldier.h"
 #include "../Mod/RuleSoldierBonus.h"
-#include "../Mod/Mod.h"
 #include "Soldier.h"
 #include "Tile.h"
 #include "SavedGame.h"
@@ -2660,7 +2659,7 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 		// either in the default slot provided in the ruleset
 		if (rule->getDefaultInventorySlot())
 		{
-			RuleInventory *defaultSlot = rule->getDefaultInventorySlot();
+			RuleInventory *defaultSlot = const_cast<RuleInventory *>(rule->getDefaultInventorySlot());
 			BattleItem *defaultSlotWeapon = getItem(defaultSlot);
 			if (!defaultSlotWeapon)
 			{
@@ -2749,14 +2748,14 @@ bool BattleUnit::addItem(BattleItem *item, const Mod *mod, bool allowSecondClip,
 			keep = (getFaction() != FACTION_PLAYER);
 			if (rightWeapon)
 			{
-				if (rightWeapon->getRules()->getSlotForAmmo(rule->getType()) != -1)
+				if (rightWeapon->getRules()->getSlotForAmmo(rule) != -1)
 				{
 					keep = true;
 				}
 			}
 			if (leftWeapon)
 			{
-				if (leftWeapon->getRules()->getSlotForAmmo(rule->getType()) != -1)
+				if (leftWeapon->getRules()->getSlotForAmmo(rule) != -1)
 				{
 					keep = true;
 				}
@@ -3217,7 +3216,7 @@ bool BattleUnit::reloadAmmo()
 
 		for (BattleItem* bi : *getInventory())
 		{
-			int slot = ruleWeapon->getSlotForAmmo(bi->getRules()->getType());
+			int slot = ruleWeapon->getSlotForAmmo(bi->getRules());
 			if (slot != -1)
 			{
 				int tuTemp = (Mod::EXTENDED_ITEM_RELOAD_COST && bi->getSlot()->getType() != INV_HAND) ? bi->getSlot()->getCost(weapon->getSlot()) : 0;
@@ -3345,7 +3344,7 @@ bool BattleUnit::isInExitArea(SpecialTileType stt) const
  */
 bool BattleUnit::liesInExitArea(Tile *tile, SpecialTileType stt) const
 {
-	return tile && tile->getMapData(O_FLOOR) && (tile->getMapData(O_FLOOR)->getSpecialType() == stt);
+	return tile && tile->getFloorSpecialTileType() == stt;
 }
 
 /**
@@ -4550,7 +4549,7 @@ void BattleUnit::setSpecialWeapon(SavedBattleGame *save)
 		}
 	}
 
-	item = mod->getItem(getArmor()->getSpecialWeapon());
+	item = getArmor()->getSpecialWeapon();
 	if (item && (item->getBattleType() == BT_FIREARM || item->getBattleType() == BT_MELEE) && !item->getClipSize())
 	{
 		throw Exception("Weapon " + item->getType() + " is used as a special weapon on armor " + getArmor()->getType() + " but doesn't have it's own ammo - give it a clipSize!");

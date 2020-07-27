@@ -39,6 +39,7 @@
 #include "../Mod/RuleInterface.h"
 #include "../Mod/RuleInventory.h"
 #include "../Mod/RuleItem.h"
+#include "../Mod/RuleSoldier.h"
 #include "../Mod/RuleSoldierBonus.h"
 #include "../Mod/RuleUfo.h"
 #include "../Savegame/BattleUnit.h"
@@ -1537,7 +1538,7 @@ void StatsForNerdsState::initItemList()
 	{
 		for (auto ammo : *itemRule->getCompatibleAmmoForSlot(slot))
 		{
-			_filterOptions.push_back(ammo);
+			_filterOptions.push_back(ammo->getType());
 		}
 	}
 	_cbxRelatedStuff->setOptions(_filterOptions, true);
@@ -1811,7 +1812,7 @@ void StatsForNerdsState::initItemList()
 
 	addHeading("primaryAmmo");
 	{
-		addVectorOfStrings(ss, *itemRule->getCompatibleAmmoForSlot(0), "compatibleAmmo");
+		addVectorOfRules(ss, *itemRule->getCompatibleAmmoForSlot(0), "compatibleAmmo");
 		addInteger(ss, itemRule->getTULoad(0), "tuLoad", 15);
 		addInteger(ss, itemRule->getTUUnload(0), "tuUnload", 8);
 		endHeading();
@@ -1819,7 +1820,7 @@ void StatsForNerdsState::initItemList()
 
 	addHeading("ammo[1]");
 	{
-		addVectorOfStrings(ss, *itemRule->getCompatibleAmmoForSlot(1), "compatibleAmmo");
+		addVectorOfRules(ss, *itemRule->getCompatibleAmmoForSlot(1), "compatibleAmmo");
 		addInteger(ss, itemRule->getTULoad(1), "tuLoad", 15);
 		addInteger(ss, itemRule->getTUUnload(1), "tuUnload", 8);
 		endHeading();
@@ -1827,7 +1828,7 @@ void StatsForNerdsState::initItemList()
 
 	addHeading("ammo[2]");
 	{
-		addVectorOfStrings(ss, *itemRule->getCompatibleAmmoForSlot(2), "compatibleAmmo");
+		addVectorOfRules(ss, *itemRule->getCompatibleAmmoForSlot(2), "compatibleAmmo");
 		addInteger(ss, itemRule->getTULoad(2), "tuLoad", 15);
 		addInteger(ss, itemRule->getTUUnload(2), "tuUnload", 8);
 		endHeading();
@@ -1835,7 +1836,7 @@ void StatsForNerdsState::initItemList()
 
 	addHeading("ammo[3]");
 	{
-		addVectorOfStrings(ss, *itemRule->getCompatibleAmmoForSlot(3), "compatibleAmmo");
+		addVectorOfRules(ss, *itemRule->getCompatibleAmmoForSlot(3), "compatibleAmmo");
 		addInteger(ss, itemRule->getTULoad(3), "tuLoad", 15);
 		addInteger(ss, itemRule->getTUUnload(3), "tuUnload", 8);
 		endHeading();
@@ -2332,17 +2333,17 @@ void StatsForNerdsState::initArmorList()
 	for (auto biw : armorRule->getBuiltInWeapons())
 	{
 		// ignore dummy inventory padding
-		if (biw.find("INV_NULL") == std::string::npos || _showDebug)
+		if (biw->getType().find("INV_NULL") == std::string::npos || _showDebug)
 		{
-			_filterOptions.push_back(biw);
+			_filterOptions.push_back(biw->getType());
 		}
 	}
 	addVectorOfStrings(ss, _filterOptions, "builtInWeapons");
-	addSingleString(ss, armorRule->getSpecialWeapon(), "specialWeapon");
+	addRule(ss, armorRule->getSpecialWeapon(), "specialWeapon");
 
-	if (!armorRule->getSpecialWeapon().empty())
+	if (armorRule->getSpecialWeapon())
 	{
-		_filterOptions.push_back(armorRule->getSpecialWeapon());
+		_filterOptions.push_back(armorRule->getSpecialWeapon()->getType());
 	}
 
 	_filterOptions.insert(_filterOptions.begin(), "STR_BUILT_IN_ITEMS");
@@ -2378,7 +2379,7 @@ void StatsForNerdsState::initArmorList()
 		endHeading();
 	}
 
-	addVectorOfStrings(ss, armorRule->getUnits(), "units");
+	addVectorOfRules(ss, armorRule->getUnits(), "units");
 
 	if (_showDebug)
 	{
@@ -2386,12 +2387,12 @@ void StatsForNerdsState::initArmorList()
 
 		addSection("{Naming}", "", _white);
 		addSingleString(ss, armorRule->getType(), "type");
-		addSingleString(ss, armorRule->getRequiredResearch(), "requires");
+		addRuleNamed(ss, armorRule->getRequiredResearch(), "requires");
 
 		addSection("{Recovery}", "", _white);
-		addVectorOfStrings(ss, armorRule->getCorpseBattlescape(), "corpseBattle");
-		addSingleString(ss, armorRule->getCorpseGeoscape(), "corpseGeo");
-		addSingleString(ss, armorRule->getStoreItem(), "storeItem");
+		addVectorOfRules(ss, armorRule->getCorpseBattlescape(), "corpseBattle");
+		addRule(ss, armorRule->getCorpseGeoscape(), "corpseGeo");
+		addRule(ss, armorRule->getStoreItem(), "storeItem");
 
 		addSection("{Inventory}", "", _white);
 		addSingleString(ss, armorRule->getSpriteInventory(), "spriteInv", "", false);
@@ -3166,10 +3167,10 @@ void StatsForNerdsState::initCraftWeaponList()
 	addIntegerSeconds(ss, craftWeaponRule->getStandardReload(), "reloadStandard");
 	addIntegerSeconds(ss, craftWeaponRule->getAggressiveReload(), "reloadAggressive");
 
-	addSingleString(ss, craftWeaponRule->getLauncherItem(), "launcher");
+	addRule(ss, craftWeaponRule->getLauncherItem(), "launcher");
 	addInteger(ss, craftWeaponRule->getWeaponType(), "weaponType");
 
-	addSingleString(ss, craftWeaponRule->getClipItem(), "clip");
+	addRule(ss, craftWeaponRule->getClipItem(), "clip");
 	addInteger(ss, craftWeaponRule->getAmmoMax(), "ammoMax");
 	addInteger(ss, craftWeaponRule->getRearmRate(), "rearmRate", 1);
 
