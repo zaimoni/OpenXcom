@@ -222,7 +222,7 @@ SellState::SellState(Base *base, DebriefingState *debriefingState, OptionsOrigin
 		else
 		{
 			qty = _base->getStorageItems()->getItem(rule);
-			if (Options::storageLimitsEnforced && _origin == OPT_BATTLESCAPE)
+			if (Options::storageLimitsEnforced && (_origin == OPT_BATTLESCAPE || overfullCritical))
 			{
 				for (std::vector<Transfer*>::iterator j = _base->getTransfers()->begin(); j != _base->getTransfers()->end(); ++j)
 				{
@@ -667,6 +667,10 @@ void SellState::btnOkClick(Action *)
 					for (std::vector<Craft*>::iterator j = _base->getCrafts()->begin(); j != _base->getCrafts()->end() && toRemove; ++j)
 					{
 						toRemove = cleanUpContainer((*j)->getItems(), item, toRemove);
+						if (toRemove > 0)
+						{
+							toRemove = cleanUpCraft((*j), item, toRemove);
+						}
 					}
 
 					// if there are STILL any left to remove, take them from the transfers, and if necessary, delete it.
@@ -691,15 +695,13 @@ void SellState::btnOkClick(Action *)
 							if ((*j)->getCraft())
 							{
 								toRemove = cleanUpContainer((*j)->getCraft()->getItems(), item, toRemove);
+								if (toRemove > 0)
+								{
+									toRemove = cleanUpCraft((*j)->getCraft(), item, toRemove);
+								}
 							}
 							++j;
 						}
-					}
-
-					// clean rest of craft weapons and vehicles
-					for (std::vector<Craft*>::iterator j = _base->getCrafts()->begin(); j != _base->getCrafts()->end() && toRemove; ++j)
-					{
-						toRemove = cleanUpCraft((*j), item, toRemove);
 					}
 				}
 
@@ -972,10 +974,8 @@ void SellState::changeByValue(int change, int dir)
 	_total += dir * getRow().cost * change;
 
 	// Calculate the change in storage space.
-	Craft *craft;
 	Soldier *soldier;
-	const RuleItem *item, *weapon, *ammo;
-	double total = 0.0;
+	const RuleItem *item;
 	switch (getRow().type)
 	{
 	case TRANSFER_SOLDIER:
@@ -986,19 +986,7 @@ void SellState::changeByValue(int change, int dir)
 		}
 		break;
 	case TRANSFER_CRAFT:
-		craft = (Craft*)getRow().rule;
-		for (std::vector<CraftWeapon*>::iterator w = craft->getWeapons()->begin(); w != craft->getWeapons()->end(); ++w)
-		{
-			if (*w)
-			{
-				weapon = (*w)->getRules()->getLauncherItem();
-				total += weapon->getSize();
-				ammo = (*w)->getRules()->getClipItem();
-				if (ammo)
-					total += ammo->getSize() * (*w)->getClipsLoaded();
-			}
-		}
-		_spaceChange += dir * total;
+		// Note: in OXCE, there is no storage space change, everything on the craft is already included in the base storage space calculations
 		break;
 	case TRANSFER_ITEM:
 		item = (const RuleItem*)getRow().rule;

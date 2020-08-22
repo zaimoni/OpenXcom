@@ -3405,11 +3405,18 @@ void BattleUnit::addPsiStrengthExp()
 }
 
 /**
- * Adds one to the mana exp counter.
+ * Adds to the mana exp counter.
  */
-void BattleUnit::addManaExp()
+void BattleUnit::addManaExp(int weaponStat)
 {
-	_exp.mana++;
+	if (weaponStat > 0)
+	{
+		_exp.mana += weaponStat / 100;
+		if (RNG::percent(weaponStat % 100))
+		{
+			_exp.mana++;
+		}
+	}
 }
 
 /**
@@ -4498,6 +4505,14 @@ void BattleUnit::calculateEnviDamage(Mod *mod, SavedBattleGame *save)
 MovementType BattleUnit::getMovementType() const
 {
 	return _movementType;
+}
+
+/**
+ * Gets the turn cost.
+ */
+int BattleUnit::getTurnCost() const
+{
+	return _armor->getTurnCost();
 }
 
 /**
