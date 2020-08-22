@@ -626,6 +626,7 @@
 		5BD535AC2461B54B0041673F /* DogfightExperienceState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DogfightExperienceState.cpp; sourceTree = "<group>"; };
 		5BD535AD2461B54C0041673F /* DogfightExperienceState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DogfightExperienceState.h; sourceTree = "<group>"; };
 		5BD535AF2461B5590041673F /* RuleBaseFacilityFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuleBaseFacilityFunctions.h; sourceTree = "<group>"; };
+		5BF48A3624F16E47003E3156 /* Functions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Functions.h; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B235EF5E201C4DF200FF7AC3 /* Game.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Game.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B235EF5F201C4DF200FF7AC3 /* OpenXcom-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "OpenXcom-Info.plist"; sourceTree = SOURCE_ROOT; };
@@ -1606,6 +1607,7 @@
 		B2834264201F6D9C00BAEC9D /* Engine */ = {
 			isa = PBXGroup;
 			children = (
+				5BF48A3624F16E47003E3156 /* Functions.h */,
 				5BD0BAFC2242E05A008E6DFB /* Script.cpp */,
 				5BD0BAFD2242E05A008E6DFB /* Script.h */,
 				5BD0BB002242E05B008E6DFB /* ScriptBind.h */,
