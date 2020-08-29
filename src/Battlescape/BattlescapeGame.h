@@ -50,10 +50,10 @@ struct BattleActionCost : RuleItemUseCost
 	const RuleSkill* skillRules = nullptr; // if defined, this is a skill action
 
 	/// Default constructor.
-	BattleActionCost() : type(BA_NONE) { }
+	BattleActionCost() noexcept : type(BA_NONE) { }
 
 	/// Constructor from unit.
-	BattleActionCost(BattleUnit *unit) : type(BA_NONE), actor(unit) { }
+	BattleActionCost(BattleUnit *unit) noexcept : type(BA_NONE), actor(unit) { }
 
 	/// Constructor with update.
 	BattleActionCost(BattleActionType action, BattleUnit *unit, BattleItem *item) : type(action), actor(unit), weapon(item) { updateTU(); }
@@ -63,7 +63,7 @@ struct BattleActionCost : RuleItemUseCost
 	/// Set TU to zero.
 	void clearTU();
 	/// Test if actor have enough TU to perform weapon action.
-	bool haveTU(std::string *message = 0);
+	bool haveTU(std::string *message = 0) const;
 	/// Spend TU when actor have enough TU.
 	bool spendTU(std::string *message = 0);
 };
@@ -86,7 +86,7 @@ struct BattleAction : BattleActionCost
 	bool sprayTargeting; // Used to separate waypoint checks between confirm firing mode and the "spray" autoshot
 
 	/// Default constructor
-	BattleAction() : target(-1, -1, -1), targeting(false), value(0), strafe(false), run(false), ignoreSpottedEnemies(false), diff(0), autoShotCounter(0), cameraPosition(0, 0, -1), desperate(false), finalFacing(-1), finalAction(false), number(0), sprayTargeting(false) { }
+	BattleAction() noexcept : target(-1, -1, -1), targeting(false), value(0), strafe(false), run(false), ignoreSpottedEnemies(false), diff(0), autoShotCounter(0), cameraPosition(0, 0, -1), desperate(false), finalFacing(-1), finalAction(false), number(0), sprayTargeting(false) { }
 
 	/// Get move type
 	BattleActionMove getMoveType() const

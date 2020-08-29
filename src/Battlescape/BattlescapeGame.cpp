@@ -97,7 +97,7 @@ void BattleActionCost::clearTU()
  * @param message optional message with error condition.
  * @return Unit have enough stats to perform action.
  */
-bool BattleActionCost::haveTU(std::string *message)
+bool BattleActionCost::haveTU(std::string *message)  const
 {
 	if (!skillRules && Time <= 0)
 	{

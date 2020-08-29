@@ -76,12 +76,12 @@ struct RuleItemUseCost
 	int Mana;
 
 	/// Default constructor.
-	RuleItemUseCost() : Time(0), Energy(0), Morale(0), Health(0), Stun(0), Mana(0)
+	RuleItemUseCost() noexcept : Time(0), Energy(0), Morale(0), Health(0), Stun(0), Mana(0)
 	{
 
 	}
 	/// Create new cost with one value for time units and another for rest.
-	RuleItemUseCost(int tu, int rest = 0) : Time(tu), Energy(rest), Morale(rest), Health(rest), Stun(rest), Mana(rest)
+	RuleItemUseCost(int tu, int rest = 0) noexcept : Time(tu), Energy(rest), Morale(rest), Health(rest), Stun(rest), Mana(rest)
 	{
 
 	}
