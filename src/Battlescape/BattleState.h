@@ -36,6 +36,12 @@ protected:
 	BattleState(BattlescapeGame* parent, BattleAction action) : _parent(parent), _action(action) {}
 	/// Creates a new BattleState linked to the game.
 	BattleState(BattlescapeGame* parent) noexcept : _parent(parent) {}
+
+	// disallow public slicing copy
+	BattleState(const BattleState &src) = default;
+	BattleState(BattleState &&src) = default;
+	BattleState& operator=(const BattleState& src) = default;
+	BattleState& operator=(BattleState && src) = default;
 public:
 	/// Cleans up the BattleState.
 	virtual ~BattleState() = default;
