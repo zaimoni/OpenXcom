@@ -40,14 +40,6 @@ UnitTurnBState::UnitTurnBState(BattlescapeGame *parent, BattleAction action, boo
 }
 
 /**
- * Deletes the UnitTurnBState.
- */
-UnitTurnBState::~UnitTurnBState()
-{
-
-}
-
-/**
  * Initializes the state.
  */
 void UnitTurnBState::init()
@@ -126,13 +118,6 @@ void UnitTurnBState::think()
 		_unit->abortTurn();
 		_parent->popState();
 	}
-}
-
-/**
- * Unit turning cannot be cancelled.
- */
-void UnitTurnBState::cancel()
-{
 }
 
 }

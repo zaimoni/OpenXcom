@@ -35,21 +35,10 @@ namespace OpenXcom
  * @param parent Pointer to the Battlescape.
  * @param unit Panicking unit.
  */
-UnitPanicBState::UnitPanicBState(BattlescapeGame *parent, BattleUnit *unit) : BattleState(parent), _unit(unit), _shotsFired(0)
+UnitPanicBState::UnitPanicBState(BattlescapeGame *parent, BattleUnit *unit) noexcept : BattleState(parent), _unit(unit), _shotsFired(0)
 {
 	_berserking = _unit->getStatus() == STATUS_BERSERK;
 	unit->abortTurn(); //makes the unit go to status STANDING :p
-}
-
-/**
- * Deletes the UnitPanicBState.
- */
-UnitPanicBState::~UnitPanicBState()
-{
-}
-
-void UnitPanicBState::init()
-{
 }
 
 /**
@@ -137,13 +126,6 @@ void UnitPanicBState::think()
 	}
 	_parent->popState();
 	_parent->setupCursor();
-}
-
-/**
- * Panicking cannot be cancelled.
- */
-void UnitPanicBState::cancel()
-{
 }
 
 }

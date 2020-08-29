@@ -33,7 +33,7 @@ struct RuleDamageType;
  * Explosion state not only handles explosions, but also bullet impacts!
  * Refactoring tip : ImpactBState.
  */
-class ExplosionBState : public BattleState
+class ExplosionBState final : public BattleState
 {
 private:
 	int _explosionCounter;
@@ -53,13 +53,12 @@ private:
 	void optValue(int &oldValue, int newValue) const;
 public:
 	/// Creates a new ExplosionBState class.
-	ExplosionBState(BattlescapeGame *parent, Position center, BattleActionAttack attack, Tile *tile = 0, bool lowerWeapon = false, int range = 0, int explosionCounter = 0);
+	ExplosionBState(BattlescapeGame *parent, Position center, BattleActionAttack attack, Tile *tile = 0, bool lowerWeapon = false, int range = 0, int explosionCounter = 0) noexcept;
 	/// Cleans up the ExplosionBState.
-	~ExplosionBState();
+	~ExplosionBState() = default;
 	/// Initializes the state.
 	void init() override;
-	/// Handles a cancel request.
-	void cancel() override;
+//	void cancel() override; // explosions cannot be cancelled
 	/// Runs state functionality every cycle.
 	void think() override;
 

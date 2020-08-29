@@ -40,13 +40,12 @@ private:
 	bool _overKill;
 public:
 	/// Creates a new UnitDieBState class
-	UnitDieBState(BattlescapeGame *parent, BattleUnit *unit, const RuleDamageType *damageType, bool noSound);
+	UnitDieBState(BattlescapeGame *parent, BattleUnit *unit, const RuleDamageType *damageType, bool noSound) noexcept;
 	/// Cleans up the UnitDieBState.
-	~UnitDieBState();
+	~UnitDieBState() = default;
 	/// Initializes the state.
-	void init() override;
-	/// Handles a cancels request.
-	void cancel() override;
+//	void init() override; // no-op initialization
+//	void cancel() override; // death cannot be cancelled
 	/// Runs state functionality every cycle.
 	void think() override;
 	/// Converts a unit to a corpse.

@@ -45,13 +45,6 @@ PsiAttackBState::PsiAttackBState(BattlescapeGame *parent, BattleAction action) :
 }
 
 /**
- * Deletes the PsiAttackBState.
- */
-PsiAttackBState::~PsiAttackBState()
-{
-}
-
-/**
  * Initializes the sequence:
  * - checks if the action is valid,
  * - adds a psi attack animation to the world.

@@ -56,13 +56,6 @@ ProjectileFlyBState::ProjectileFlyBState(BattlescapeGame *parent, BattleAction a
 }
 
 /**
- * Deletes the ProjectileFlyBState.
- */
-ProjectileFlyBState::~ProjectileFlyBState()
-{
-}
-
-/**
  * Initializes the sequence:
  * - checks if the shot is valid,
  * - calculates the base accuracy.

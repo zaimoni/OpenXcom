@@ -31,7 +31,7 @@ class Tile;
 /**
  * A Melee Attack state.
  */
-class MeleeAttackBState : public BattleState
+class MeleeAttackBState final : public BattleState
 {
 private:
 	BattleUnit *_unit, *_target;
@@ -44,7 +44,7 @@ public:
 	/// Creates a new MeleeAttackBState class
 	MeleeAttackBState(BattlescapeGame *parent, BattleAction action);
 	/// Cleans up the MeleeAttackBState.
-	~MeleeAttackBState();
+	~MeleeAttackBState() = default;
 	/// Initializes the state.
 	void init() override;
 	/// Runs state functionality every cycle.

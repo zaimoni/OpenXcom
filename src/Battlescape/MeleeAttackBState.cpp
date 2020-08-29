@@ -46,13 +46,6 @@ MeleeAttackBState::MeleeAttackBState(BattlescapeGame *parent, BattleAction actio
 }
 
 /**
- * Deletes the MeleeAttackBState.
- */
-MeleeAttackBState::~MeleeAttackBState()
-{
-}
-
-/**
  * Initializes the sequence.
  * does a lot of validity checking.
  */

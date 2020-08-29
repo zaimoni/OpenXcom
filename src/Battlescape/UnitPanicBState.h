@@ -27,7 +27,7 @@ class BattleUnit;
 /**
  * State for panicking units.
  */
-class UnitPanicBState : public BattleState
+class UnitPanicBState final : public BattleState
 {
 private:
 	BattleUnit *_unit;
@@ -35,13 +35,11 @@ private:
 	int _shotsFired;
 public:
 	/// Creates a new UnitPanicBState class
-	UnitPanicBState(BattlescapeGame *parent, BattleUnit *unit);
+	UnitPanicBState(BattlescapeGame *parent, BattleUnit *unit) noexcept;
 	/// Cleans up the UnitPanicBState.
-	~UnitPanicBState();
-	/// Initializes the state.
-	void init() override;
-	/// Handles a cancels request.
-	void cancel() override;
+	~UnitPanicBState() = default;
+//	void init() override; // no-op initialization
+//	void cancel() override; // panic cannot be cancelled
 	/// Runs state functionality every cycle.
 	void think() override;
 };

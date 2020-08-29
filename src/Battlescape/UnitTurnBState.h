@@ -27,7 +27,7 @@ class BattleUnit;
 /**
  * State for turning units.
  */
-class UnitTurnBState : public BattleState
+class UnitTurnBState final : public BattleState
 {
 private:
 	BattleUnit *_unit;
@@ -36,11 +36,10 @@ public:
 	/// Creates a new UnitTurnBState class
 	UnitTurnBState(BattlescapeGame *parent, BattleAction action, bool chargeTUs = true);
 	/// Cleans up the UnitTurnBState.
-	~UnitTurnBState();
+	~UnitTurnBState() = default;
 	/// Initializes the state.
 	void init() override;
-	/// Handles a cancels request.
-	void cancel() override;
+//	void cancel() override;	// cannot cancel
 	/// Runs state functionality every cycle.
 	void think() override;
 };

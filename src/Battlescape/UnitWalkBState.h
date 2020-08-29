@@ -31,7 +31,7 @@ class TileEngine;
 /**
  * State for walking units.
  */
-class UnitWalkBState : public BattleState
+class UnitWalkBState final : public BattleState
 {
 private:
 	Position _target;
@@ -52,7 +52,7 @@ public:
 	/// Creates a new UnitWalkBState class.
 	UnitWalkBState(BattlescapeGame *parent, BattleAction _action);
 	/// Cleans up the UnitWalkBState.
-	~UnitWalkBState();
+	~UnitWalkBState() = default;
 	/// Initializes the state.
 	void init() override;
 	/// Deinitializes the state.

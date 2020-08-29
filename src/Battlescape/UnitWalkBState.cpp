@@ -48,14 +48,6 @@ UnitWalkBState::UnitWalkBState(BattlescapeGame *parent, BattleAction action) : B
 }
 
 /**
- * Deletes the UnitWalkBState.
- */
-UnitWalkBState::~UnitWalkBState()
-{
-
-}
-
-/**
  * Initializes the state.
  */
 void UnitWalkBState::init()

@@ -30,7 +30,7 @@ class Tile;
 /**
  * A Psi Attack state.
  */
-class PsiAttackBState : public BattleState
+class PsiAttackBState final : public BattleState
 {
 private:
 	BattleUnit *_unit, *_target;
@@ -40,7 +40,7 @@ public:
 	/// Creates a new PsiAttack state.
 	PsiAttackBState(BattlescapeGame *parent, BattleAction action);
 	/// Cleans up the PsiAttack.
-	~PsiAttackBState();
+	~PsiAttackBState() = default;
 	/// Initializes the state.
 	void init() override;
 	/// Runs state functionality every cycle.

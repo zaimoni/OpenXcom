@@ -46,7 +46,7 @@ namespace OpenXcom
  * @param damageType Type of damage that caused the death.
  * @param noSound Whether to disable the death sound.
  */
-UnitDieBState::UnitDieBState(BattlescapeGame *parent, BattleUnit *unit, const RuleDamageType* damageType, bool noSound) : BattleState(parent),
+UnitDieBState::UnitDieBState(BattlescapeGame *parent, BattleUnit *unit, const RuleDamageType* damageType, bool noSound) noexcept : BattleState(parent),
 	_unit(unit), _damageType(damageType), _noSound(noSound), _extraFrame(0), _overKill(unit->getOverKillDamage())
 {
 	// don't show the "fall to death" animation when a unit is blasted with explosives or he is already unconscious
@@ -102,18 +102,6 @@ UnitDieBState::UnitDieBState(BattlescapeGame *parent, BattleUnit *unit, const Ru
 			}
 		}
 	}
-}
-
-/**
- * Deletes the UnitDieBState.
- */
-UnitDieBState::~UnitDieBState()
-{
-
-}
-
-void UnitDieBState::init()
-{
 }
 
 /**
@@ -233,13 +221,6 @@ void UnitDieBState::think()
 		}
 	}
 
-}
-
-/**
- * Unit falling cannot be cancelled.
- */
-void UnitDieBState::cancel()
-{
 }
 
 /**

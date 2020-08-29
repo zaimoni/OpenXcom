@@ -30,7 +30,7 @@ class BattleUnit;
 /**
  * State for falling units.
  */
-class UnitFallBState : public BattleState
+class UnitFallBState final : public BattleState
 {
 private:
 	TileEngine *_terrain;
@@ -38,9 +38,9 @@ private:
 	std::vector<BattleUnit*> unitsToMove;
 public:
 	/// Creates a new UnitWalkBState class
-	UnitFallBState(BattlescapeGame *parent);
+	UnitFallBState(BattlescapeGame* parent) : BattleState(parent), _terrain(0) {}
 	/// Cleans up the UnitWalkBState.
-	~UnitFallBState();
+	~UnitFallBState() = default;
 	/// Initializes the state.
 	void init() override;
 	/// Runs state functionality every cycle. Returns when finished.

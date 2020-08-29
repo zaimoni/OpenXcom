@@ -31,7 +31,7 @@ class Tile;
 /**
  * A projectile state.
  */
-class ProjectileFlyBState : public BattleState
+class ProjectileFlyBState final : public BattleState
 {
 private:
 	BattleUnit *_unit;
@@ -47,7 +47,7 @@ public:
 	ProjectileFlyBState(BattlescapeGame *parent, BattleAction action);
 	ProjectileFlyBState(BattlescapeGame *parent, BattleAction action, Position origin, int range);
 	/// Cleans up the ProjectileFly.
-	~ProjectileFlyBState();
+	~ProjectileFlyBState() = default;
 	/// Initializes the state.
 	void init() override;
 	/// Handles a cancel request.

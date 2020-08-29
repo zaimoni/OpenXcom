@@ -35,23 +35,6 @@ namespace OpenXcom
 {
 
 /**
- * Sets up an UnitFallBState.
- * @param parent Pointer to the Battlescape.
- */
-UnitFallBState::UnitFallBState(BattlescapeGame *parent) : BattleState(parent), _terrain(0)
-{
-
-}
-
-/**
- * Deletes the UnitWalkBState.
- */
-UnitFallBState::~UnitFallBState()
-{
-
-}
-
-/**
  * Initializes the state.
  */
 void UnitFallBState::init()
