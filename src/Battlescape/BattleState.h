@@ -29,15 +29,16 @@ namespace OpenXcom
 class BattleState
 {
 protected:
-	BattlescapeGame *_parent;
-	BattleAction _action;
+	BattlescapeGame *_parent; /// Pointer to the parent state.
+	BattleAction _action; /// Struct containing info about the action.
+
+	/// Creates a new BattleState linked to the game.
+	BattleState(BattlescapeGame* parent, BattleAction action) : _parent(parent), _action(action) {}
+	/// Creates a new BattleState linked to the game.
+	BattleState(BattlescapeGame* parent) noexcept : _parent(parent) {}
 public:
-	/// Creates a new BattleState linked to the game.
-	BattleState(BattlescapeGame *parent, BattleAction action);
-	/// Creates a new BattleState linked to the game.
-	BattleState(BattlescapeGame *parent);
 	/// Cleans up the BattleState.
-	virtual ~BattleState();
+	virtual ~BattleState() = default;
 	/// Initializes the state.
 	virtual void init();
 	/// Called when the state gets popped out.
@@ -47,7 +48,7 @@ public:
 	/// Runs state functionality every cycle.
 	virtual void think();
 	/// Gets a copy of the action.
-	const BattleAction& getAction() const;
+	const BattleAction& getAction() const { return _action; }
 };
 
 }

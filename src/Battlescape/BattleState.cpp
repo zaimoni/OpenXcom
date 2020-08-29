@@ -22,36 +22,6 @@ namespace OpenXcom
 {
 
 /**
- * Sets up a BattleState.
- * @param parent Pointer to the parent state.
- * @param action Struct containing info about the action.
- */
-BattleState::BattleState(BattlescapeGame *parent, BattleAction action) : _parent(parent), _action(action)
-{
-
-}
-
-/**
- * Sets up a BattleState.
- * @param parent Pointer to the parent state.
- */
-BattleState::BattleState(BattlescapeGame *parent) : _parent(parent)
-{
-	_action.result = "";
-	_action.targeting = false;
-	_action.clearTU();
-}
-
-
-/**
- * Deletes the BattleState.
- */
-BattleState::~BattleState()
-{
-
-}
-
-/**
  * Start the current BattleState.
  */
 void BattleState::init()
@@ -82,15 +52,6 @@ void BattleState::cancel()
 void BattleState::think()
 {
 
-}
-
-/**
- * Gets the action result. Returns error messages or an empty string when everything went fine.
- * @return Error or empty string when everything is fine.
- */
-const BattleAction& BattleState::getAction() const
-{
-	return _action;
 }
 
 }
