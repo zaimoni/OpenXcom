@@ -89,6 +89,11 @@
 #include "SDL2Helpers.h"
 #include "../version.h"
 
+// abuse C preprocessor auto-string concatenation
+#define OXCOM_MIXED "OpenXcom"
+#define OXCOM_LC "openxcom"
+#define OXCOM_UC "OPENXCOM"
+
 namespace OpenXcom
 {
 namespace CrossPlatform
@@ -235,7 +240,7 @@ std::vector<std::string> findDataFolders()
 #ifdef _WIN32
 	std::unordered_set<std::string> seen; // avoid dups in case cwd = dirname(exe)
 	wchar_t pathW[MAX_PATH+1];
-	const std::wstring oxconst = pathToWindows("OpenXcom/");
+	const std::wstring oxconst = pathToWindows(OXCOM_MIXED "/");
 	// Get Documents folder
 	if (SHGetSpecialFolderPathW(NULL, pathW, CSIDL_PERSONAL, FALSE))
 	{
@@ -267,8 +272,8 @@ std::vector<std::string> findDataFolders()
 	char const *home = getHome();
 #ifdef __HAIKU__
 	char data_path[B_PATH_NAME_LENGTH];
-	find_directory(B_SYSTEM_SETTINGS_DIRECTORY, 0, true, data_path, sizeof(data_path)-strlen("/OpenXcom/"));
-	strcat(data_path,"/OpenXcom/");
+	find_directory(B_SYSTEM_SETTINGS_DIRECTORY, 0, true, data_path, sizeof(data_path)-strlen("/" OXCOM_MIXED "/"));
+	strcat(data_path,"/" OXCOM_MIXED "/");
 	list.push_back(data_path);
 #endif
 	char path[MAXPATHLEN];
@@ -276,14 +281,14 @@ std::vector<std::string> findDataFolders()
 	// Get user-specific data folders
 	if (char const *const xdg_data_home = getenv("XDG_DATA_HOME"))
  	{
-		snprintf(path, MAXPATHLEN, "%s/openxcom/", xdg_data_home);
+		snprintf(path, MAXPATHLEN, "%s/" OXCOM_LC "/", xdg_data_home);
  	}
  	else
  	{
 #ifdef __APPLE__
-		snprintf(path, MAXPATHLEN, "%s/Library/Application Support/OpenXcom/", home);
+		snprintf(path, MAXPATHLEN, "%s/Library/Application Support/" OXCOM_MIXED "/", home);
 #else
-		snprintf(path, MAXPATHLEN, "%s/.local/share/openxcom/", home);
+		snprintf(path, MAXPATHLEN, "%s/.local/share/" OXCOM_LC "/", home);
 #endif
  	}
  	list.push_back(path);
@@ -296,16 +301,16 @@ std::vector<std::string> findDataFolders()
 		char *dir = strtok(xdg_data_dirs_copy, ":");
 		while (dir != 0)
 		{
-			snprintf(path, MAXPATHLEN, "%s/openxcom/", dir);
+			snprintf(path, MAXPATHLEN, "%s/" OXCOM_LC "/", dir);
 			list.push_back(path);
 			dir = strtok(0, ":");
 		}
 	}
 #ifdef __APPLE__
-	list.push_back("/Users/Shared/OpenXcom/");
+	list.push_back("/Users/Shared/" OXCOM_MIXED "/");
 #else
-	list.push_back("/usr/local/share/openxcom/");
-	list.push_back("/usr/share/openxcom/");
+	list.push_back("/usr/local/share/" OXCOM_LC "/");
+	list.push_back("/usr/share/" OXCOM_LC "/");
 #ifdef DATADIR
 	snprintf(path, MAXPATHLEN, "%s/", DATADIR);
 	list.push_back(path);
@@ -336,7 +341,7 @@ std::vector<std::string> findUserFolders()
 #ifdef _WIN32
 	std::unordered_set<std::string> seen;
 	wchar_t pathW[MAX_PATH+1];
-	const std::wstring oxconst = pathToWindows("OpenXcom/");
+	const std::wstring oxconst = pathToWindows(OXCOM_MIXED "/");
 	const std::wstring usconst = pathToWindows("user/");
 
 	// Get Documents folder
@@ -369,8 +374,8 @@ std::vector<std::string> findUserFolders()
 #else
 #ifdef __HAIKU__
 	char user_path[B_PATH_NAME_LENGTH];
-	find_directory(B_USER_SETTINGS_DIRECTORY, 0, true, user_path, sizeof(user_path)-strlen("/OpenXcom/"));
-	strcat(user_path,"/OpenXcom/");
+	find_directory(B_USER_SETTINGS_DIRECTORY, 0, true, user_path, sizeof(user_path)-strlen("/" OXCOM_MIXED "/"));
+	strcat(user_path,"/" OXCOM_MIXED "/");
 	list.push_back(user_path);
 #endif
 	char const *home = getHome();
@@ -379,20 +384,20 @@ std::vector<std::string> findUserFolders()
 	// Get user folders
 	if (char const *const xdg_data_home = getenv("XDG_DATA_HOME"))
  	{
-		snprintf(path, MAXPATHLEN, "%s/openxcom/", xdg_data_home);
+		snprintf(path, MAXPATHLEN, "%s/" OXCOM_LC "/", xdg_data_home);
  	}
  	else
  	{
 #ifdef __APPLE__
-		snprintf(path, MAXPATHLEN, "%s/Library/Application Support/OpenXcom/", home);
+		snprintf(path, MAXPATHLEN, "%s/Library/Application Support/" OXCOM_MIXED "/", home);
 #else
-		snprintf(path, MAXPATHLEN, "%s/.local/share/openxcom/", home);
+		snprintf(path, MAXPATHLEN, "%s/.local/share/" OXCOM_LC "/", home);
 #endif
  	}
 	list.push_back(path);
 
 	// Get old-style folder
-	snprintf(path, MAXPATHLEN, "%s/.openxcom/", home);
+	snprintf(path, MAXPATHLEN, "%s/." OXCOM_LC "/", home);
 	list.push_back(path);
 
 	// Get working directory
@@ -416,8 +421,8 @@ std::string findConfigFolder()
 	return "";
 #elif defined (__HAIKU__)
 	char settings_path[B_PATH_NAME_LENGTH];
-	find_directory(B_USER_SETTINGS_DIRECTORY, 0, true, settings_path, sizeof(settings_path)-strlen("/OpenXcom/"));
-	strcat(settings_path,"/OpenXcom/");
+	find_directory(B_USER_SETTINGS_DIRECTORY, 0, true, settings_path, sizeof(settings_path)-strlen("/" OXCOM_MIXED "/"));
+	strcat(settings_path,"/" OXCOM_MIXED "/");
 	return settings_path;
 #else
 	char const *home = getHome();
@@ -425,12 +430,12 @@ std::string findConfigFolder()
 	// Get config folders
 	if (char const *const xdg_config_home = getenv("XDG_CONFIG_HOME"))
 	{
-		snprintf(path, MAXPATHLEN, "%s/openxcom/", xdg_config_home);
+		snprintf(path, MAXPATHLEN, "%s/" OXCOM_LC "/", xdg_config_home);
 		return path;
 	}
 	else
 	{
-		snprintf(path, MAXPATHLEN, "%s/.config/openxcom/", home);
+		snprintf(path, MAXPATHLEN, "%s/.config/" OXCOM_LC "/", home);
 		return path;
 	}
 #endif
@@ -1133,11 +1138,11 @@ std::string getDosPath()
 	}
 	else
 	{
-		path = "C:\\GAMES\\OPENXCOM";
+		path = "C:\\GAMES\\" OXCOM_UC;
 	}
 	return path;
 #else
-	return "C:\\GAMES\\OPENXCOM";
+	return "C:\\GAMES\\" OXCOM_UC;
 #endif
 }
 
