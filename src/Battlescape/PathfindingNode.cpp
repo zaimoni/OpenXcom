@@ -26,26 +26,9 @@ namespace OpenXcom
  * Sets up a PathfindingNode.
  * @param pos Position.
  */
-PathfindingNode::PathfindingNode(Position pos) : _pos(pos), _checked(0), _tuCost(0), _prevNode(0), _prevDir(0), _tuGuess(0), _openentry(0)
+PathfindingNode::PathfindingNode(Position pos) noexcept : _pos(pos), _checked(0), _tuCost(0), _prevNode(0), _prevDir(0), _tuGuess(0), _openentry(0)
 {
 
-}
-
-/**
- * Deletes the PathfindingNode.
- */
-PathfindingNode::~PathfindingNode()
-{
-
-}
-
-/**
- * Gets the node position.
- * @return Node position.
- */
-Position PathfindingNode::getPosition() const
-{
-	return _pos;
 }
 
 /**
@@ -55,15 +38,6 @@ void PathfindingNode::reset()
 {
 	_checked = false;
 	_openentry = 0;
-}
-
-/**
- * Gets the checked status of this node.
- * @return True, if this node was checked.
- */
-bool PathfindingNode::isChecked() const
-{
-	return _checked;
 }
 
 /**
@@ -77,24 +51,6 @@ int PathfindingNode::getTUCost(bool missile) const
 		return 0;
 	else
 		return _tuCost;
-}
-
-/**
- * Gets the previous node.
- * @return Pointer to the previous node.
- */
-PathfindingNode* PathfindingNode::getPrevNode() const
-{
-	return _prevNode;
-}
-
-/**
- * Gets the previous walking direction for how we got on this node.
- * @return Previous vector.
- */
-int PathfindingNode::getPrevDir() const
-{
-	return _prevDir;
 }
 
 /**

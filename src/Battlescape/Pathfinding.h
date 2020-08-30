@@ -78,7 +78,7 @@ public:
 	/// Creates a new Pathfinding class.
 	Pathfinding(SavedBattleGame *save);
 	/// Cleans up the Pathfinding.
-	~Pathfinding();
+	~Pathfinding() = default;
 	/// Calculates the shortest path.
 	void calculate(BattleUnit *unit, Position endPosition, BattleUnit *missileTarget = 0, int maxTUCost = 1000);
 
@@ -119,8 +119,7 @@ public:
 	int getTUCost(Position startPosition, int direction, Position *endPosition, BattleUnit *unit, BattleUnit *target, bool missile);
 	/// Aborts the current path.
 	void abortPath();
-	/// Gets the strafe move setting.
-	bool getStrafeMove() const;
+	bool getStrafeMove() const { return _strafeMove; } /// @return strafe move setting
 	/// Checks, for the up/down button, if the movement is valid.
 	bool validateUpDown(BattleUnit *bu, const Position& startPosition, const int direction, bool missile = false) const;
 	/// Previews the path.
@@ -133,12 +132,9 @@ public:
 	std::vector<int> findReachable(BattleUnit *unit, const BattleActionCost &cost);
 	/// Gets _totalTUCost; finds out whether we can hike somewhere in this turn or not.
 	int getTotalTUCost() const { return _totalTUCost; }
-	/// Gets the path preview setting.
-	bool isPathPreviewed() const;
-	/// Gets the modifier setting.
-	bool isModifierUsed() const;
-	/// Gets a reference to the path.
-	const std::vector<int> &getPath() const;
+	bool isPathPreviewed() const { return _pathPreviewed; } /// @return True, if and only if paths are previewed.
+	bool isModifierUsed() const { return _modifierUsed; } /// @return True, if and only if a modifier was used to enable strafing or running.
+	const std::vector<int> &getPath() const { return _path; } /// @return const reference to the current path
 	/// Makes a copy to the path.
 	std::vector<int> copyPath() const;
 };

@@ -34,32 +34,28 @@ private:
 	Position _pos;
 	bool _checked;
 	int _tuCost;
-	PathfindingNode* _prevNode;
+	PathfindingNode* _prevNode; /// owner is Pathfinding class
 	int _prevDir;
 	/// Approximate cost to reach goal position.
 	int _tuGuess;
 	// Invasive field needed by PathfindingOpenSet
-	OpenSetEntry *_openentry;
+	OpenSetEntry *_openentry; /// owner is PathfindingOpenSet
 	friend class PathfindingOpenSet;
 public:
 	/// Creates a new PathfindingNode class.
-	PathfindingNode(Position pos);
+	PathfindingNode(Position pos) noexcept;
 	/// Cleans up the PathfindingNode.
-	~PathfindingNode();
-	/// Gets the node position.
-	Position getPosition() const;
+	~PathfindingNode() = default;
+	Position getPosition() const { return _pos; } /// @return Node position.
 	/// Resets the node.
 	void reset();
-	/// Is checked?
-	bool isChecked() const;
+	bool isChecked() const { return _checked; } /// @return True, if and only if this node was checked.
 	/// Marks the node as checked.
 	void setChecked() { _checked = true; }
 	/// Gets the TU cost.
 	int getTUCost(bool missile) const;
-	/// Gets the previous node.
-	PathfindingNode* getPrevNode() const;
-	/// Gets the previous walking direction.
-	int getPrevDir() const;
+	PathfindingNode* getPrevNode() const { return _prevNode; } /// @return Pointer to the previous node.
+	int getPrevDir() const { return _prevDir; } /// @return the previous walking direction, i.e. how we got on this node.
 	/// Is this node already in a PathfindingOpenSet?
 	bool inOpenSet() const { return (_openentry != 0); }
 	/// Gets the approximate cost to reach the target position.

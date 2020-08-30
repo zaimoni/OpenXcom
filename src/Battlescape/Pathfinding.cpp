@@ -55,15 +55,6 @@ Pathfinding::Pathfinding(SavedBattleGame *save) : _save(save), _unit(0), _pathPr
 }
 
 /**
- * Deletes the Pathfinding.
- * @internal This is required to be here because it requires the PathfindingNode class definition.
- */
-Pathfinding::~Pathfinding()
-{
-	// Nothing more to do here.
-}
-
-/**
  * Gets the Node on a given position on the map.
  * @param pos Position.
  * @return Pointer to node.
@@ -1198,24 +1189,6 @@ std::vector<int> Pathfinding::findReachable(BattleUnit *unit, const BattleAction
 }
 
 /**
- * Gets the strafe move setting.
- * @return Strafe move.
- */
-bool Pathfinding::getStrafeMove() const
-{
-	return _strafeMove;
-}
-
-/**
- * Gets the path preview setting.
- * @return True, if paths are previewed.
- */
-bool Pathfinding::isPathPreviewed() const
-{
-	return _pathPreviewed;
-}
-
-/**
  * Sets _unit in order to abuse low-level pathfinding functions from outside the class.
  * @param unit Unit taking the path.
  */
@@ -1230,24 +1203,6 @@ void Pathfinding::setUnit(BattleUnit* unit)
 	{
 		_movementType = MT_WALK;
 	}
-}
-
-/**
- * Checks whether a modifier key was used to enable strafing or running.
- * @return True, if a modifier was used.
- */
-bool Pathfinding::isModifierUsed() const
-{
-	return _modifierUsed;
-}
-
-/**
- * Gets a reference to the current path.
- * @return the actual path.
- */
-const std::vector<int> &Pathfinding::getPath() const
-{
-	return _path;
 }
 
 /**
