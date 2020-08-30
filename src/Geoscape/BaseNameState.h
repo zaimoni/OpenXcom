@@ -48,10 +48,9 @@ private:
 	TextButton *_btnCancel;
 #endif
 	bool _first;
-	bool _fixedLocation;
 public:
 	/// Creates the Base Name state.
-	BaseNameState(Base *base, Globe *globe, bool first, bool fixedLocation);
+	BaseNameState(Base *base, Globe *globe, bool first);
 	/// Cleans up the Base Name state.
 	~BaseNameState();
 	/// Handler for clicking the OK button.
