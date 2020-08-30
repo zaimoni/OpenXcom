@@ -90,9 +90,9 @@
 #include "../version.h"
 
 // abuse C preprocessor auto-string concatenation
-#define OXCOM_MIXED "OpenXcom"
-#define OXCOM_LC "openxcom"
-#define OXCOM_UC "OPENXCOM"
+#define OXCOM_MIXED "OZXcom"
+#define OXCOM_LC "ozxcom"
+#define OXCOM_UC "OZXCOM"
 
 namespace OpenXcom
 {
