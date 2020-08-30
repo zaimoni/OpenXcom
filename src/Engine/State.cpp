@@ -224,29 +224,6 @@ void State::add(Surface *surface, const std::string &id, const std::string &cate
 }
 
 /**
- * Returns whether this is a full-screen state.
- * This is used to optimize the state machine since full-screen
- * states automatically cover the whole screen, (whether they
- * actually use it all or not) so states behind them can be
- * safely ignored since they'd be covered up.
- * @return True if it's a screen, False otherwise.
- */
-bool State::isScreen() const
-{
-	return _screen;
-}
-
-/**
- * Toggles the full-screen flag. Used by windows to
- * keep the previous screen in display while the window
- * is still "popping up".
- */
-void State::toggleScreen()
-{
-	_screen = !_screen;
-}
-
-/**
  * Initializes the state and its child elements. This is
  * used for settings that have to be reset every time the
  * state is returned to focus (eg. palettes), so can't
@@ -487,18 +464,6 @@ void State::redrawText()
 }
 
 /**
- * Changes the current modal surface. If a surface is modal,
- * then only that surface can receive events. This is used
- * when an element needs to take priority over everything else,
- * eg. focus.
- * @param surface Pointer to modal surface, NULL for no modal.
- */
-void State::setModal(InteractiveSurface *surface)
-{
-	_modal = surface;
-}
-
-/**
  * Replaces a certain amount of colors in the state's palette.
  * @param colors Pointer to the set of colors.
  * @param firstcolor Offset of the first color to replace.
@@ -571,15 +536,6 @@ void State::setCustomPalette(SDL_Color *colors, int cursorColor)
 }
 
 /**
- * Returns the state's 8bpp palette.
- * @return Pointer to the palette's colors.
- */
-SDL_Color *State::getPalette()
-{
-	return _palette;
-}
-
-/**
  * Each state will probably need its own resize handling,
  * so this space intentionally left blank
  * @param dX delta of X;
@@ -602,11 +558,6 @@ void State::recenter(int dX, int dY)
 		(*i)->setX((*i)->getX() + dX / 2);
 		(*i)->setY((*i)->getY() + dY / 2);
 	}
-}
-
-void State::setGamePtr(Game* game)
-{
-	_game = game;
 }
 
 }
