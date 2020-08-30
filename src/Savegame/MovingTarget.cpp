@@ -27,7 +27,7 @@ namespace OpenXcom
 /**
  * Initializes a moving target with blank coordinates.
  */
-MovingTarget::MovingTarget() : Target(), _dest(0), _speedLon(0.0), _speedLat(0.0), _speedRadian(0.0), _meetPointLon(0.0), _meetPointLat(0.0), _speed(0), _meetCalculated(false)
+MovingTarget::MovingTarget() noexcept : Target(), _dest(0), _speedLon(0.0), _speedLat(0.0), _speedRadian(0.0), _meetPointLon(0.0), _meetPointLat(0.0), _speed(0), _meetCalculated(false)
 {
 }
 
@@ -71,15 +71,6 @@ YAML::Node MovingTarget::save() const
 }
 
 /**
- * Returns the destination the moving target is heading to.
- * @return Pointer to destination.
- */
-Target *MovingTarget::getDestination() const
-{
-	return _dest;
-}
-
-/**
  * Changes the destination the moving target is heading to.
  * @param dest Pointer to destination.
  */
@@ -110,24 +101,6 @@ void MovingTarget::setDestination(Target *dest)
 		(*i)->resetMeetPoint();
 	}
 	calculateSpeed();
-}
-
-/**
- * Returns the speed of the moving target.
- * @return Speed in knots.
- */
-int MovingTarget::getSpeed() const
-{
-	return _speed;
-}
-
-/**
- * Returns the radial speed of the moving target.
- * @return Speed in 1 / 5 sec.
- */
-double MovingTarget::getSpeedRadian() const
-{
-	return _speedRadian;
 }
 
 /**
@@ -303,38 +276,6 @@ void MovingTarget::calculateMeetPoint()
 
 	_meetCalculated = true;
 #endif
-}
-
-/**
- * Returns the latitude of the meeting point.
- * @return Angle in rad.
- */
-double MovingTarget::getMeetLatitude() const
-{
-	return _meetPointLat;
-}
-
-/**
- * Returns the longitude of the meeting point.
- * @return Angle in rad.
- */
-double MovingTarget::getMeetLongitude() const
-{
-	return _meetPointLon;
-}
-
-/**
- * Forces the meeting point to be recalculated in the event
- * that the target has changed direction.
- */
-void MovingTarget::resetMeetPoint()
-{
-	_meetCalculated = false;
-}
-
-bool MovingTarget::isMeetCalculated() const
-{
-	return _meetCalculated;
 }
 
 }

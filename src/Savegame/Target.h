@@ -36,12 +36,12 @@ class Ufo;
 class Target
 {
 protected:
-	double _lon, _lat;
+	double _lon, _lat; // in radians; legal range 0 to 2pi, and -pi to pi
 	int _id;
 	std::string _name;
 	std::vector<MovingTarget*> _followers;
 	/// Creates a target.
-	Target();
+	Target() noexcept : _lon(0.0), _lat(0.0), _id(0) {} // initializes with blank coordinates
 public:
 	/// Cleans up the target.
 	virtual ~Target();
@@ -54,27 +54,27 @@ public:
 	/// Gets the target's type.
 	virtual std::string getType() const = 0;
 	/// Gets the target's longitude.
-	double getLongitude() const;
+	double getLongitude() const { return _lon; }
 	/// Sets the target's longitude.
 	void setLongitude(double lon);
 	/// Gets the target's latitude.
-	double getLatitude() const;
+	double getLatitude() const { return _lat; }
 	/// Sets the target's latitude.
 	void setLatitude(double lat);
 	/// Gets the target's ID.
-	int getId() const;
+	int getId() const { return _id; }
 	/// Sets the target's ID.
-	void setId(int id);
-	/// Gets the target's name.
+	void setId(int id) { _id = id; }
+	/// Gets the target's name.  Default used when explicitly empty.
 	virtual std::string getName(Language *lang) const;
 	/// Sets the target's name.
-	void setName(const std::string &newName);
+	void setName(const std::string &newName) { _name = newName; }
 	/// Gets the target's default name.
 	virtual std::string getDefaultName(Language *lang) const;
 	/// Gets the target's marker name.
 	virtual std::string getMarkerName() const;
 	/// Gets the target's marker ID.
-	virtual int getMarkerId() const;
+	virtual int getMarkerId() const { return _id; }
 	/// Gets the target's marker sprite.
 	virtual int getMarker() const = 0;
 	/// Gets the target's followers.

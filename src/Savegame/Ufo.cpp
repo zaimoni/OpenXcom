@@ -20,14 +20,12 @@
 #include <assert.h>
 #include <algorithm>
 #include "../fmath.h"
-#include "Craft.h"
 #include "AlienMission.h"
 #include "../Engine/Exception.h"
 #include "../Engine/Language.h"
 #include "../Engine/RNG.h"
 #include "../Engine/ScriptBind.h"
 #include "../Mod/Mod.h"
-#include "../Mod/RuleUfo.h"
 #include "../Mod/UfoTrajectory.h"
 #include "../Mod/RuleAlienMission.h"
 #include "Base.h"
@@ -342,34 +340,6 @@ std::string Ufo::getType() const
 }
 
 /**
- * Returns the ruleset for the UFO's type.
- * @return Pointer to ruleset.
- */
-const RuleUfo *Ufo::getRules() const
-{
-	return _rules;
-}
-
-/**
- * Changes the ruleset for the UFO's type.
- * @param rules Pointer to ruleset.
- * @warning ONLY FOR NEW BATTLE USE!
- */
-void Ufo::changeRules(const RuleUfo *rules)
-{
-	_rules = rules;
-}
-
-/**
- * Returns the UFO's unique ID.
- * @return Unique ID.
- */
-int Ufo::getUniqueId() const
-{
-	return _uniqueId;
-}
-
-/**
  * Returns the UFO's unique default name.
  * @param lang Language to get strings from.
  * @return Full name.
@@ -441,15 +411,6 @@ int Ufo::getMarker() const
 }
 
 /**
- * Returns the amount of damage this UFO has taken.
- * @return Amount of damage.
- */
-int Ufo::getDamage() const
-{
-	return _damage;
-}
-
-/**
  * Changes the amount of damage this UFO has taken.
  * @param damage Amount of damage.
  */
@@ -493,46 +454,6 @@ void Ufo::setDamage(int damage, const Mod *mod)
 			}
 		}
 	}
-}
-
-/**
- * Returns whether this UFO has been detected by radars.
- * @return Detection status.
- */
-bool Ufo::getDetected() const
-{
-	return _detected;
-}
-
-/**
- * Changes whether this UFO has been detected by radars.
- * @param detected Detection status.
- */
-void Ufo::setDetected(bool detected)
-{
-	_detected = detected;
-}
-
-/**
- * Returns the amount of remaining seconds the UFO has left on the ground.
- * After this many seconds the UFO will take off, if landed, or disappear, if
- * crashed.
- * @return Amount of seconds.
- */
-size_t Ufo::getSecondsRemaining() const
-{
-	return _secondsRemaining;
-}
-
-/**
- * Changes the amount of remaining seconds the UFO has left on the ground.
- * After this many seconds the UFO will take off, if landed, or disappear, if
- * crashed.
- * @param seconds Amount of seconds.
- */
-void Ufo::setSecondsRemaining(size_t seconds)
-{
-	_secondsRemaining = seconds;
 }
 
 /**
@@ -730,15 +651,6 @@ void Ufo::think()
 }
 
 /**
- * Gets the UFO's battlescape status.
- * @return Is the UFO currently in battle?
- */
-bool Ufo::isInBattlescape() const
-{
-	return _inBattlescape;
-}
-
-/**
  * Sets the UFO's battlescape status.
  * @param inbattle True if it's in battle, False otherwise.
  */
@@ -756,16 +668,6 @@ void Ufo::setInBattlescape(bool inbattle)
 const std::string &Ufo::getAlienRace() const
 {
 	return _mission->getRace();
-}
-
-void Ufo::setShotDownByCraftId(const CraftId& craft)
-{
-	_shotDownByCraftId = craft;
-}
-
-CraftId Ufo::getShotDownByCraftId() const
-{
-	return _shotDownByCraftId;
 }
 
 /**
@@ -830,24 +732,6 @@ void Ufo::setMissionInfo(AlienMission *mission, const UfoTrajectory *trajectory)
 	_trajectoryPoint = 0;
 	_trajectory = trajectory;
 	_stats += _rules->getRaceBonus(_mission->getRace());
-}
-
-/**
- * Returns whether this UFO has been detected by hyper-wave.
- * @return Detection status.
- */
-bool Ufo::getHyperDetected() const
-{
-	return _hyperDetected;
-}
-
-/**
- * Changes whether this UFO has been detected by hyper-wave.
- * @param hyperdetected Detection status.
- */
-void Ufo::setHyperDetected(bool hyperdetected)
-{
-	_hyperDetected = hyperdetected;
 }
 
 /**
@@ -969,149 +853,6 @@ void Ufo::setDestination(Target *dest)
 }
 
 /**
- * Gets which interception window the UFO is active in.
- * @return which interception window the UFO is active in.
- */
-int Ufo::getShootingAt() const
-{
-	return _shootingAt;
-}
-
-/**
- * Sets which interception window the UFO is active in.
- * @param target the window the UFO is active in.
- */
-void Ufo::setShootingAt(int target)
-{
-	_shootingAt = target;
-}
-
-/**
- * Gets the UFO's landing site ID.
- * @return landing site ID.
- */
-int Ufo::getLandId() const
-{
-	return _landId;
-}
-
-/**
- * Sets the UFO's landing site ID.
- * @param id landing site ID.
- */
-void Ufo::setLandId(int id)
-{
-	_landId = id;
-}
-
-/**
- * Gets the UFO's crash site ID.
- * @return the UFO's crash site ID.
- */
-int Ufo::getCrashId() const
-{
-	return _crashId;
-}
-
-/**
- * Sets the UFO's crash site ID.
- * @param id the UFO's crash site ID.
- */
-void Ufo::setCrashId(int id)
-{
-	_crashId = id;
-}
-
-/**
- * Sets the UFO's hit frame.
- * @param frame the hit frame.
- */
-void Ufo::setHitFrame(int frame)
-{
-	_hitFrame = frame;
-}
-
-/**
- * Gets the UFO's hit frame.
- * @return the hit frame.
- */
-int Ufo::getHitFrame() const
-{
-	return _hitFrame;
-}
-
-/// Gets the UFO's stats.
-const RuleUfoStats& Ufo::getCraftStats() const
-{
-	return _stats;
-}
-
-/**
- * Sets the countdown timer for escaping a dogfight.
- * @param time how many ticks until the ship attempts to escape.
- */
-void Ufo::setEscapeCountdown(int time)
-{
-	_escapeCountdown = time;
-}
-
-/**
- * Gets the escape timer for dogfights.
- * @return how many ticks until the ship tries to leave.
- */
-int Ufo::getEscapeCountdown() const
-{
-	return _escapeCountdown;
-}
-
-/**
- * Sets the number of ticks until the ufo fires its weapon.
- * @param time number of ticks until refire.
- */
-void Ufo::setFireCountdown(int time)
-{
-	_fireCountdown = time;
-}
-
-/**
- * Gets the number of ticks until the ufo is ready to fire.
- * @return ticks until weapon is ready.
- */
-int Ufo::getFireCountdown() const
-{
-	return _fireCountdown;
-}
-
-/**
- * Sets a flag denoting that this ufo has had its timers decremented.
- * prevents multiple interceptions from decrementing or resetting an already running timer.
- * this flag is reset in advance each time the geoscape processes the dogfights.
- * @param processed whether or not we've had our timers processed.
- */
-void Ufo::setInterceptionProcessed(bool processed)
-{
-	_processedIntercept = processed;
-}
-
-/**
- * Gets if the ufo has had its timers decremented on this cycle of interception updates.
- * @return if this ufo has already been processed.
- */
-bool Ufo::getInterceptionProcessed() const
-{
-	return _processedIntercept;
-}
-
-/**
- * Gets the UFO's shield level
- * @return the points of shield remaining
- */
-int Ufo::getShield() const
-{
-	return _shield;
-}
-
-/**
  * Sets the UFO's shield level
  * @param the shield point value to set
  */
@@ -1121,111 +862,12 @@ void Ufo::setShield(int shield)
 }
 
 /**
- * Sets which _interceptionNumber handles the UFO's shield recharge in a dogfight
- * @param the _interceptionNumber to set
- */
-void Ufo::setShieldRechargeHandle(int shieldRechargeHandle)
-{
-	_shieldRechargeHandle = shieldRechargeHandle;
-}
-
-/**
- * Gets which _interceptionNumber handles the UFO's shield recharge in a dogfight
- * @return the _interceptionNumber to handle shield recharge
- */
-int Ufo::getShieldRechargeHandle() const
-{
-	return _shieldRechargeHandle;
-}
-
-/**
  * Sets how much this UFO is being slowed down by craft tractor beams
  * @param the _tractorBeamSlowdown to set
  */
 void Ufo::setTractorBeamSlowdown(int tractorBeamSlowdown)
 {
 	_tractorBeamSlowdown = std::max(0, std::min(_stats.speedMax, tractorBeamSlowdown));
-}
-
-/**
- * Gets how much this UFO is being slowed down by craft tractor beams
- * @return the tractor beam slowdown
- */
-int Ufo::getTractorBeamSlowdown() const
-{
-	return _tractorBeamSlowdown;
-}
-
-/**
- * Is this UFO a hunter-killer?
- * @return True if UFO is a hunter-killer.
- */
-bool Ufo::isHunterKiller() const
-{
-	return _isHunterKiller;
-}
-
-/**
- * Sets if the UFO is a hunter-killer.
- * @param isHunterKiller new value to set
- */
-void Ufo::setHunterKiller(bool isHunterKiller)
-{
-	_isHunterKiller = isHunterKiller;
-}
-
-/**
-* Is this UFO an escort?
-* @return True if UFO is an escort.
-*/
-bool Ufo::isEscort() const
-{
-	return _isEscort;
-}
-
-/**
-* Sets if the UFO is an escort.
-* @param isEscort new value to set
-*/
-void Ufo::setEscort(bool isEscort)
-{
-	_isEscort = isEscort;
-}
-
-/**
- * Gets the UFO's hunting preferences.
- * @return Hunt mode ID.
- */
-int Ufo::getHuntMode() const
-{
-	return _huntMode;
-}
-
-/**
- * Gets the UFO's hunting behavior.
- * @return Hunt behavior ID.
- */
-int Ufo::getHuntBehavior() const
-{
-	return _huntBehavior;
-}
-
-/**
- * Is this UFO actively hunting right now?
- * @return True if UFO is actively hunting.
- */
-bool Ufo::isHunting() const
-{
-	return _isHunting;
-}
-
-/**
- * Is this UFO escorting other UFO right now?
- * @return True if UFO is escorting.
- */
-bool Ufo::isEscorting() const
-{
-	return _isEscorting;
 }
 
 /**

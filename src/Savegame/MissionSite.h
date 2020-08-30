@@ -18,8 +18,6 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Target.h"
-#include <string>
-#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -30,7 +28,7 @@ class AlienDeployment;
 /**
  * Represents an alien mission site on the world.
  */
-class MissionSite : public Target
+class MissionSite final : public Target
 {
 private:
 	const RuleAlienMission *_rules;
@@ -42,49 +40,39 @@ private:
 	bool _inBattlescape, _detected;
 public:
 	/// Creates a mission site.
-	MissionSite(const RuleAlienMission *rules, const AlienDeployment *deployment, const AlienDeployment *alienWeaponDeploy);
+	MissionSite(const RuleAlienMission *rules, const AlienDeployment *deployment, const AlienDeployment *alienWeaponDeploy) noexcept;
 	/// Cleans up the mission site.
-	~MissionSite();
+	~MissionSite() = default;
 	/// Loads the mission site from YAML.
 	void load(const YAML::Node& node) override;
 	/// Saves the mission site to YAML.
 	YAML::Node save() const override;
 	/// Gets the waypoint's type.
 	std::string getType() const override;
-	/// Gets the mission site's ruleset.
-	const RuleAlienMission *getRules() const;
-	/// Gets the mission site's deployment.
-	const AlienDeployment *getDeployment() const;
-	/// Gets the optional alien weapon deployment for site.
-	const AlienDeployment *getMissionCustomDeploy() const;
+	const RuleAlienMission* getRules() const { return _rules; } /// @return Pointer to ruleset for the mission's type.
+	const AlienDeployment* getDeployment() const { return _deployment; } /// @return Pointer to mission site's deployment rules.
+	const AlienDeployment* getMissionCustomDeploy() const { return _missionCustomDeploy; } /// @return mission's optional custom deployment of weapons.
 	/// Gets the mission site's marker name.
 	std::string getMarkerName() const override;
 	/// Gets the mission site's marker sprite.
 	int getMarker() const override;
-	/// Gets the seconds until this mission site expires.
-	size_t getSecondsRemaining() const;
-	/// Sets the seconds until this mission site expires.
-	void setSecondsRemaining(size_t seconds);
+	size_t getSecondsRemaining() const { return _secondsRemaining; } /// @return number of seconds remaining, until this mission site expires.
+	void setSecondsRemaining(size_t seconds) { _secondsRemaining = seconds; } /// @param seconds until this mission site expires.
 	/// Gets the mission site's alien race.
 	std::string getAlienRace() const;
 	/// Sets the mission site's alien race.
 	void setAlienRace(const std::string &race);
-	/// Sets the mission site's battlescape status.
-	void setInBattlescape(bool inbattle);
-	/// Gets if the mission site is in battlescape.
-	bool isInBattlescape() const;
-	/// Gets the mission site's texture.
-	int getTexture() const;
-	/// Sets the mission site's texture.
-	void setTexture(int texture);
+	void setInBattlescape(bool inbattle) { _inBattlescape = inbattle; } /// @param inbattle True if and only if it's in battle.
+	bool isInBattlescape() const  { return _inBattlescape; } /// @return Is the mission currently in battle?
+	int getTexture() const { return _texture; } /// @return mission site's Texture ID.
+	void setTexture(int texture) { _texture = texture; } /// @param texture mission site's new Texture ID.
 	/// Gets the mission site's city.
 	std::string getCity() const;
 	/// Sets the mission site's city.
 	void setCity(const std::string &city);
-	/// Gets the mission site's detection state.
-	bool getDetected() const;
-	/// Sets the mission site's detection state.
-	void setDetected(bool detected);
+	/// used for popups of sites spawned directly, rather than by UFOs.
+	bool getDetected() const { return _detected; } /// @return whether or not this site has been detected.
+	void setDetected(bool detected) { _detected = detected; } /// @param detected whether we want this site to show on the geoscape or not.
 };
 
 }

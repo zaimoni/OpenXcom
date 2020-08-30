@@ -27,14 +27,8 @@ namespace OpenXcom
 /**
  * Initializes a mission site.
  */
-MissionSite::MissionSite(const RuleAlienMission *rules, const AlienDeployment *deployment, const AlienDeployment *alienCustomDeploy) : Target(), _rules(rules), _deployment(deployment), _missionCustomDeploy(alienCustomDeploy), _texture(-1), _secondsRemaining(0), _inBattlescape(false), _detected(false)
-{
-}
-
-/**
- *
- */
-MissionSite::~MissionSite()
+MissionSite::MissionSite(const RuleAlienMission *rules, const AlienDeployment *deployment, const AlienDeployment *alienCustomDeploy)  noexcept
+: Target(), _rules(rules), _deployment(deployment), _missionCustomDeploy(alienCustomDeploy), _texture(-1), _secondsRemaining(0), _inBattlescape(false), _detected(false)
 {
 }
 
@@ -85,33 +79,6 @@ std::string MissionSite::getType() const
 }
 
 /**
- * Returns the ruleset for the mission's type.
- * @return Pointer to ruleset.
- */
-const RuleAlienMission *MissionSite::getRules() const
-{
-	return _rules;
-}
-
-/**
- * Returns the ruleset for the mission's deployment.
- * @return Pointer to deployment rules.
- */
-const AlienDeployment *MissionSite::getDeployment() const
-{
-	return _deployment;
-}
-
-/**
- * Get mission's custom deployment of weapons.
- * @return Aline deployment.
- */
-const AlienDeployment *MissionSite::getMissionCustomDeploy() const
-{
-	return _missionCustomDeploy;
-}
-
-/**
  * Returns the name on the globe for the mission.
  * @return String ID.
  */
@@ -126,29 +93,10 @@ std::string MissionSite::getMarkerName() const
  */
 int MissionSite::getMarker() const
 {
-	if (!_detected)
-		return -1;
-	if (_deployment->getMarkerIcon() == -1)
-		return 5;
-	return _deployment->getMarkerIcon();
-}
+	if (!_detected) return -1;
 
-/**
- * Returns the number of seconds remaining before the mission site expires.
- * @return Amount of seconds.
- */
-size_t MissionSite::getSecondsRemaining() const
-{
-	return _secondsRemaining;
-}
-
-/**
- * Changes the number of seconds before the mission site expires.
- * @param seconds Amount of seconds.
- */
-void MissionSite::setSecondsRemaining(size_t seconds)
-{
-	_secondsRemaining = seconds;
+	int icon = _deployment->getMarkerIcon();
+	return (-1 != icon) ? icon : 5;
 }
 
 /**
@@ -170,42 +118,6 @@ void MissionSite::setAlienRace(const std::string &race)
 }
 
 /**
- * Gets the mission site's battlescape status.
- * @return Is the mission currently in battle?
- */
-bool MissionSite::isInBattlescape() const
-{
-	return _inBattlescape;
-}
-
-/**
- * Sets the mission site's battlescape status.
- * @param inbattle True if it's in battle, False otherwise.
- */
-void MissionSite::setInBattlescape(bool inbattle)
-{
-	_inBattlescape = inbattle;
-}
-
-/**
- * Gets the mission site's associated texture.
- * @return Texture ID.
- */
-int MissionSite::getTexture() const
-{
-	return _texture;
-}
-
-/**
- * Sets the mission site's associated texture.
- * @param texture Texture ID.
- */
-void MissionSite::setTexture(int texture)
-{
-	_texture = texture;
-}
-
-/**
  * Gets the mission site's associated city, if any.
  * @return String ID for the city, "" if none.
  */
@@ -221,25 +133,6 @@ std::string MissionSite::getCity() const
 void MissionSite::setCity(const std::string &city)
 {
 	_city = city;
-}
-
-/**
- * Gets the detection state for this mission site.
- * used for popups of sites spawned directly rather than by UFOs.
- * @return whether or not this site has been detected.
- */
-bool MissionSite::getDetected() const
-{
-	return _detected;
-}
-
-/**
- * Sets the mission site's detection state.
- * @param detected whether we want this site to show on the geoscape or not.
- */
-void MissionSite::setDetected(bool detected)
-{
-	_detected = detected;
 }
 
 }

@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <string>
 #include "../Savegame/Target.h"
 
 namespace OpenXcom
@@ -29,7 +28,7 @@ class Language;
  * Represents a city of the world.
  * Aliens target cities for certain missions.
  */
-class City : public Target
+class City final : public Target
 {
 private:
 	std::string _name;
@@ -40,7 +39,7 @@ public:
 	/// Creates a new city at a certain position.
 	City(const std::string &name, double lon, double lat);
 	/// Cleans up the city.
-	~City();
+	~City() = default;
 	/// Gets the city's name.
 	std::string getName(Language *lang) const override;
 	/// Gets the city's marker.

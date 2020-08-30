@@ -49,6 +49,7 @@
 #include "../Savegame/AlienBase.h"
 #include "../Engine/Language.h"
 #include "../Savegame/BaseFacility.h"
+#include "../Mod/AlienDeployment.h"
 #include "../Mod/RuleBaseFacility.h"
 #include "../Mod/RuleCraft.h"
 #include "../Mod/RuleGlobe.h"

@@ -20,6 +20,7 @@
 #include "../Engine/Game.h"
 #include "../Mod/Mod.h"
 #include "../Mod/AlienRace.h"
+#include "../Mod/AlienDeployment.h"
 #include "../Engine/LocalizedText.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"

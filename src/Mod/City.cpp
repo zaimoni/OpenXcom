@@ -35,13 +35,6 @@ City::City(const std::string &name, double lon, double lat): Target(), _name(nam
 }
 
 /**
- *
- */
-City::~City()
-{
-}
-
-/**
  * Returns the city's unique identifying name.
  * @param lang Language to get strings from.
  * @return Full name.

@@ -21,7 +21,6 @@
 #include "../fmath.h"
 #include "../Engine/Language.h"
 #include "../Engine/RNG.h"
-#include "../Mod/RuleCraft.h"
 #include "CraftWeapon.h"
 #include "../Mod/RuleCraftWeapon.h"
 #include "../Mod/Mod.h"
@@ -348,15 +347,6 @@ std::string Craft::getType() const
 }
 
 /**
- * Returns the ruleset for the craft's type.
- * @return Pointer to ruleset.
- */
-const RuleCraft *Craft::getRules() const
-{
-	return _rules;
-}
-
-/**
  * Changes the ruleset for the craft's type.
  * @param rules Pointer to ruleset.
  * @warning ONLY FOR NEW BATTLE USE!
@@ -393,15 +383,6 @@ int Craft::getMarker() const
 	else if (_rules->getMarker() == -1)
 		return 1;
 	return _rules->getMarker();
-}
-
-/**
- * Returns the base the craft belongs to.
- * @return Pointer to base.
- */
-Base *Craft::getBase() const
-{
-	return _base;
 }
 
 /**
@@ -470,36 +451,6 @@ void Craft::setDestination(Target *dest)
 	else
 		setSpeed(_stats.speedMax);
 	MovingTarget::setDestination(dest);
-}
-
-bool Craft::getIsAutoPatrolling() const
-{
-	return _isAutoPatrolling;
-}
-
-void Craft::setIsAutoPatrolling(bool isAuto)
-{
-	_isAutoPatrolling = isAuto;
-}
-
-double Craft::getLongitudeAuto() const
-{
-	return _lonAuto;
-}
-
-void Craft::setLongitudeAuto(double lon)
-{
-	_lonAuto = lon;
-}
-
-double Craft::getLatitudeAuto() const
-{
-	return _latAuto;
-}
-
-void Craft::setLatitudeAuto(double lat)
-{
-	_latAuto = lat;
 }
 
 /**
@@ -718,16 +669,6 @@ int Craft::getFuelMax() const
 }
 
 /**
- * Returns the amount of fuel currently contained
- * in this craft.
- * @return Amount of fuel.
- */
-int Craft::getFuel() const
-{
-	return _fuel;
-}
-
-/**
  * Changes the amount of fuel currently contained
  * in this craft.
  * @param fuel Amount of fuel.
@@ -765,15 +706,6 @@ int Craft::getDamageMax() const
 }
 
 /**
- * Returns the amount of damage this craft has taken.
- * @return Amount of damage.
- */
-int Craft::getDamage() const
-{
-	return _damage;
-}
-
-/**
  * Changes the amount of damage this craft has taken.
  * @param damage Amount of damage.
  */
@@ -807,15 +739,6 @@ int Craft::getShieldCapacity() const
 }
 
 /**
- * Gets the amount of shield this craft has remaining
- * @return shield points remaining.
- */
-int Craft::getShield() const
-{
-	return _shield;
-}
-
-/**
  * Sets the amount of shield for this craft, capped at the capacity plus bonuses
  * @param shield value to set the shield.
  */
@@ -831,46 +754,6 @@ void Craft::setShield(int shield)
 int Craft::getShieldPercentage() const
 {
 	return _stats.shieldCapacity != 0 ? _shield * 100 / _stats.shieldCapacity : 0;
-}
-
-/**
- * Returns whether the craft is currently low on fuel
- * (only has enough to head back to base).
- * @return True if it's low, false otherwise.
- */
-bool Craft::getLowFuel() const
-{
-	return _lowFuel;
-}
-
-/**
- * Changes whether the craft is currently low on fuel
- * (only has enough to head back to base).
- * @param low True if it's low, false otherwise.
- */
-void Craft::setLowFuel(bool low)
-{
-	_lowFuel = low;
-}
-
-/**
- * Returns whether the craft has just done a ground mission,
- * and is forced to return to base.
- * @return True if it's returning, false otherwise.
- */
-bool Craft::getMissionComplete() const
-{
-	return _mission;
-}
-
-/**
- * Changes whether the craft has just done a ground mission,
- * and is forced to return to base.
- * @param mission True if it's returning, false otherwise.
- */
-void Craft::setMissionComplete(bool mission)
-{
-	_mission = mission;
 }
 
 /**
@@ -1239,15 +1122,6 @@ const RuleItem* Craft::rearm()
 }
 
 /**
- * Returns the craft's battlescape status.
- * @return Is the craft currently in battle?
- */
-bool Craft::isInBattlescape() const
-{
-	return _inBattlescape;
-}
-
-/**
  * Changes the craft's battlescape status.
  * @param inbattle True if it's in battle, False otherwise.
  */
@@ -1558,42 +1432,6 @@ int Craft::getVehicleCount(const std::string &vehicle) const
 		}
 	}
 	return total;
-}
-
-/**
- * Returns the craft's dogfight status.
- * @return Is the craft ion a dogfight?
- */
-bool Craft::isInDogfight() const
-{
-	return _inDogfight;
-}
-
-/**
- * Changes the craft's dogfight status.
- * @param inDogfight True if it's in dogfight, False otherwise.
- */
-void Craft::setInDogfight(bool inDogfight)
-{
-	_inDogfight = inDogfight;
-}
-
-/**
- * Sets interception order (first craft to leave the base gets 1, second 2, etc.).
- * @param order Interception order.
- */
-void Craft::setInterceptionOrder(const int order)
-{
-	_interceptionOrder = order;
-}
-
-/**
- * Gets interception order.
- * @return Interception order.
- */
-int Craft::getInterceptionOrder() const
-{
-	return _interceptionOrder;
 }
 
 /**

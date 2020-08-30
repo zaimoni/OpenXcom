@@ -83,7 +83,7 @@ struct BaseSumDailyRecovery
  * Represents a player base on the globe.
  * Bases can contain facilities, personnel, crafts and equipment.
  */
-class Base : public Target
+class Base final : public Target
 {
 private:
 	static const int BASE_SIZE = 6;
@@ -142,14 +142,10 @@ public:
 	ItemContainer *getStorageItems() { return _items; }
 	/// Gets the base's items.
 	const ItemContainer *getStorageItems() const { return _items; }
-	/// Gets the base's scientists.
-	int getScientists() const;
-	/// Sets the base's scientists.
-	void setScientists(int scientists);
-	/// Gets the base's engineers.
-	int getEngineers() const;
-	/// Sets the base's engineers.
-	void setEngineers(int engineers);
+	int getScientists() const { return _scientists; } /// @return Number of scientists.
+	void setScientists(int scientists) { _scientists = scientists; } /// @param scientists Number of scientists.
+	int getEngineers() const { return _engineers; } /// @return Number of engineers.
+	void setEngineers(int engineers) { _engineers = engineers; } /// @param engineers Number of engineers.
 	/// Checks if a target is detected by the base's radar.
 	UfoDetection detect(const Ufo *target, bool alreadyTracked) const;
 	/// Gets the base's available soldiers.
@@ -250,14 +246,10 @@ public:
 	int getAvailableContainment(int prisonType) const;
 	/// Gets the total amount of used Containment space.
 	int getUsedContainment(int prisonType) const;
-	/// Sets the craft's battlescape status.
-	void setInBattlescape(bool inbattle);
-	/// Gets if the craft is in battlescape.
-	bool isInBattlescape() const;
-	/// Mark this base for alien retaliation.
-	void setRetaliationTarget(bool mark = true);
-	/// Gets the retaliation status of this base.
-	bool getRetaliationTarget() const;
+	void setInBattlescape(bool inbattle) { _inBattlescape = inbattle; } /// @param inbattle True if and only if it's in battle.
+	bool isInBattlescape() const { return _inBattlescape; } /// @return Is the base on the battlescape?
+	void setRetaliationTarget(bool mark = true) { _retaliationTarget = mark; } /// @param mark Mark (if @c true) or unmark (if @c false) the base for retaliation.
+	bool getRetaliationTarget() const { return _retaliationTarget; } /// @return If the base is a valid target for alien retaliation.
 	/// Mark/unmark this base as a fake underwater base.
 	void setFakeUnderwater(bool fakeUnderwater) { _fakeUnderwater = fakeUnderwater; }
 	/// Is this a fake underwater base?

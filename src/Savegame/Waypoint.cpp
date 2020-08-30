@@ -17,24 +17,9 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Waypoint.h"
-#include "../Engine/Language.h"
 
 namespace OpenXcom
 {
-
-/**
- * Initializes a waypoint.
- */
-Waypoint::Waypoint() : Target()
-{
-}
-
-/**
- *
- */
-Waypoint::~Waypoint()
-{
-}
 
 /**
  * Returns the waypoint's unique type used for

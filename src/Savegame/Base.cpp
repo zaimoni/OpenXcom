@@ -420,46 +420,10 @@ void Base::prepareSoldierStatsWithBonuses()
 }
 
 /**
- * Returns the amount of scientists currently in the base.
- * @return Number of scientists.
- */
-int Base::getScientists() const
-{
-	return _scientists;
-}
-
-/**
- * Changes the amount of scientists currently in the base.
- * @param scientists Number of scientists.
- */
-void Base::setScientists(int scientists)
-{
-	 _scientists = scientists;
-}
-
-/**
- * Returns the amount of engineers currently in the base.
- * @return Number of engineers.
- */
-int Base::getEngineers() const
-{
-	return _engineers;
-}
-
-/**
- * Changes the amount of engineers currently in the base.
- * @param engineers Number of engineers.
- */
-void Base::setEngineers(int engineers)
-{
-	 _engineers = engineers;
-}
-
-/**
  * Returns if a certain target is covered by the base's
  * radar range, taking in account the range and chance.
  * @param target Pointer to target to compare.
- * @param alreadyDedected Was ufo already detected, `true` mean we track it without probability.
+ * @param alreadyTracked Was ufo already detected, `true` mean we track it without probability.
  * @return 0 - not detected, 1 - detected by conventional radar, 2 - detected by hyper-wave decoder.
  */
 UfoDetection Base::detect(const Ufo *target, bool alreadyTracked) const
@@ -1494,42 +1458,6 @@ int Base::getAvailableContainment(int prisonType) const
 		}
 	}
 	return total;
-}
-
-/**
- * Returns the base's battlescape status.
- * @return Is the craft on the battlescape?
- */
-bool Base::isInBattlescape() const
-{
-	return _inBattlescape;
-}
-
-/**
- * Changes the base's battlescape status.
- * @param inbattle True if it's in battle, False otherwise.
- */
-void Base::setInBattlescape(bool inbattle)
-{
-	_inBattlescape = inbattle;
-}
-
-/**
- * Mark the base as a valid alien retaliation target.
- * @param mark Mark (if @c true) or unmark (if @c false) the base.
- */
-void Base::setRetaliationTarget(bool mark)
-{
-	_retaliationTarget = mark;
-}
-
-/**
- * Get the base's retaliation status.
- * @return If the base is a valid target for alien retaliation.
- */
-bool Base::getRetaliationTarget() const
-{
-	return _retaliationTarget;
 }
 
 /**

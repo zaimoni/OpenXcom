@@ -18,6 +18,7 @@
  */
 #include "AlienBase.h"
 #include "../Engine/Language.h"
+#include "../Mod/AlienDeployment.h"
 
 namespace OpenXcom
 {
@@ -29,13 +30,6 @@ AlienBase::AlienBase(AlienDeployment *deployment, int startMonth) : Target(), _i
 {
 	// allow spawning hunt missions immediately after the base is created, i.e. no initial delay
 	_minutesSinceLastHuntMissionGeneration = _deployment->getHuntMissionMaxFrequency();
-}
-
-/**
- *
- */
-AlienBase::~AlienBase()
-{
 }
 
 /**
@@ -96,15 +90,6 @@ int AlienBase::getMarker() const
 }
 
 /**
- * Returns the country this base has a pact with.
- * @return Country ID.
- */
-const std::string &AlienBase::getPactCountry() const
-{
-	return _pactCountry;
-}
-
-/**
  * Changes the country that has a pact with this alien base.
  * @param pactCountry Country ID.
  */
@@ -131,89 +116,12 @@ void AlienBase::setAlienRace(const std::string &race)
 	_race = race;
 }
 
-/**
- * Gets the alien base's battlescape status.
- * @return Is the base on the battlescape?
- */
-bool AlienBase::isInBattlescape() const
-{
-	return _inBattlescape;
-}
-
-/**
- * Sets the alien base's battlescape status.
- * @param inbattle True if it's in battle, False otherwise.
- */
-void AlienBase::setInBattlescape(bool inbattle)
-{
-	_inBattlescape = inbattle;
-}
-
-/**
- * Gets the alien base's geoscape status.
- * @return Has the base been discovered?
- */
-bool AlienBase::isDiscovered() const
-{
-	return _discovered;
-}
-
-/**
- * Sets the alien base's geoscape status.
- * @param discovered Has the base been discovered?
- */
-void AlienBase::setDiscovered(bool discovered)
-{
-	_discovered = discovered;
-}
-
-AlienDeployment *AlienBase::getDeployment() const
-{
-	return _deployment;
-}
-
 void AlienBase::setDeployment(AlienDeployment *deployment)
 {
 	_deployment = deployment;
 
 	// allow spawning hunt missions immediately after the base is upgraded, i.e. no initial delay
 	_minutesSinceLastHuntMissionGeneration = _deployment->getHuntMissionMaxFrequency();
-}
-
-/**
- * Gets the number of minutes passed since the last hunt mission was generated.
- * @return Number of minutes.
- */
-int AlienBase::getMinutesSinceLastHuntMissionGeneration() const
-{
-	return _minutesSinceLastHuntMissionGeneration;
-}
-
-/**
- * Sets the number of minutes passed since the last hunt mission was generated.
- * @param newValue Number of minutes.
- */
-void AlienBase::setMinutesSinceLastHuntMissionGeneration(int newValue)
-{
-	_minutesSinceLastHuntMissionGeneration = newValue;
-}
-
-/**
- * Gets the number of genMissions generated so far by this base.
- * @return Number of missions.
- */
-int AlienBase::getGenMissionCount() const
-{
-	return _genMissionCount;
-}
-
-/**
- * Sets the number of genMissions generated so far by this base.
- * @param newValue Number of missions.
- */
-void AlienBase::setGenMissionCount(int newValue)
-{
-	_genMissionCount = newValue;
 }
 
 }

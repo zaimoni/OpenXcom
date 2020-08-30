@@ -18,17 +18,16 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Target.h"
-#include <string>
-#include "../Mod/AlienDeployment.h"
-#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
 
+class AlienDeployment;
+
 /**
  * Represents an alien base on the world.
  */
-class AlienBase : public Target
+class AlienBase final : public Target
 {
 private:
 	std::string _pactCountry;
@@ -42,7 +41,7 @@ public:
 	/// Creates an alien base.
 	AlienBase(AlienDeployment *deployment, int startMonth);
 	/// Cleans up the alien base.
-	~AlienBase();
+	~AlienBase() = default;
 	/// Loads the alien base from YAML.
 	void load(const YAML::Node& node) override;
 	/// Saves the alien base to YAML.
@@ -51,36 +50,28 @@ public:
 	std::string getType() const override;
 	/// Gets the alien base's marker sprite.
 	int getMarker() const override;
-	/// Gets the alien base's pact country.
-	const std::string &getPactCountry() const;
+	const std::string &getPactCountry() const { return _pactCountry; } /// @return alien base's pact Country ID.
 	/// Sets the alien base's pact country.
 	void setPactCountry(const std::string &pactCountry);
 	/// Gets the alien base's amount of active hours.
 	std::string getAlienRace() const;
 	/// Sets the alien base's alien race.
 	void setAlienRace(const std::string &race);
-	/// Sets the alien base's battlescape status.
-	void setInBattlescape(bool inbattle);
-	/// Gets the alien base's battlescape status.
-	bool isInBattlescape() const;
-	/// Gets the alien base's discovered status.
-	bool isDiscovered() const;
-	/// Sets the alien base's discovered status.
-	void setDiscovered(bool discovered);
+	void setInBattlescape(bool inbattle) { _inBattlescape = inbattle; } /// @param inbattle True if and only if it's in battle.
+	bool isInBattlescape() const { return _inBattlescape; } /// @return Is the base on the battlescape?
+	bool isDiscovered() const { return _discovered; } /// @return Has the base been discovered?
+	void setDiscovered(bool discovered) { _discovered = discovered; } /// @param discovered True if and only if the base been discovered.
+	AlienDeployment *getDeployment() const { return _deployment; } /// @return Pointer to alien base's deployment rules.
 
-	AlienDeployment *getDeployment() const;
 	void setDeployment(AlienDeployment *deployment);
 
 	/// Gets the month on which the base spawned.
 	int getStartMonth() const { return _startMonth; }
-	/// Gets the number of minutes passed since the last hunt mission was generated.
-	int getMinutesSinceLastHuntMissionGeneration() const;
-	/// Sets the number of minutes passed since the last hunt mission was generated.
-	void setMinutesSinceLastHuntMissionGeneration(int newValue);
-	/// Gets the number of genMissions generated so far by this base.
-	int getGenMissionCount() const;
-	/// Sets the number of genMissions generated so far by this base.
-	void setGenMissionCount(int newValue);
+	int getMinutesSinceLastHuntMissionGeneration() const { return _minutesSinceLastHuntMissionGeneration; } /// @return Number of minutes since the last hunt mission was generated.
+	void setMinutesSinceLastHuntMissionGeneration(int newValue) { _minutesSinceLastHuntMissionGeneration = newValue; } /// @param newValue Number of minutes, since the last hunt mission was generated.
+	int getGenMissionCount() const { return _genMissionCount; } /// @return Number of missions generated so far by this base.
+	void setGenMissionCount(int newValue) { _genMissionCount = newValue; } /// @param newValue Number of missions.
+
 
 };
 

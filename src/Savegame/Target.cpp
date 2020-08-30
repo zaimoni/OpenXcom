@@ -27,13 +27,6 @@ namespace OpenXcom
 {
 
 /**
- * Initializes a target with blank coordinates.
- */
-Target::Target() : _lon(0.0), _lat(0.0), _id(0)
-{
-}
-
-/**
  * Make sure no crafts are chasing this target.
  */
 Target::~Target()
@@ -97,15 +90,6 @@ YAML::Node Target::saveId() const
 }
 
 /**
- * Returns the longitude coordinate of the target.
- * @return Longitude in radian.
- */
-double Target::getLongitude() const
-{
-	return _lon;
-}
-
-/**
  * Changes the longitude coordinate of the target.
  * @param lon Longitude in radian.
  */
@@ -118,15 +102,6 @@ void Target::setLongitude(double lon)
 		_lon += 2 * M_PI;
 	while (_lon >= 2 * M_PI)
 		_lon -= 2 * M_PI;
-}
-
-/**
- * Returns the latitude coordinate of the target.
- * @return Latitude in radian.
- */
-double Target::getLatitude() const
-{
-	return _lat;
 }
 
 /**
@@ -150,24 +125,6 @@ void Target::setLatitude(double lat)
 }
 
 /**
- * Returns the target's unique ID.
- * @return Unique ID, 0 if none.
- */
-int Target::getId() const
-{
-	return _id;
-}
-
-/**
- * Changes the target's unique ID.
- * @param id Unique ID.
- */
-void Target::setId(int id)
-{
-	_id = id;
-}
-
-/**
  * Returns the target's user-readable name.
  * If there's no custom name, the language default is used.
  * @param lang Language to get strings from.
@@ -178,15 +135,6 @@ std::string Target::getName(Language *lang) const
 	if (_name.empty())
 		return getDefaultName(lang);
 	return _name;
-}
-
-/**
- * Changes the target's custom name.
- * @param newName New custom name. If set to blank, the language default is used.
- */
-void Target::setName(const std::string &newName)
-{
-	_name = newName;
 }
 
 /**
@@ -206,15 +154,6 @@ std::string Target::getDefaultName(Language *lang) const
 std::string Target::getMarkerName() const
 {
 	return getType() + "_";
-}
-
-/**
- * Returns the marker ID on the globe for the target.
- * @return Marker ID.
- */
-int Target::getMarkerId() const
-{
-	return _id;
 }
 
 /**

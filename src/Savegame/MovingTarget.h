@@ -32,9 +32,10 @@ protected:
 	static const double GLOBE_RADIUS;
 
 	Target *_dest;
-	double _speedLon, _speedLat, _speedRadian;
+	double _speedLon, _speedLat;
+	double _speedRadian; /// radians per 5 seconds
 	double _meetPointLon, _meetPointLat;
-	int _speed;
+	int _speed;	/// in knots, i.e. minutes of latitude per hour
 	bool _meetCalculated;
 
 	/// Calculates a new speed vector to the destination.
@@ -42,22 +43,20 @@ protected:
 	/// Converts a speed to radians.
 	static double calculateRadianSpeed(int speed);
 	/// Creates a moving target.
-	MovingTarget();
+	MovingTarget() noexcept;
 public:
 	/// Cleans up the moving target.
 	virtual ~MovingTarget();
 	/// Loads the moving target from YAML.
-	virtual void load(const YAML::Node& node) override;
+	void load(const YAML::Node& node) override;
 	/// Saves the moving target to YAML.
-	virtual YAML::Node save() const override;
-	/// Gets the moving target's destination.
-	Target *getDestination() const;
+	YAML::Node save() const override;
+	Target *getDestination() const { return _dest; } /// @return Pointer to destination the moving target is heading to.
 	/// Sets the moving target's destination.
 	virtual void setDestination(Target *dest);
 	/// Gets the moving target's speed.
-	int getSpeed() const;
-	/// Gets the moving target's radial speed.
-	double getSpeedRadian() const;
+	int getSpeed() const { return _speed; } /// @return Speed in knots.
+	double getSpeedRadian() const { return _speedRadian; } /// @return Speed in radians / 5 sec.
 	/// Sets the moving target's speed.
 	void setSpeed(int speed);
 	/// Has the moving target reached its destination?
@@ -66,14 +65,11 @@ public:
 	void move();
 	/// Calculate meeting point with the target.
 	void calculateMeetPoint();
-	/// Returns the latitude of the meeting point.
-	double getMeetLatitude() const;
-	/// Returns the longitude of the meeting point.
-	double getMeetLongitude() const;
-	/// Reset meeting point calculation.
-	void resetMeetPoint();
-	/// Returns if the meeting point was calculated.
-	bool isMeetCalculated() const;
+	double getMeetLatitude() const { return _meetPointLat; } /// @return latitude of the meeting point, in radians.
+	double getMeetLongitude() const { return _meetPointLon; } /// @return longitude of the meeting point, in radians.
+	/// Forces the meeting point to be recalculated, in the event that the target has changed direction.
+	void resetMeetPoint() { _meetCalculated = false; }
+	bool isMeetCalculated() const { return _meetCalculated; } /// @return if the meeting point was calculated.
 };
 
 }

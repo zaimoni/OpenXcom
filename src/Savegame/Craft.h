@@ -19,8 +19,6 @@
  */
 #include "MovingTarget.h"
 #include <utility>
-#include <vector>
-#include <string>
 #include "../Mod/RuleCraft.h"
 
 namespace OpenXcom
@@ -28,7 +26,6 @@ namespace OpenXcom
 
 typedef std::pair<std::string, int> CraftId;
 
-class RuleCraft;
 class RuleItem;
 class Base;
 class Soldier;
@@ -47,7 +44,7 @@ enum UfoDetection : int;
  * position, fuel, damage, etc.
  * @sa RuleCraft
  */
-class Craft : public MovingTarget
+class Craft final : public MovingTarget
 {
 private:
 	const RuleCraft *_rules;
@@ -82,16 +79,14 @@ public:
 	static CraftId loadId(const YAML::Node &node);
 	/// Gets the craft's type.
 	std::string getType() const override;
-	/// Gets the craft's ruleset.
-	const RuleCraft *getRules() const;
+	const RuleCraft *getRules() const { return _rules; } /// @return Pointer to the ruleset for the craft's type.
 	/// Sets the craft's ruleset.
 	void changeRules(RuleCraft *rules);
 	/// Gets the craft's default name.
 	std::string getDefaultName(Language *lang) const override;
 	/// Gets the craft's marker sprite.
 	int getMarker() const override;
-	/// Gets the craft's base.
-	Base *getBase() const;
+	Base *getBase() const { return _base; } /// @return Pointer to the base the craft belongs to.
 	/// Sets the craft's base.
 	void setBase(Base *base, bool move = true);
 	/// Gets the craft's status.
@@ -102,18 +97,12 @@ public:
 	std::string getAltitude() const;
 	/// Sets the craft's destination.
 	void setDestination(Target *dest) override;
-	/// Gets whether the craft is on auto patrol.
-	bool getIsAutoPatrolling() const;
-	/// Sets whether the craft is on auto patrol.
-	void setIsAutoPatrolling(bool isAuto);
-	/// Gets the auto patrol longitude.
-	double getLongitudeAuto() const;
-	/// Sets the auto patrol longitude.
-	void setLongitudeAuto(double lon);
-	/// Gets the auto patrol latitude.
-	double getLatitudeAuto() const;
-	/// Sets the auto patrol latitude.
-	void setLatitudeAuto(double lat);
+	bool getIsAutoPatrolling() const { return _isAutoPatrolling; } /// @return whether craft is on auto patrol
+	void setIsAutoPatrolling(bool isAuto) { _isAutoPatrolling = isAuto; } /// @param isAuto whether craft is on auto patrol
+	double getLongitudeAuto() const { return _lonAuto; } /// @return auto patrol longitude.
+	void setLongitudeAuto(double lon) { _lonAuto = lon; } /// @param lon auto patrol longitude. 
+	double getLatitudeAuto() const { return _latAuto; } /// @return auto patrol latitude.
+	void setLatitudeAuto(double lat) { _latAuto = lat; } /// @param lat auto patrol latitude.
 	/// Gets the craft's amount of weapons.
 	int getNumWeapons(bool onlyLoaded = false) const;
 	/// Gets the craft's amount of soldiers.
@@ -140,36 +129,29 @@ public:
 	const RuleCraftStats& getCraftStats() const;
 	/// Gets the craft's max amount of fuel.
 	int getFuelMax() const;
-	/// Gets the craft's amount of fuel.
-	int getFuel() const;
+	int getFuel() const { return _fuel; } /// @return the amount of fuel currently contained in this craft.
 	/// Sets the craft's amount of fuel.
 	void setFuel(int fuel);
 	/// Gets the craft's percentage of fuel.
 	int getFuelPercentage() const;
 	/// Gets the craft's max amount of damage.
 	int getDamageMax() const;
-	/// Gets the craft's amount of damage.
-	int getDamage() const;
+	int getDamage() const { return _damage; } /// @return the amount of damage this craft has taken.
 	/// Sets the craft's amount of damage.
 	void setDamage(int damage);
 	/// Gets the craft's percentage of damage.
 	int getDamagePercentage() const;
 	/// Gets the craft's max shield capacity
 	int getShieldCapacity () const;
-	/// Gets the craft's shield remaining
-	int getShield() const;
+	int getShield() const { return _shield; } /// @return shield points this craft has remaining.
 	/// Sets the craft's shield remaining
 	void setShield(int shield);
 	/// Gets the percent shield remaining
 	int getShieldPercentage() const;
-	/// Gets whether the craft is running out of fuel.
-	bool getLowFuel() const;
-	/// Sets whether the craft is running out of fuel.
-	void setLowFuel(bool low);
-	/// Gets whether the craft has just finished a mission.
-	bool getMissionComplete() const;
-	/// Sets whether the craft has just finished a mission.
-	void setMissionComplete(bool mission);
+	bool getLowFuel() const { return _lowFuel; } /// @return whether the craft is currently low on fuel (only has enough to head back to base).
+	void setLowFuel(bool low) { _lowFuel = low; } /// @param low whether the craft is currently low on fuel (only has enough to head back to base).
+	bool getMissionComplete() const { return _mission; } /// @return whether the craft has just done a ground mission, and is forced to return to base.
+	void setMissionComplete(bool mission) { _mission = mission; } // @param mission whether the craft has just done a ground mission, and is forced to return to base.
 	/// Gets the craft's distance from its base.
 	double getDistanceFromBase() const;
 	/// Gets the craft's fuel consumption at a certain speed.
@@ -206,8 +188,7 @@ public:
 	const RuleItem* rearm();
 	/// Sets the craft's battlescape status.
 	void setInBattlescape(bool inbattle);
-	/// Gets if the craft is in battlescape.
-	bool isInBattlescape() const;
+	bool isInBattlescape() const { return _inBattlescape; } /// @return Is the craft currently in battle?
 	/// Gets if craft is destroyed during dogfights.
 	bool isDestroyed() const;
 	/// Gets the amount of space available inside a craft.
@@ -238,14 +219,10 @@ public:
 	int getPilotApproachSpeedModifier(const std::vector<Soldier*> &pilots, const Mod *mod) const;
 	/// Gets the craft's vehicles of a certain type.
 	int getVehicleCount(const std::string &vehicle) const;
-	/// Sets the craft's dogfight status.
-	void setInDogfight(const bool inDogfight);
-	/// Gets if the craft is in dogfight.
-	bool isInDogfight() const;
-	/// Sets interception order (first craft to leave the base gets 1, second 2, etc.).
-	void setInterceptionOrder(const int order);
-	/// Gets interception number.
-	int getInterceptionOrder() const;
+	bool isInDogfight() const { return _inDogfight; } /// @return Is the craft ion a dogfight?
+	void setInDogfight(const bool inDogfight) { _inDogfight = inDogfight; } /// @param inDogFight Is the craft ion a dogfight?
+	int getInterceptionOrder() const { return _interceptionOrder; } /// @return Interception order (first to leave base 1, second 2, ...)
+	void setInterceptionOrder(const int order) { _interceptionOrder = order; } /// @param order Interception order (first to leave base 1, second 2, ...)
 	/// Gets the craft's unique id.
 	CraftId getUniqueId() const;
 	/// Unloads the craft.

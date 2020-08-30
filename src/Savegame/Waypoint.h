@@ -18,8 +18,6 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Target.h"
-#include <string>
-#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -27,13 +25,13 @@ namespace OpenXcom
 /**
  * Represents a fixed waypoint on the world.
  */
-class Waypoint : public Target
+class Waypoint final : public Target
 {
 public:
 	/// Creates a waypoint.
-	Waypoint();
+	Waypoint() = default;
 	/// Cleans up the waypoint.
-	~Waypoint();
+	~Waypoint() = default;
 	/// Gets the waypoint's type.
 	std::string getType() const override;
 	/// Gets the waypoint's marker sprite.
