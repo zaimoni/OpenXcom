@@ -2206,17 +2206,10 @@ void AIModule::projectileAction()
 		if (cost.haveTU())
 		{
 			auto attack = BattleActionAttack::GetBeforeShoot(cost);
-			if (attack.damage_item == nullptr)
+			int radius = attack.damage_item->getRules()->getExplosionRadius(attack);
+			if (radius != 0 && explosiveEfficacy(_attackAction->target, _unit, radius, _attackAction->diff) == 0)
 			{
 				cost.clearTU();
-			}
-			else
-			{
-				int radius = attack.damage_item->getRules()->getExplosionRadius(attack);
-				if (radius != 0 && explosiveEfficacy(_attackAction->target, _unit, radius, _attackAction->diff) == 0)
-				{
-					cost.clearTU();
-				}
 			}
 		}
 	};
