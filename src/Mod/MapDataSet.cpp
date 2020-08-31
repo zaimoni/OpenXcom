@@ -47,15 +47,6 @@ MapDataSet::~MapDataSet()
 }
 
 /**
- * Gets the MapDataSet name (string).
- * @return The MapDataSet name.
- */
-std::string MapDataSet::getName() const
-{
-	return _name;
-}
-
-/**
  * Gets the MapDataSet size.
  * @return The size in number of records.
  */
@@ -87,15 +78,6 @@ MapData *MapDataSet::getObject(size_t i)
 		throw Exception(ss.str());
 	}
 	return _objects[i];
-}
-
-/**
- * Gets the surfaces in this dataset.
- * @return Pointer to the surfaceset.
- */
-SurfaceSet *MapDataSet::getSurfaceset() const
-{
-	return _surfaceSet;
 }
 
 /**
@@ -284,24 +266,6 @@ void MapDataSet::loadLOFTEMPS(const std::string &filename, std::vector<Uint16> *
 	{
 		throw Exception("Invalid LOFTEMPS");
 	}
-}
-
-/**
- * Gets a blank floor tile.
- * @return Pointer to a blank tile.
- */
-MapData *MapDataSet::getBlankFloorTile()
-{
-	return MapDataSet::_blankTile;
-}
-
-/**
- * Gets a scorched earth tile.
- * @return Pointer to a scorched earth tile.
- */
-MapData *MapDataSet::getScorchedEarthTile()
-{
-	return MapDataSet::_scorchedTile;
 }
 
 }

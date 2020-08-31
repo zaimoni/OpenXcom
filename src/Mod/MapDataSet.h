@@ -49,24 +49,20 @@ public:
 	~MapDataSet();
 	/// Loads voxeldata from a DAT file.
 	static void loadLOFTEMPS(const std::string &filename, std::vector<Uint16> *voxelData);
-	/// Gets the dataset name (used for MAP generation).
-	std::string getName() const;
+	const std::string& getName() const { return _name; } /// @return The dataset name (used for MAP generation).
 	/// Gets the dataset size.
 	size_t getSize() const;
 	/// Gets the objects in this dataset.
 	std::vector<MapData*> *getObjectsRaw();
 	/// Gets an object in this dataset.
 	MapData *getObject(size_t i);
-	/// Gets the surfaces in this dataset.
-	SurfaceSet *getSurfaceset() const;
+	SurfaceSet *getSurfaceset() const { return _surfaceSet; } /// @return Pointer to the surfaceset, i.e. surfaces in this dataset.
 	/// Loads the objects from an MCD file.
 	void loadData(MCDPatch *patch, bool validate = true);
 	///	Unloads to free memory.
 	void unloadData();
-	/// Gets a blank floor tile.
-	static MapData *getBlankFloorTile();
-	/// Gets a scorched earth tile.
-	static MapData *getScorchedEarthTile();
+	static MapData *getBlankFloorTile() { return _blankTile; } /// @return Pointer to a blank tile.
+	static MapData *getScorchedEarthTile() { return _scorchedTile; } /// @return @return Pointer to a scorched earth tile.
 };
 
 }
