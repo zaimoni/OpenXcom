@@ -3768,7 +3768,7 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
 		return V_EMPTY;
 	}
 
-	if (tile->getMapData(O_FLOOR) && tile->getMapData(O_FLOOR)->isGravLift() && (voxel.z % 24 == 0 || voxel.z % 24 == 1))
+	if (1 >= voxel.z % 24 && tile->getMapData(O_FLOOR) && tile->getMapData(O_FLOOR)->isGravLift())
 	{
 		if ((tile->getPosition().z == 0) || (tileBelow && tileBelow->getMapData(O_FLOOR) && !tileBelow->getMapData(O_FLOOR)->isGravLift()))
 		{
@@ -3780,10 +3780,8 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
 	for (int i = V_FLOOR; i <= V_OBJECT; ++i)
 	{
 		TilePart tp = (TilePart)i;
-		MapData *mp = tile->getMapData(tp);
-		if (((tp == O_WESTWALL) || (tp == O_NORTHWALL)) && tile->isUfoDoorOpen(tp))
-			continue;
-		if (mp != 0)
+		if (((tp == O_WESTWALL) || (tp == O_NORTHWALL)) && tile->isUfoDoorOpen(tp)) continue;
+		if (MapData* const mp = tile->getMapData(tp))
 		{
 			int x = 15 - voxel.x%16;
 			int y = voxel.y%16;
@@ -3801,12 +3799,12 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
 
 		if (unit != 0 && !unit->isOut() && unit != excludeUnit && (!excludeAllBut || unit == excludeAllBut) && (!onlyVisible || unit->getVisible() ) )
 		{
-			Position tilepos;
 			Position unitpos = unit->getPosition();
+			const int unit_size = unit->getArmor()->getSize();
 			int terrainHeight = 0;
-			for (int x = 0; x < unit->getArmor()->getSize(); ++x)
+			for (int x = 0; x < unit_size; ++x)
 			{
-				for (int y = 0; y < unit->getArmor()->getSize(); ++y)
+				for (int y = 0; y < unit_size; ++y)
 				{
 					Tile *tempTile = _save->getTile(unitpos + Position(x,y,0));
 					if (tempTile->getTerrainLevel() < terrainHeight)
@@ -3821,9 +3819,9 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
 				int x = voxel.x%16;
 				int y = voxel.y%16;
 				int part = 0;
-				if (unit->getArmor()->getSize() > 1)
+				if (1 < unit_size)
 				{
-					tilepos = tile->getPosition();
+					Position tilepos = tile->getPosition();
 					part = tilepos.x - unitpos.x + (tilepos.y - unitpos.y)*2;
 				}
 				int idx = (unit->getLoftemps(part) * 16) + y;
