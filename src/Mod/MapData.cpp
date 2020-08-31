@@ -130,6 +130,26 @@ bool MapData::isGravLift() const
 }
 
 /**
+ * Gets whether this is a grav lift.
+ * @param md map data
+ * @return True if this is definitely a grav lift.
+ */
+bool MapData::isGravLift(MapData* md)
+{
+	return md && md->isGravLift();
+}
+
+/**
+ * Gets whether this is a grav lift.
+ * @param md map data
+ * @return True if this is definitely a grav lift.
+ */
+bool MapData::isNotGravLift(MapData* md)
+{
+	return md && !md->isGravLift();
+}
+
+/**
  * Gets whether this should be drawn behind a unit or in front of a unit (i.e. if it works as a S or E wall).
  */
 bool MapData::isBackTileObject() const

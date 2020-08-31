@@ -841,8 +841,7 @@ bool Pathfinding::validateUpDown(BattleUnit *bu, const Position& startPosition, 
 	endPosition += startPosition;
 	Tile *startTile = _save->getTile(startPosition);
 	Tile *destinationTile = _save->getTile(endPosition);
-	if (startTile->getMapData(O_FLOOR) && destinationTile && destinationTile->getMapData(O_FLOOR) &&
-		(startTile->getMapData(O_FLOOR)->isGravLift() && destinationTile->getMapData(O_FLOOR)->isGravLift()))
+	if (MapData::isGravLift(startTile->getMapData(O_FLOOR)) && destinationTile && MapData::isGravLift(destinationTile->getMapData(O_FLOOR)))
 	{
 		if (missile)
 		{

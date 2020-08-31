@@ -3768,9 +3768,9 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
 		return V_EMPTY;
 	}
 
-	if (1 >= voxel.z % 24 && tile->getMapData(O_FLOOR) && tile->getMapData(O_FLOOR)->isGravLift())
+	if (1 >= voxel.z % 24 && MapData::isGravLift(tile->getMapData(O_FLOOR)))
 	{
-		if ((tile->getPosition().z == 0) || (tileBelow && tileBelow->getMapData(O_FLOOR) && !tileBelow->getMapData(O_FLOOR)->isGravLift()))
+		if ((tile->getPosition().z == 0) || (tileBelow && MapData::isNotGravLift(tileBelow->getMapData(O_FLOOR))))
 		{
 			return V_FLOOR;
 		}

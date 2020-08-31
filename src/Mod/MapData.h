@@ -82,6 +82,8 @@ public:
 	bool isDoor() const;
 	/// Gets whether this is a grav lift.
 	bool isGravLift() const;
+	static bool isGravLift(MapData* md);
+	static bool isNotGravLift(MapData* md);
 	/// Gets whether this should be drawn behind a unit or in front of a unit (i.e. if it works as a S or E wall).
 	bool isBackTileObject() const;
 	/// Sets all kinds of flags.
