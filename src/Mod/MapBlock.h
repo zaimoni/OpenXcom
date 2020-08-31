@@ -54,19 +54,14 @@ private:
 	std::map<std::string, std::pair<int, int> > _itemsFuseTimer;
 public:
 	MapBlock(const std::string &name);
-	~MapBlock();
+	~MapBlock() = default;
 	/// Loads the map block from YAML.
 	void load(const YAML::Node& node);
-	/// Gets the mapblock's name (used for MAP generation).
-	std::string getName() const;
-	/// Gets the mapblock's x size.
-	int getSizeX() const;
-	/// Gets the mapblock's y size.
-	int getSizeY() const;
-	/// Gets the mapblock's z size.
-	int getSizeZ() const;
-	/// Sets the mapblock's z size.
-	void setSizeZ(int size_z);
+	const std::string& getName() const { return _name; } /// @return The mapblock's name (used for MAP generation).
+	int getSizeX() const { return _size_x; } /// @return the MapBlock size x, in tiles
+	int getSizeY() const { return _size_y; } /// @return the MapBlock size y, in tiles
+	int getSizeZ() const { return _size_z; } /// @return the MapBlock size z, in tiles
+	void setSizeZ(int size_z) { _size_z = size_z; } /// @param size_z the MapBlock size z, in tiles
 	/// Returns if this mapblock is from the group specified.
 	bool isInGroup(int group);
 	/// Gets if this floor should be revealed or not.

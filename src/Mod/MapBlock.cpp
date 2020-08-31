@@ -63,13 +63,6 @@ MapBlock::MapBlock(const std::string &name): _name(name), _size_x(10), _size_y(1
 }
 
 /**
- * MapBlock destruction.
- */
-MapBlock::~MapBlock()
-{
-}
-
-/**
  * Loads the map block from a YAML file.
  * @param node YAML node.
  */
@@ -112,51 +105,6 @@ void MapBlock::load(const YAML::Node &node)
 	_items = node["items"].as<std::map<std::string, std::vector<Position> > >(_items);
 	_randomizedItems = node["randomizedItems"].as< std::vector<RandomizedItems> >(_randomizedItems);
 	_itemsFuseTimer = node["fuseTimers"].as<std::map<std::string, std::pair<int, int> > >(_itemsFuseTimer);
-}
-
-/**
- * Gets the MapBlock name (string).
- * @return The name.
- */
-std::string MapBlock::getName() const
-{
-	return _name;
-}
-
-/**
- * Gets the MapBlock size x.
- * @return The size x in tiles.
- */
-int MapBlock::getSizeX() const
-{
-	return _size_x;
-}
-
-/**
- * Gets the MapBlock size y.
- * @return The size y in tiles.
- */
-int MapBlock::getSizeY() const
-{
-	return _size_y;
-}
-
-/**
- * Sets the MapBlock size z.
- * @param size_z The size z.
- */
-void MapBlock::setSizeZ(int size_z)
-{
-	_size_z = size_z;
-}
-
-/**
- * Gets the MapBlock size z.
- * @return The size z.
- */
-int MapBlock::getSizeZ() const
-{
-	return _size_z;
 }
 
 /**
