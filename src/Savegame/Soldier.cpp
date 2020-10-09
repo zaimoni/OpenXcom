@@ -117,17 +117,33 @@ Soldier::~Soldier()
  * @param mod Game mod.
  * @param save Pointer to savegame.
  */
-void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, const ScriptGlobal *shared)
+void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, const ScriptGlobal *shared, bool soldierTemplate)
 {
-	_id = node["id"].as<int>(_id);
-	_name = node["name"].as<std::string>();
+	if (!soldierTemplate)
+	{
+		_id = node["id"].as<int>(_id);
+	}
+	_name = node["name"].as<std::string>(_name);
 	if (node["callsign"])
 	{
 		_callsign = node["callsign"].as<std::string>();
 	}
 	_nationality = node["nationality"].as<int>(_nationality);
-	_initialStats = node["initialStats"].as<UnitStats>(_initialStats);
-	_currentStats = node["currentStats"].as<UnitStats>(_currentStats);
+	if (soldierTemplate)
+	{
+		UnitStats ii, cc;
+		if (node["initialStats"])
+			ii = node["initialStats"].as<UnitStats>(ii);
+		if (node["currentStats"])
+			cc = node["currentStats"].as<UnitStats>(cc);
+		_initialStats = UnitStats::templateMerge(_initialStats, ii);
+		_currentStats = UnitStats::templateMerge(_currentStats, cc);
+	}
+	else
+	{
+		_initialStats = node["initialStats"].as<UnitStats>(_initialStats);
+		_currentStats = node["currentStats"].as<UnitStats>(_currentStats);
+	}
 	_dailyDogfightExperienceCache = node["dailyDogfightExperienceCache"].as<UnitStats>(_dailyDogfightExperienceCache);
 
 	// re-roll mana stats when upgrading saves
@@ -138,16 +154,20 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 		_initialStats.mana = reroll;
 	}
 
-	_rank = (SoldierRank)node["rank"].as<int>();
-	_gender = (SoldierGender)node["gender"].as<int>();
-	_look = (SoldierLook)node["look"].as<int>();
+	_rank = (SoldierRank)node["rank"].as<int>(_rank);
+	_gender = (SoldierGender)node["gender"].as<int>(_gender);
+	_look = (SoldierLook)node["look"].as<int>(_look);
 	_lookVariant = node["lookVariant"].as<int>(_lookVariant);
 	_missions = node["missions"].as<int>(_missions);
 	_kills = node["kills"].as<int>(_kills);
 	_manaMissing = node["manaMissing"].as<int>(_manaMissing);
 	_healthMissing = node["healthMissing"].as<int>(_healthMissing);
 	_recovery = node["recovery"].as<float>(_recovery);
-	Armor *armor = mod->getArmor(node["armor"].as<std::string>());
+	Armor *armor = nullptr;
+	if (node["armor"])
+	{
+		armor = mod->getArmor(node["armor"].as<std::string>());
+	}
 	if (armor == 0)
 	{
 		armor = mod->getArmor(mod->getSoldier(mod->getSoldiersList().front())->getArmor());
