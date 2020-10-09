@@ -37,6 +37,7 @@ class ExplosionBState final : public BattleState
 {
 private:
 	int _explosionCounter;
+	int _terrainMeleeTilePart;
 	BattleActionAttack _attack;
 	Position _center;
 	const RuleDamageType *_damageType;
@@ -53,7 +54,7 @@ private:
 	void optValue(int &oldValue, int newValue) const;
 public:
 	/// Creates a new ExplosionBState class.
-	ExplosionBState(BattlescapeGame *parent, Position center, BattleActionAttack attack, Tile *tile = 0, bool lowerWeapon = false, int range = 0, int explosionCounter = 0) noexcept;
+	ExplosionBState(BattlescapeGame *parent, Position center, BattleActionAttack attack, Tile *tile = 0, bool lowerWeapon = false, int range = 0, int explosionCounter = 0, int terrainMeleeTilePart = 0) noexcept;
 	/// Cleans up the ExplosionBState.
 	~ExplosionBState() = default;
 	/// Initializes the state.

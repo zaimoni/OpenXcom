@@ -2741,15 +2741,15 @@ BattlescapeTally BattlescapeGame::tallyUnits()
 	for (std::vector<BattleUnit*>::iterator j = _save->getUnits()->begin(); j != _save->getUnits()->end(); ++j)
 	{
 		//TODO: add handling of stunned units for display purposes in AbortMissionState
-		if (!(*j)->isOut() && !(*j)->isOutThresholdExceed())
+		if (!(*j)->isOut() && (!(*j)->isOutThresholdExceed() || (*j)->getUnitRules()->getSpawnUnit()))
 		{
 			if ((*j)->getOriginalFaction() == FACTION_HOSTILE)
 			{
-				if (Options::allowPsionicCapture && (*j)->getFaction() == FACTION_PLAYER)
+				if (Options::allowPsionicCapture && (*j)->getFaction() == FACTION_PLAYER && (*j)->getCapturable())
 				{
 					// don't count psi-captured units
 				}
-				else if (isSurrendering((*j)))
+				else if (isSurrendering((*j)) && (*j)->getCapturable())
 				{
 					// don't count surrendered units
 				}
