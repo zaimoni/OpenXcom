@@ -212,7 +212,7 @@ MapSubset mapAreaExpand(MapSubset gs, int radius)
 
 } // namespace
 
-const int TileEngine::heightFromCenter[11] = {0,-2,+2,-4,+4,-6,+6,-8,+8,-12,+12};
+constexpr int TileEngine::heightFromCenter[11];
 
 
 constexpr Position TileEngine::invalid;
@@ -1027,6 +1027,15 @@ bool TileEngine::visible(BattleUnit *currentUnit, Tile *tile)
 	bool fearImmune = tile->getUnit()->getArmor()->getFearImmune();
 	if (psiVisionDistance > 0 && !fearImmune)
 	{
+		int psiCamo = tile->getUnit()->getArmor()->getPsiCamouflage();
+		if (psiCamo > 0)
+		{
+			psiVisionDistance = std::min(psiVisionDistance, psiCamo);
+		}
+		else if (psiCamo < 0)
+		{
+			psiVisionDistance = std::max(0, psiVisionDistance + psiCamo);
+		}
 		if (currentDistanceSq <= (psiVisionDistance * psiVisionDistance))
 		{
 			return true; // we already sense the unit, no need to check obstacles or smoke
@@ -4059,7 +4068,7 @@ void TileEngine::medikitRemoveIfEmpty(BattleAction *action)
 	}
 }
 
-bool TileEngine::medikitUse(BattleAction *action, BattleUnit *target, BattleMediKitAction originalMedikitAction, int bodyPart)
+bool TileEngine::medikitUse(BattleAction *action, BattleUnit *target, BattleMediKitAction originalMedikitAction, UnitBodyPart bodyPart)
 {
 	BattleActionAttack attack;
 	attack.type = action->type;
@@ -4088,7 +4097,7 @@ bool TileEngine::medikitUse(BattleAction *action, BattleUnit *target, BattleMedi
 	ModScript::HealUnit::Output args { };
 
 	std::get<medikitActionKey>(args.data) += originalMedikitAction;
-	std::get<bodyPartKey>(args.data) += bodyPart;
+	std::get<bodyPartKey>(args.data) += (int)bodyPart;
 	std::get<woundRecoveryKey>(args.data) += rule->getWoundRecovery();
 	std::get<healthRecoveryKey>(args.data) += rule->getHealthRecovery();
 	std::get<energyRecoveryKey>(args.data) += rule->getEnergyRecovery();
@@ -4572,6 +4581,21 @@ bool TileEngine::validTerrainMeleeRange(BattleAction* action)
 	}
 
 	action->terrainMeleeTilePart = 0;
+
+	if (action->weapon)
+	{
+		auto wRule = action->weapon->getRules();
+		if (wRule->getBattleType() == BT_MELEE)
+		{
+			// check primary damage type
+			if (wRule->getDamageType()->ToTile == 0.0) return false;
+		}
+		else
+		{
+			// check secondary damage type
+			if (wRule->getMeleeType()->ToTile == 0.0) return false;
+		}
+	}
 
 	Position pos = action->actor->getPosition();
 	int direction = action->actor->getDirection();

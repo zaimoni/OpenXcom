@@ -83,6 +83,10 @@ en-GB:
   STR_FILTER_DEFAULT_NO_SUPPLIES: "Default (no supplies)"
   STR_FILTER_FACILITY_REQUIRED: "Facility Missing"
   STR_FILTER_HIDDEN: "Hidden"
+#NewResearchListState.cpp
+  STR_SORT_DEFAULT: "Default"
+  STR_SORT_BY_COST: "By cost"
+  STR_SORT_BY_NAME: "By name"
 #ProductionCompleteState.cpp
   STR_RANDOM_PRODUCTION_SUMMARY: "Summary"
 #PurchaseState.cpp
@@ -93,6 +97,7 @@ en-GB:
   STR_SELECT_AVATAR_FOR: "SELECT AVATAR FOR{NEWLINE}{0}"
 #SoldierBonusState.cpp
   STR_SOLDIER_BONUSES_FOR: "SOLDIER BONUSES FOR{NEWLINE}{0}"
+  STR_SUMMARY: "Summary"
 #SoldierInfoState.cpp
   STR_MANA_RECOVERY: "MANA RECOVERY> {ALT}{0}"
   STR_HEALTH_RECOVERY: "HEALTH RECOVERY> {ALT}{0}"
@@ -110,6 +115,17 @@ en-GB:
   STR_CHANGES_MIN: "Changes (min)"
   STR_CHANGES_MAX: "Changes (max)"
   STR_BONUS_STATS: "Bonus stats"
+#SoldierTransformationListState.cpp
+  STR_TRANSFORMATIONS_OVERVIEW: "Transformations Overview"
+  STR_PROJECT_NAME: "PROJECT NAME"
+  STR_AVAILABLE_MATERIALS: "AVAILABLE MATERIALS"
+  STR_ELIGIBLE_SOLDIERS: "ELIGIBLE SOLDIERS"
+  STR_SHOW_ONLY_ELIGIBLE: "Show Only Eligible"
+  STR_ALL_SOLDIER_TYPES: "All Soldier Types"
+  STR_ALL_SOLDIERS: "All Soldiers"
+  STR_HEALTHY_SOLDIERS: "Healthy Soldiers"
+  STR_WOUNDED_SOLDIERS: "Wounded Soldiers"
+  STR_DEAD_SOLDIERS: "Dead Soldiers"
 #StoresState.cpp
   STR_GRAND_TOTAL: "Grand Total"
 #TechTreeSelectState.cpp
@@ -158,6 +174,8 @@ en-GB:
   STR_AFFECTS_GAME_PROGRESSION: "Affects game progression!"
 #TransferItemsState.cpp
   STR_ITEMS_AT_DESTINATION: "Items at destination"
+  STR_PRISONERS: "Prisoners"
+  STR_ARMORS: "Armors"
 #=================== Battlescape ===================
 #ActionMenuState.cpp
   STR_MUST_USE_BOTH_HANDS: "Both hands are required for this!"
@@ -297,6 +315,7 @@ en-GB:
   STR_STARTING_CONDITION_SOLDIER_TYPE_ALLOWED: "Some soldiers cannot participate in this mission.{NEWLINE}{NEWLINE}Allowed soldier types: {0}"
   STR_STARTING_CONDITION_SOLDIER_TYPE_FORBIDDEN: "Some soldiers cannot participate in this mission.{NEWLINE}{NEWLINE}Forbidden soldier types: {0}"
   STR_STARTING_CONDITION_ITEM: "This mission requires specific item(s):{NEWLINE}{NEWLINE}{0}"
+  STR_NOT_ENOUGH_FUEL_TO_REACH_TARGET: "NOT ENOUGH FUEL!{SMALLLINE}The destination is too far for the range of the craft."
 #CraftNotEnoughPilotsState.cpp
   STR_ASSIGN_PILOTS: "Assign pilots..."
   STR_NOT_ENOUGH_PILOTS: "Not enough pilots!{NEWLINE}Minimum: {0}"
