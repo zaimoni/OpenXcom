@@ -347,7 +347,7 @@ Mod::Mod() :
 	_crewEmergencyEvacuationSurvivalChance(100), _pilotsEmergencyEvacuationSurvivalChance(100),
 	_soldiersPerSergeant(5), _soldiersPerCaptain(11), _soldiersPerColonel(23), _soldiersPerCommander(30),
 	_pilotAccuracyZeroPoint(55), _pilotAccuracyRange(40), _pilotReactionsZeroPoint(55), _pilotReactionsRange(60),
-	_performanceBonusFactor(0), _useCustomCategories(false), _shareAmmoCategories(false), _showDogfightDistanceInKm(false), _showFullNameInAlienInventory(false),
+	_performanceBonusFactor(0), _enableNewResearchSorting(false), _displayCustomCategories(0), _shareAmmoCategories(false), _showDogfightDistanceInKm(false), _showFullNameInAlienInventory(false),
 	_alienInventoryOffsetX(80), _alienInventoryOffsetBigUnit(32),
 	_hidePediaInfoButton(false), _extraNerdyPediaInfo(false),
 	_giveScoreAlsoForResearchedArtifacts(false), _statisticalBulletConservation(false), _stunningImprovesMorale(false),
@@ -2360,6 +2360,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_fontName = doc["fontName"].as<std::string>(_fontName);
 	_psiUnlockResearch = doc["psiUnlockResearch"].as<std::string>(_psiUnlockResearch);
 	_fakeUnderwaterBaseUnlockResearch = doc["fakeUnderwaterBaseUnlockResearch"].as<std::string>(_fakeUnderwaterBaseUnlockResearch);
+	_newBaseUnlockResearch = doc["newBaseUnlockResearch"].as<std::string>(_newBaseUnlockResearch);
 	_destroyedFacility = doc["destroyedFacility"].as<std::string>(_destroyedFacility);
 
 	_aiUseDelayGrenade = doc["turnAIUseGrenade"].as<int>(_aiUseDelayGrenade);
@@ -2463,7 +2464,8 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		}
 	}
 	_performanceBonusFactor = doc["performanceBonusFactor"].as<int>(_performanceBonusFactor);
-	_useCustomCategories = doc["useCustomCategories"].as<bool>(_useCustomCategories);
+	_enableNewResearchSorting = doc["enableNewResearchSorting"].as<bool>(_enableNewResearchSorting);
+	_displayCustomCategories = doc["displayCustomCategories"].as<int>(_displayCustomCategories);
 	_shareAmmoCategories = doc["shareAmmoCategories"].as<bool>(_shareAmmoCategories);
 	_showDogfightDistanceInKm = doc["showDogfightDistanceInKm"].as<bool>(_showDogfightDistanceInKm);
 	_showFullNameInAlienInventory = doc["showFullNameInAlienInventory"].as<bool>(_showFullNameInAlienInventory);

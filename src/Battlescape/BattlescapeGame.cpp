@@ -508,7 +508,7 @@ void BattlescapeGame::endTurn()
 				const RuleItem *rule = item->getRules();
 				const Tile *tile = item->getTile();
 				BattleUnit *unit = item->getOwner();
-				if (!tile && unit && rule->isExplodingInHands())
+				if (!tile && unit && rule->isExplodingInHands() && !_allEnemiesNeutralized)
 				{
 					tile = unit->getTile();
 				}
@@ -2741,7 +2741,7 @@ BattlescapeTally BattlescapeGame::tallyUnits()
 	for (std::vector<BattleUnit*>::iterator j = _save->getUnits()->begin(); j != _save->getUnits()->end(); ++j)
 	{
 		//TODO: add handling of stunned units for display purposes in AbortMissionState
-		if (!(*j)->isOut() && (!(*j)->isOutThresholdExceed() || (*j)->getUnitRules()->getSpawnUnit()))
+		if (!(*j)->isOut() && (!(*j)->isOutThresholdExceed() || ((*j)->getUnitRules() && (*j)->getUnitRules()->getSpawnUnit())))
 		{
 			if ((*j)->getOriginalFaction() == FACTION_HOSTILE)
 			{
@@ -2840,6 +2840,44 @@ bool BattlescapeGame::getKneelReserved() const
  */
 int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
 {
+	// death trap?
+	if (unit->getTile()->getFloorSpecialTileType() >= DEATH_TRAPS)
+	{
+		std::ostringstream ss;
+		ss << "STR_DEATH_TRAP_" << unit->getTile()->getFloorSpecialTileType();
+		auto deathTrapRule = getMod()->getItem(ss.str());
+		if (deathTrapRule && (deathTrapRule->getBattleType() == BT_PROXIMITYGRENADE || deathTrapRule->getBattleType() == BT_MELEE))
+		{
+			BattleItem* deathTrapItem = nullptr;
+			for (auto item : *unit->getTile()->getInventory())
+			{
+				if (item->getRules() == deathTrapRule)
+				{
+					deathTrapItem = item;
+					break;
+				}
+			}
+			if (!deathTrapItem)
+			{
+				deathTrapItem = _save->createItemForTile(deathTrapRule, unit->getTile());
+			}
+			if (deathTrapRule->getBattleType() == BT_PROXIMITYGRENADE)
+			{
+				deathTrapItem->setFuseTimer(0);
+				Position p = unit->getTile()->getPosition().toVoxel() + Position(8, 8, unit->getTile()->getTerrainLevel());
+				statePushNext(new ExplosionBState(this, p, BattleActionAttack::GetBeforeShoot(BA_NONE, nullptr, deathTrapItem)));
+				return 2;
+			}
+			else if (deathTrapRule->getBattleType() == BT_MELEE)
+			{
+				Position p = unit->getTile()->getPosition().toVoxel() + Position(8, 8, 12);
+				// EXPERIMENTAL: terrainMeleeTilePart = 4 (V_UNIT); no attacker
+				statePushNext(new ExplosionBState(this, p, BattleActionAttack::GetBeforeShoot(BA_HIT, nullptr, deathTrapItem), nullptr, false, 0, 0, 4));
+				return 2;
+			}
+		}
+	}
+
 	bool exploded = false;
 	bool glow = false;
 	int size = unit->getArmor()->getSize() + 1;

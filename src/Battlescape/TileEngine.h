@@ -35,6 +35,8 @@ class RuleSkill;
 struct BattleAction;
 template<typename Tag, typename DataType> struct AreaSubset;
 
+enum UnitBodyPart : int;
+
 /**
  * Define some part of map
  */
@@ -93,7 +95,7 @@ private:
 	std::vector<Uint16> *_voxelData;
 	std::vector<VisibilityBlockCache> _blockVisibility;
 	RuleInventory *_inventorySlotGround;
-	static const int heightFromCenter[11];
+	constexpr static int heightFromCenter[11] = {0,-2,+2,-4,+4,-6,+6,-8,+8,-12,+12};
 	bool _personalLighting;
 	Tile *_cacheTile;
 	Tile *_cacheTileBelow;
@@ -212,7 +214,7 @@ public:
 	/// Remove the medikit from the game if consumable and empty.
 	void medikitRemoveIfEmpty(BattleAction *action);
 	/// Try using medikit heal ability.
-	bool medikitUse(BattleAction *action, BattleUnit *target, BattleMediKitAction medikitAction, int bodyPart);
+	bool medikitUse(BattleAction *action, BattleUnit *target, BattleMediKitAction medikitAction, UnitBodyPart bodyPart);
 	/// Try using a skill.
 	bool skillUse(BattleAction *action, const RuleSkill *skill);
 	/// Try to conceal a unit.
